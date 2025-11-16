@@ -8,14 +8,21 @@ import Image from 'next/image';
 import Link from "next/link";
 import { formatPrice } from "@/lib/utils";
 import { cn } from "@/lib/utils";
+import { usePathname } from "next/navigation";
 
 export function CartSheet({ scrolled }: { scrolled?: boolean }) {
   const { state, itemCount, totalPrice, updateQuantity, removeItem } = useCart();
+  const pathname = usePathname();
+  const isHomePage = pathname === '/';
+
+  const buttonClass = isHomePage 
+    ? cn("relative hover:bg-white/20", scrolled ? "text-foreground hover:bg-accent" : "text-white")
+    : "relative text-primary-foreground hover:bg-primary/80";
 
   return (
     <Sheet>
       <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" className={cn("relative hover:bg-white/20", scrolled ? "text-foreground hover:bg-accent" : "text-white")}>
+        <Button variant="ghost" size="icon" className={buttonClass}>
           <ShoppingCart className="h-5 w-5" />
           {itemCount > 0 && (
             <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-accent text-accent-foreground text-xs font-bold">
