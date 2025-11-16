@@ -12,23 +12,13 @@ import { Separator } from "../ui/separator";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
 
-export function CartSheet() {
+export function CartSheet({ scrolled }: { scrolled?: boolean }) {
   const { state, itemCount, totalPrice, updateQuantity, removeItem } = useCart();
-  const [scrolled, setScrolled] = useState(false);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 10);
-    };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
 
   return (
     <Sheet>
       <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" className={cn("relative hover:bg-white/20", scrolled && "text-foreground hover:bg-accent")}>
+        <Button variant="ghost" size="icon" className={cn("relative hover:bg-white/20", scrolled ? "text-foreground hover:bg-accent" : "text-white")}>
           <ShoppingCart className="h-5 w-5" />
           {itemCount > 0 && (
             <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-accent text-accent-foreground text-xs font-bold">

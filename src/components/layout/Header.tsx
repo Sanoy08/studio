@@ -27,7 +27,7 @@ export function Header() {
 
   useEffect(() => {
     const handleScroll = () => {
-      setScrolled(window.scrollY > 10);
+      setScrolled(window.scrollY > 20); // Trigger after scrolling 20px
     };
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
@@ -36,25 +36,21 @@ export function Header() {
   return (
     <header
       className={cn(
-        'sticky top-0 z-40 w-full text-white transition-all duration-300 ease-in-out',
-        scrolled
-          ? 'bg-background/95 shadow-md backdrop-blur-sm'
-          : 'bg-transparent'
+        'sticky top-0 z-40 w-full transition-colors duration-300 ease-in-out',
+        scrolled ? 'bg-background/95 shadow-md backdrop-blur-sm' : 'bg-transparent'
       )}
     >
-      <div
-        className={cn(
-          'container flex flex-col justify-center gap-4 transition-all duration-300 ease-in-out',
-          scrolled ? 'py-2' : 'py-6'
-        )}
-      >
+      {/* This container sets a fixed height to prevent layout shifts during animation */}
+      <div className="container h-[128px] transition-all duration-300 ease-in-out flex flex-col justify-center">
+        {/* Top bar with Logo and Actions */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Logo scrolled={scrolled} />
             <span
               className={cn(
-                "font-bold text-orange-400 transition-all duration-300 ease-in-out",
-                scrolled ? 'text-xl' : 'text-2xl'
+                'font-bold text-orange-400 transition-all duration-300 ease-in-out',
+                scrolled ? 'text-xl' : 'text-2xl',
+                !scrolled && 'text-white' // Ensure text is white when not scrolled
               )}
               style={{ fontFamily: "'Hind Siliguri', sans-serif" }}
             >
@@ -68,7 +64,7 @@ export function Header() {
               size="icon"
               className={cn(
                 'hover:bg-white/20',
-                scrolled && 'text-foreground hover:bg-accent'
+                scrolled ? 'text-foreground hover:bg-accent' : 'text-white'
               )}
             >
               <Link href="#">
@@ -83,7 +79,7 @@ export function Header() {
                 size="icon"
                 className={cn(
                   'hover:bg-white/20',
-                  scrolled && 'text-foreground hover:bg-accent'
+                  scrolled ? 'text-foreground hover:bg-accent' : 'text-white'
                 )}
               >
                 <Link href="/admin">
@@ -98,7 +94,7 @@ export function Header() {
                 size="icon"
                 className={cn(
                   'hover:bg-white/20',
-                  scrolled && 'text-foreground hover:bg-accent'
+                  scrolled ? 'text-foreground hover:bg-accent' : 'text-white'
                 )}
               >
                 <Link href="/login">
@@ -108,11 +104,11 @@ export function Header() {
               </Button>
             )}
             <div className="hidden md:block">
-              <CartSheet />
+              <CartSheet scrolled={scrolled} />
             </div>
             <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
               <SheetTrigger asChild className="md:hidden">
-                <Button variant="ghost" size="icon" className={cn(scrolled && 'text-foreground')}>
+                <Button variant="ghost" size="icon" className={cn(scrolled ? 'text-foreground' : 'text-white')}>
                   <ShoppingCart className="h-5 w-5" />
                   <span className="sr-only">Toggle Menu</span>
                 </Button>
@@ -131,12 +127,14 @@ export function Header() {
             </Sheet>
           </div>
         </div>
+        
+        {/* Search Bar - Animates with transform and opacity */}
         <div
           className={cn(
             'relative w-full transition-all duration-300 ease-in-out',
             scrolled
-              ? 'opacity-0 pointer-events-none h-0'
-              : 'opacity-100 h-12'
+              ? 'h-0 opacity-0 -translate-y-4 pointer-events-none'
+              : 'h-12 opacity-100 translate-y-0 mt-4'
           )}
         >
           <Input
