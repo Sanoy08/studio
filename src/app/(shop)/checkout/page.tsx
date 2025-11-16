@@ -3,7 +3,6 @@
 import { useCart } from '@/hooks/useCart';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { formatPrice } from '@/lib/utils';
@@ -59,7 +58,7 @@ export default function CheckoutPage() {
 
   function onSubmit(values: z.infer<typeof checkoutSchema>) {
     console.log('Checkout submitted', values);
-    // Here you would integrate with Stripe or another payment processor
+    // Here you would integrate with a payment processor
     alert('Order placed successfully! (This is a demo)');
     clearCart();
     router.push('/');
@@ -71,8 +70,8 @@ export default function CheckoutPage() {
 
   return (
     <div className="container py-12">
-      <h1 className="text-3xl md:text-4xl font-bold font-headline mb-8">Checkout</h1>
-      <div className="grid lg:grid-cols-2 gap-12">
+      <h1 className="text-3xl md:text-4xl font-bold font-headline mb-8 text-center">Checkout</h1>
+      <div className="grid lg:grid-cols-2 gap-12 items-start">
         <div className="lg:col-span-1">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
@@ -141,7 +140,7 @@ export default function CheckoutPage() {
           </Form>
         </div>
         <div className="lg:col-span-1">
-          <Card className="sticky top-24">
+          <Card className="sticky top-24 bg-card">
             <CardHeader>
               <CardTitle>Order Summary</CardTitle>
             </CardHeader>
@@ -150,7 +149,7 @@ export default function CheckoutPage() {
                 {state.items.map(item => (
                   <div key={item.id} className="flex justify-between items-center">
                     <div className="flex items-center gap-4">
-                      <div className="relative h-16 w-16 rounded-md overflow-hidden">
+                      <div className="relative h-16 w-16 rounded-md overflow-hidden border">
                         <Image src={item.image.url} alt={item.name} fill className="object-cover" />
                       </div>
                       <div>
@@ -165,15 +164,15 @@ export default function CheckoutPage() {
               <Separator className="my-4" />
               <div className="space-y-2">
                 <div className="flex justify-between">
-                  <p>Subtotal</p>
+                  <p className="text-muted-foreground">Subtotal</p>
                   <p>{formatPrice(totalPrice)}</p>
                 </div>
                 <div className="flex justify-between">
-                  <p>Shipping</p>
+                  <p className="text-muted-foreground">Shipping</p>
                   <p>Free</p>
                 </div>
                 <div className="flex justify-between">
-                  <p>Taxes</p>
+                  <p className="text-muted-foreground">Taxes</p>
                   <p>Calculated at next step</p>
                 </div>
               </div>
