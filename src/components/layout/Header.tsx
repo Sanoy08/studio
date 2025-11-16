@@ -10,7 +10,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet';
-import { Search, Bell, User, ShoppingCart, Menu } from 'lucide-react';
+import { Search, Bell, User, Menu } from 'lucide-react';
 import { Logo } from '@/components/shared/Logo';
 import { CartSheet } from '@/components/shop/CartSheet';
 import { useState, useEffect } from 'react';
@@ -57,7 +57,7 @@ export function Header() {
                 </SheetHeader>
                 <nav className="mt-4">
                   <Link href="/" className="block py-2" onClick={closeMobileMenu}>Home</Link>
-                  <Link href="/products" className="block py-2" onClick={close_mobile_menu}>Products</Link>
+                  <Link href="/products" className="block py-2" onClick={closeMobileMenu}>Products</Link>
                   <Link href="/about" className="block py-2" onClick={closeMobileMenu}>About</Link>
                   <Link href="/contact" className="block py-2" onClick={closeMobileMenu}>Contact</Link>
                 </nav>
@@ -72,9 +72,6 @@ export function Header() {
             <CartSheet />
           </div>
         </div>
-        <div className="bg-gray-800 text-white text-xs text-center py-1">
-            <p>🎉 New menu items available! *T&C Applied*</p>
-        </div>
       </header>
     );
   }
@@ -88,7 +85,8 @@ export function Header() {
       )}
     >
       <div className={cn(
-          "container flex flex-col justify-center transition-all duration-300 ease-in-out h-20",
+          "container flex flex-col justify-center transition-all duration-300 ease-in-out",
+           scrolled ? 'h-16' : 'h-32'
         )}>
         {/* Top bar with Logo and Actions */}
         <div className="flex items-center justify-between">
@@ -169,7 +167,7 @@ export function Header() {
           className={cn(
             'relative w-full transition-all duration-300 ease-in-out px-4 pb-4',
             scrolled
-              ? 'h-0 opacity-0 -translate-y-4 pointer-events-none'
+              ? 'h-0 opacity-0 -translate-y-full pointer-events-none'
               : 'h-auto opacity-100 translate-y-0'
           )}
         >
@@ -184,8 +182,4 @@ export function Header() {
         </div>
     </header>
   );
-}
-
-function close_mobile_menu() {
-  throw new Error('Function not implemented.');
 }
