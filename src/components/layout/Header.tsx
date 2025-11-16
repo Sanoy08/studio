@@ -10,7 +10,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet';
-import { Search, Bell, User } from 'lucide-react';
+import { Search, Bell, User, ShoppingCart } from 'lucide-react';
 import { Logo } from '@/components/shared/Logo';
 import { CartSheet } from '@/components/shop/CartSheet';
 import { useState, useEffect } from 'react';
@@ -27,7 +27,7 @@ export function Header() {
 
   useEffect(() => {
     const handleScroll = () => {
-      setScrolled(window.scrollY > 50);
+      setScrolled(window.scrollY > 10);
     };
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
@@ -107,9 +107,28 @@ export function Header() {
                 </Link>
               </Button>
             )}
-            <div className="md:hidden">
+            <div className="hidden md:block">
               <CartSheet />
             </div>
+            <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+              <SheetTrigger asChild className="md:hidden">
+                <Button variant="ghost" size="icon" className={cn(scrolled && 'text-foreground')}>
+                  <ShoppingCart className="h-5 w-5" />
+                  <span className="sr-only">Toggle Menu</span>
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left">
+                <SheetHeader>
+                  <SheetTitle>Menu</SheetTitle>
+                </SheetHeader>
+                <nav className="mt-4">
+                  <Link href="/" className="block py-2" onClick={closeMobileMenu}>Home</Link>
+                  <Link href="/products" className="block py-2" onClick={closeMobileMenu}>Products</Link>
+                  <Link href="/about" className="block py-2" onClick={closeMobileMenu}>About</Link>
+                  <Link href="/contact" className="block py-2" onClick={closeMobileMenu}>Contact</Link>
+                </nav>
+              </SheetContent>
+            </Sheet>
           </div>
         </div>
         <div
