@@ -43,8 +43,8 @@ export function Header() {
   return (
     <header className={headerClasses}>
       <div className="container flex h-16 items-center">
-        {/* Mobile Menu & Logo */}
-        <div className="flex items-center gap-2">
+        {/* Left side: Mobile Menu & Logo */}
+        <div className="flex items-center gap-2 lg:w-1/4">
             <div className="md:hidden">
                 <Sheet>
                   <SheetTrigger asChild>
@@ -82,15 +82,15 @@ export function Header() {
         </div>
         
         {/* Centered Search Bar */}
-        <div className="flex-1 flex justify-center px-4">
-           <div className={cn(
-                "relative w-full transition-all duration-300",
-                isSearchFocused ? "md:max-w-md" : "md:max-w-sm"
-              )}>
+        <div className="flex flex-1 items-center justify-center px-4 lg:w-1/2">
+           <div className="relative w-full max-w-sm md:max-w-md">
             <Input
               type="search"
               placeholder="Search dishes..."
-              className="h-10 w-full rounded-full pl-10"
+              className={cn(
+                "h-10 w-full rounded-full pl-10 transition-all duration-300 ease-in-out",
+                isSearchFocused ? "md:w-full" : "md:w-3/4"
+              )}
               onFocus={() => setIsSearchFocused(true)}
               onBlur={() => setIsSearchFocused(false)}
             />
@@ -99,7 +99,7 @@ export function Header() {
         </div>
 
         {/* Right side icons */}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center justify-end gap-1 lg:w-1/4">
           <Button
             asChild
             variant="ghost"
