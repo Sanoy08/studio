@@ -9,10 +9,9 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
-  SheetClose,
   SheetTrigger,
 } from '@/components/ui/sheet';
-import { Search, Bell, User, Menu, ShoppingCart, Phone } from 'lucide-react';
+import { Search, Bell, User, Menu, Phone } from 'lucide-react';
 import { Logo } from '@/components/shared/Logo';
 import { CartSheet } from '@/components/shop/CartSheet';
 import { usePathname } from 'next/navigation';
@@ -48,40 +47,35 @@ export function Header() {
         <div className="flex items-center gap-2">
             <div className="md:hidden">
                 <Sheet>
-                <SheetTrigger asChild>
-                    <Button variant="ghost" size="icon">
-                    <Menu className="h-6 w-6" />
-                    <span className="sr-only">Open Menu</span>
-                    </Button>
-                </SheetTrigger>
-                <SheetContent side="left" className="w-[300px] bg-card p-0">
-                    <SheetHeader className="p-4 border-b">
-                      <SheetTitle className="sr-only">Mobile Menu</SheetTitle>
-                      <div className="flex justify-between items-center">
-                        <Logo />
-                        <SheetClose asChild>
-                            <Button variant="ghost" size="icon">
-                                <span className="sr-only">Close</span>
-                            </Button>
-                        </SheetClose>
+                  <SheetTrigger asChild>
+                      <Button variant="ghost" size="icon">
+                      <Menu className="h-6 w-6" />
+                      <span className="sr-only">Open Menu</span>
+                      </Button>
+                  </SheetTrigger>
+                  <SheetContent side="left" className="w-[300px] bg-card p-0">
+                      <SheetHeader className="p-4 border-b">
+                        <SheetTitle className="sr-only">Mobile Menu</SheetTitle>
+                        <div className="flex justify-between items-center">
+                          <Logo />
+                        </div>
+                      </SheetHeader>
+                      <div className="p-4">
+                      <div className="flex items-center gap-2 bg-muted p-2 rounded-lg text-xs">
+                          <Phone className="h-4 w-4"/>
+                          <span>+91 9123456789</span>
                       </div>
-                    </SheetHeader>
-                    <div className="p-4">
-                    <div className="flex items-center gap-2 bg-muted p-2 rounded-lg text-xs">
-                        <Phone className="h-4 w-4"/>
-                        <span>+91 9123456789</span>
-                    </div>
-                    </div>
-                    <nav className="flex flex-col p-4 space-y-2">
-                    <Link href="/" className="py-2 text-lg font-medium hover:text-primary">Home</Link>
-                    <Separator />
-                    <Link href="/products" className="py-2 text-lg font-medium hover:text-primary">Menu</Link>
-                    <Separator />
-                    <Link href="/about" className="py-2 text-lg font-medium hover:text-primary">About Us</Link>
-                    <Separator />
-                    <Link href="/contact" className="py-2 text-lg font-medium hover:text-primary">Contact</Link>
-                    </nav>
-                </SheetContent>
+                      </div>
+                      <nav className="flex flex-col p-4 space-y-2">
+                      <Link href="/" className="py-2 text-lg font-medium hover:text-primary">Home</Link>
+                      <Separator />
+                      <Link href="/products" className="py-2 text-lg font-medium hover:text-primary">Menu</Link>
+                      <Separator />
+                      <Link href="/about" className="py-2 text-lg font-medium hover:text-primary">About Us</Link>
+                      <Separator />
+                      <Link href="/contact" className="py-2 text-lg font-medium hover:text-primary">Contact</Link>
+                      </nav>
+                  </SheetContent>
                 </Sheet>
             </div>
             <Logo />
@@ -90,7 +84,7 @@ export function Header() {
         {/* Centered Search Bar */}
         <div className="flex-1 flex justify-center px-4">
            <div className={cn(
-                "relative w-full max-w-sm transition-all duration-300",
+                "relative w-full transition-all duration-300",
                 isSearchFocused ? "md:max-w-md" : "md:max-w-sm"
               )}>
             <Input
