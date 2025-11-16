@@ -2,7 +2,6 @@
 
 import React, { createContext, useReducer, ReactNode, useState, useEffect } from 'react';
 import type { CartItem, Product } from '@/lib/types';
-import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogFooter, AlertDialogAction } from '@/components/ui/alert-dialog';
 import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -13,7 +12,7 @@ type CartState = {
 type AlertState = {
   id: number;
   message: string;
-} | null;
+};
 
 type CartAction =
   | { type: 'ADD_ITEM'; payload: {product: Product, quantity: number} }
@@ -126,11 +125,8 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const addItem = (product: Product, quantity: number = 1) => {
     dispatch({ type: 'ADD_ITEM', payload: { product, quantity } });
     const existingItem = state.items.find(item => item.id === product.id);
-    const newQuantity = existingItem ? existingItem.quantity + quantity : quantity;
-    if (newQuantity > 1 && existingItem) {
-       // Don't show toast for quantity updates, only new items
-    } else {
-       showAlert(`Added ${quantity} "${product.name}" to cart!`);
+    if (!existingItem) {
+       showAlert(`Added to cart: "${product.name}"`);
     }
   };
 
@@ -155,15 +151,13 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   return (
     <CartContext.Provider value={{ state, addItem, removeItem, updateQuantity, clearCart, itemCount, totalPrice }}>
       {children}
-      <div className="fixed bottom-0 left-0 right-0 z-[100] p-4 flex flex-col items-center gap-2 pointer-events-none">
-          {alerts.map((alert) => (
-            <SweetAlertToast 
-                key={alert.id}
-                message={alert.message}
-                onDismiss={() => dismissAlert(alert.id)}
-            />
-          ))}
-      </div>
+      {alerts.map((alert) => (
+        <SweetAlertToast 
+            key={alert.id}
+            message={alert.message}
+            onDismiss={() => dismissAlert(alert.id)}
+        />
+      ))}
     </CartContext.Provider>
   );
 };
