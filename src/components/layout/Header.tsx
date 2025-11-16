@@ -20,9 +20,7 @@ import { Separator } from '../ui/separator';
 
 export function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
-  const [isSearchFocused, setIsSearchFocused] = useState(false);
   const pathname = usePathname();
-
   const isHomePage = pathname === '/';
 
   useEffect(() => {
@@ -32,8 +30,10 @@ export function Header() {
     if (isHomePage) {
       window.addEventListener('scroll', handleScroll);
       return () => window.removeEventListener('scroll', handleScroll);
+    } else {
+        setIsScrolled(true);
     }
-  }, [isHomePage]);
+  }, [isHomePage, pathname]);
   
   const isAuthenticated = false;
   
@@ -85,18 +85,12 @@ export function Header() {
         
         {/* Centered Search Bar */}
         <div className="flex flex-1 items-center justify-center px-4">
-          <div className="relative w-full md:max-w-[400px]">
+          <div className="relative w-full max-w-md">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground z-10" />
             <Input
               type="search"
               placeholder="Search dishes..."
-              className={cn(
-                "h-10 rounded-full pl-10 transition-all duration-300 ease-in-out w-full",
-                "md:w-full",
-                isSearchFocused ? "max-w-[400px]" : "max-w-[200px] md:max-w-full"
-              )}
-              onFocus={() => setIsSearchFocused(true)}
-              onBlur={() => setIsSearchFocused(false)}
+              className="h-10 w-full rounded-full pl-10"
             />
           </div>
         </div>
