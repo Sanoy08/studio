@@ -1,97 +1,76 @@
+'use client';
+
+import { useState } from 'react';
 import { ProductCard } from '@/components/shop/ProductCard';
-import { products, categories } from '@/lib/data';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Slider } from '@/components/ui/slider';
+import { products } from '@/lib/data';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search } from 'lucide-react';
+import { Search, Drumstick, Sprout, Egg, Beef, Thali } from 'lucide-react';
+
+const categoryIcons = {
+  All: Thali,
+  Veg: Sprout,
+  Chicken: Drumstick,
+  Egg: Egg,
+  Mutton: Beef,
+};
+
+const categories = ['All', 'Veg', 'Chicken', 'Egg', 'Mutton'];
 
 export default function ProductsPage() {
+  const [activeCategory, setActiveCategory] = useState('All');
+
+  const filteredProducts = products.filter(product => {
+    if (activeCategory === 'All') return true;
+    // This is a mock filter. In a real app, products would have a category field to filter by.
+    if (activeCategory === 'Veg') return product.category.name === 'Decor' || product.category.name === 'Lamps';
+    if (activeCategory === 'Chicken') return product.category.name === 'Chairs' || product.category.name === 'Sofas';
+    return true;
+  });
+
   return (
-    <div className="container py-12">
-      <div className="text-center mb-12">
-        <h1 className="text-4xl md:text-5xl font-bold font-headline">All Products</h1>
-        <p className="mt-2 text-muted-foreground max-w-2xl mx-auto">
-          Browse our entire collection of high-quality furniture and home decor.
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-        {/* Filters Sidebar */}
-        <aside className="lg:col-span-1">
-          <div className="sticky top-20">
-            <div className="mb-6 relative">
-              <Input type="search" placeholder="Search..." className="pl-10" />
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            </div>
-            <Accordion type="multiple" defaultValue={['category', 'price']} className="w-full">
-              <AccordionItem value="category">
-                <AccordionTrigger className="text-lg font-semibold">Category</AccordionTrigger>
-                <AccordionContent>
-                  <div className="grid gap-2">
-                    {categories.map(category => (
-                      <div key={category.id} className="flex items-center space-x-2">
-                        <Checkbox id={category.id} />
-                        <label
-                          htmlFor={category.id}
-                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+    <div className="container py-8">
+      <div className="mb-8">
+        <div className="relative mb-6">
+          <Input type="search" placeholder="Search by Biryani" className="pl-10 h-12 text-base" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+        </div>
+        <div className="flex items-center justify-center space-x-2 sm:space-x-4">
+            {categories.map(category => {
+                const Icon = categoryIcons[category as keyof typeof categoryIcons] || Thali;
+                return (
+                    <div key={category} className="text-center">
+                        <Button
+                            variant={activeCategory === category ? 'default' : 'ghost'}
+                            size="icon"
+                            className={`w-16 h-16 rounded-full flex flex-col items-center justify-center gap-1 shadow-md ${activeCategory === category ? 'bg-primary text-primary-foreground' : 'bg-card'}`}
+                            onClick={() => setActiveCategory(category)}
                         >
-                          {category.name}
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-              <AccordionItem value="price">
-                <AccordionTrigger className="text-lg font-semibold">Price Range</AccordionTrigger>
-                <AccordionContent>
-                  <div className="px-1">
-                    <Slider
-                        defaultValue={[0, 1500]}
-                        max={3000}
-                        step={50}
-                    />
-                    <div className="flex justify-between text-sm text-muted-foreground mt-2">
-                        <span>$0</span>
-                        <span>$3000</span>
+                            <Icon className="h-6 w-6" />
+                        </Button>
+                         <p className="text-xs mt-2 font-medium">{category}</p>
                     </div>
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-              <AccordionItem value="rating">
-                <AccordionTrigger className="text-lg font-semibold">Rating</AccordionTrigger>
-                <AccordionContent>
-                  <div className="grid gap-2">
-                    {[4, 3, 2, 1].map(rating => (
-                        <div key={rating} className="flex items-center space-x-2">
-                            <Checkbox id={`rating-${rating}`} />
-                            <label htmlFor={`rating-${rating}`} className="text-sm font-medium">
-                                {rating} stars & up
-                            </label>
-                        </div>
-                    ))}
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
-            <Button className="w-full mt-6">Apply Filters</Button>
-          </div>
-        </aside>
-
-        {/* Products Grid */}
-        <main className="lg:col-span-3">
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-            {products.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
-          <div className="mt-12 flex justify-center">
-            <Button variant="outline">Load More</Button>
-          </div>
-        </main>
+                )
+            })}
+        </div>
       </div>
+
+      <main>
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          {products.map((product) => (
+            <ProductCard key={product.id} product={product} />
+          ))}
+        </div>
+        <div className="mt-12 flex justify-center">
+            <div className="flex items-center gap-2">
+                <Button variant="outline" size="icon">&lt;</Button>
+                <Button variant="default" className="w-8 h-8 p-0">1</Button>
+                <Button variant="outline" className="w-8 h-8 p-0">2</Button>
+                <Button variant="outline" className="w-8 h-8 p-0">3</Button>
+                <Button variant="outline" size="icon">&gt;</Button>
+            </div>
+        </div>
+      </main>
     </div>
   );
 }
