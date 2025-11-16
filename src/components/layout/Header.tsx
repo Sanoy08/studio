@@ -12,7 +12,7 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet';
 import { Search, Bell, User, Menu, ShoppingCart, Phone, X } from 'lucide-react';
-import { Logo } from '@/components/shared/Logo';
+import { Logo } from '@/components/layout/Logo';
 import { CartSheet } from '@/components/shop/CartSheet';
 import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
@@ -73,6 +73,7 @@ export function Header() {
               </SheetTrigger>
               <SheetContent side="left" className="w-[300px] bg-primary text-primary-foreground p-0">
                 <SheetHeader className="p-4 border-b border-primary-foreground/20">
+                  <SheetTitle className="sr-only">Mobile Menu</SheetTitle>
                     <div className="flex justify-between items-center">
                         <Logo scrolled={true} />
                         <div className="flex items-center gap-2">
