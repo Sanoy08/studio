@@ -32,21 +32,29 @@ export function Header() {
   }, []);
 
   const isHomePage = pathname === '/';
-  const isAuthenticated = false; // Mock authentication state
+  const isAuthenticated = false;
   
   const headerClasses = cn(
-    "sticky top-0 z-40 w-full transition-all duration-300",
+    "sticky top-0 z-50 w-full transition-all duration-300",
     {
-      "bg-transparent text-white": isHomePage && !isScrolled,
-      "bg-primary text-primary-foreground shadow-md": !isHomePage || isScrolled,
+      "bg-primary/0": isHomePage && !isScrolled,
+      "bg-primary shadow-md": !isHomePage || isScrolled,
     }
   );
+
+  const textClasses = cn(
+    "transition-colors",
+    {
+        "text-white": isHomePage && !isScrolled,
+        "text-primary-foreground": !isHomePage || isScrolled
+    }
+  )
 
   const inputClasses = cn(
     "h-10 w-full rounded-full pl-10 transition-colors",
     {
         "bg-white/20 placeholder:text-white/80 text-white focus:bg-white/30": isHomePage && !isScrolled,
-        "bg-white/90 text-foreground placeholder:text-muted-foreground focus:bg-white": !isHomePage || isScrolled,
+        "bg-white text-foreground placeholder:text-muted-foreground focus:bg-white": !isHomePage || isScrolled,
     }
   )
 
@@ -75,7 +83,7 @@ export function Header() {
                     <SheetHeader className="p-4 border-b border-primary-foreground/20">
                       <div className="flex justify-between items-center">
                             <Logo variant="light" />
-                            <SheetClose>
+                             <SheetClose>
                                 <X className="h-6 w-6 text-primary-foreground" />
                             </SheetClose>
                         </div>
@@ -98,7 +106,7 @@ export function Header() {
                 </SheetContent>
                 </Sheet>
             </div>
-            <Logo variant={isHomePage && !isScrolled ? 'light' : 'dark'} isScrolled={isHomePage && isScrolled} />
+            <Logo isScrolled={isScrolled} isHomePage={isHomePage} />
         </div>
         
         {/* Centered Search Bar */}
@@ -117,7 +125,7 @@ export function Header() {
         </div>
 
         {/* Right side icons */}
-        <div className="flex items-center gap-1">
+        <div className={cn("flex items-center gap-1", textClasses)}>
           <Button
             asChild
             variant="ghost"

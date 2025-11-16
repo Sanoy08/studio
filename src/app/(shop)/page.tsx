@@ -13,47 +13,55 @@ export default function HomePage() {
   return (
     <div className="bg-background">
       {/* Hero Section with Search and Image Carousel */}
-      <section className="container pt-6">
+      <section className="relative -mt-16">
         <Carousel opts={{ loop: true }}>
           <CarouselContent>
             <CarouselItem>
-              <div className="relative h-64 overflow-hidden rounded-lg">
+              <div className="relative h-screen overflow-hidden">
                 <Image
-                  src="https://picsum.photos/seed/offer1/1200/400"
+                  src="https://picsum.photos/seed/offer1/1200/800"
                   alt="Special Offer 1"
                   data-ai-hint="food offer"
                   fill
                   className="object-cover"
                 />
-                <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                  <h2 className="text-white text-4xl font-bold">Special Discount Today!</h2>
+                <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center text-center text-white p-4">
+                  <h1 className="text-4xl md:text-6xl font-bold font-headline leading-tight">Welcome to Bumba's Kitchen</h1>
+                  <p className="mt-4 text-lg md:text-xl max-w-2xl">Delicious, home-cooked meals delivered right to your door. Experience the taste of tradition.</p>
+                  <Button asChild size="lg" className="mt-8">
+                    <Link href="/products">Explore Our Menu</Link>
+                  </Button>
                 </div>
               </div>
             </CarouselItem>
             <CarouselItem>
-              <div className="relative h-64 overflow-hidden rounded-lg">
+              <div className="relative h-screen overflow-hidden">
                 <Image
-                  src="https://picsum.photos/seed/offer2/1200/400"
+                  src="https://picsum.photos/seed/offer2/1200/800"
                   alt="Special Offer 2"
                   data-ai-hint="delicious food"
                   fill
                   className="object-cover"
                 />
-                 <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                  <h2 className="text-white text-4xl font-bold">Buy One Get One Free</h2>
+                 <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center text-center text-white p-4">
+                  <h1 className="text-4xl md:text-6xl font-bold font-headline leading-tight">Authentic Flavors, Modern Convenience</h1>
+                  <p className="mt-4 text-lg md:text-xl max-w-2xl">From classic Biryani to mouth-watering curries, every dish is prepared with love.</p>
+                   <Button asChild size="lg" className="mt-8">
+                    <Link href="/products">Order Now</Link>
+                  </Button>
                 </div>
               </div>
             </CarouselItem>
           </CarouselContent>
-          <CarouselPrevious className="left-2" />
-          <CarouselNext className="right-2" />
+          <CarouselPrevious className="left-4" />
+          <CarouselNext className="right-4" />
         </Carousel>
       </section>
 
       {/* Upcoming Special Offers */}
-      <section className="py-12">
+      <section className="py-12 md:py-24">
         <div className="container">
-          <h2 className="text-3xl font-bold text-center mb-8 font-headline">Upcoming Special Offers</h2>
+          <h2 className="text-3xl font-bold text-center mb-12 font-headline">Upcoming Special Offers</h2>
           <Carousel
             opts={{
               align: "start",
@@ -65,16 +73,19 @@ export default function HomePage() {
               {Array.from({ length: 5 }).map((_, index) => (
                 <CarouselItem key={index} className="md:basis-1/2 lg:basis-1/3">
                   <div className="p-1">
-                    <Card className="overflow-hidden">
-                      <CardContent className="p-0">
+                    <Card className="overflow-hidden group">
+                      <CardContent className="p-0 relative">
                          <Image
                           src={`https://picsum.photos/seed/special${index}/600/400`}
                           alt={`Special Offer ${index + 1}`}
                           data-ai-hint="indian thali"
                           width={600}
                           height={400}
-                          className="w-full h-auto object-cover"
+                          className="w-full h-auto object-cover transition-transform duration-300 group-hover:scale-105"
                         />
+                         <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                            <p className="text-white text-2xl font-bold">Weekend Special</p>
+                        </div>
                       </CardContent>
                     </Card>
                   </div>
@@ -88,12 +99,12 @@ export default function HomePage() {
       </section>
 
       {/* Veg Thali Menu */}
-      <section className="py-12 bg-card">
+      <section className="py-12 md:py-24 bg-card">
         <div className="container text-center">
           <h2 className="text-3xl font-bold mb-2 font-headline">Veg Thali Menu</h2>
-          <p className="text-muted-foreground mb-6">For 31 May 2024</p>
-          <div className="max-w-md mx-auto text-left">
-            <ul className="space-y-3 list-disc list-inside">
+          <p className="text-muted-foreground mb-8">For 31 May 2024</p>
+          <div className="max-w-md mx-auto text-left bg-background p-8 rounded-lg shadow-lg">
+            <ul className="space-y-3 list-disc list-inside text-lg">
               <li>ভাত, ডাল (Rice, Dal)</li>
               <li>পাঁচমিশালি সবজি (Mixed Vegetables)</li>
               <li>বেগুন ভাজা (Fried Eggplant)</li>
@@ -101,8 +112,8 @@ export default function HomePage() {
               <li>মিষ্টি দই (Sweet Yogurt)</li>
               <li>রসগোল্লা (Rasgulla)</li>
             </ul>
-            <p className="text-2xl font-bold text-accent mt-6">Price: ₹250</p>
-            <Button asChild size="lg" className="mt-4 w-full">
+            <p className="text-3xl font-bold text-accent mt-8 text-center">Price: ₹250</p>
+            <Button asChild size="lg" className="mt-6 w-full">
               <Link href="/products">View Details</Link>
             </Button>
           </div>
@@ -110,23 +121,23 @@ export default function HomePage() {
       </section>
 
       {/* Explore Our Bestsellers */}
-      <section className="py-16">
+      <section className="py-16 md:py-24">
         <div className="container">
-          <h2 className="text-3xl font-bold text-center mb-8 font-headline">Explore Our Bestsellers</h2>
+          <h2 className="text-3xl font-bold text-center mb-12 font-headline">Explore Our Bestsellers</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {bestSellers.map((product) => (
-              <Card key={product.id} className="flex flex-col overflow-hidden text-center transition-shadow hover:shadow-lg">
+              <Card key={product.id} className="flex flex-col overflow-hidden text-center transition-shadow hover:shadow-xl border-border">
                 <Link href={`/products/${product.slug}`} className="block relative aspect-square">
                   <Image
                     src={product.images[0].url}
                     alt={product.name}
                     data-ai-hint="indian food"
                     fill
-                    className="object-cover"
+                    className="object-cover group-hover:scale-105 transition-transform duration-300"
                   />
                 </Link>
-                <CardContent className="p-4 flex-grow flex flex-col">
-                  <h3 className="font-semibold text-lg mt-1">{product.name}</h3>
+                <CardContent className="p-4 flex-grow flex flex-col bg-card">
+                  <h3 className="font-semibold text-lg mt-1 flex-grow">{product.name}</h3>
                   <p className="font-bold text-accent text-xl mt-auto pt-2">₹{product.price}</p>
                 </CardContent>
               </Card>
@@ -136,15 +147,15 @@ export default function HomePage() {
       </section>
 
       {/* What Our Customers Say */}
-      <section className="py-12 bg-card">
+      <section className="py-12 md:py-24 bg-card">
         <div className="container">
-          <h2 className="text-3xl font-bold text-center mb-8 font-headline">What Our Customers Say</h2>
+          <h2 className="text-3xl font-bold text-center mb-12 font-headline">What Our Customers Say</h2>
           <div className="max-w-2xl mx-auto">
             <Card>
-              <CardContent className="p-6 text-center">
+              <CardContent className="p-8 text-center">
                 <Rating rating={5} className="justify-center mb-4" />
-                <p className="text-lg italic text-muted-foreground">"The food is very tasty and the price is reasonable. A must try for all food lovers."</p>
-                <p className="font-bold mt-4">- Ishita M.</p>
+                <blockquote className="text-lg italic text-muted-foreground">"The food is very tasty and the price is reasonable. A must try for all food lovers."</blockquote>
+                <p className="font-bold mt-6">- Ishita M.</p>
                 <p className="text-sm text-muted-foreground">Kolkata</p>
               </CardContent>
             </Card>
