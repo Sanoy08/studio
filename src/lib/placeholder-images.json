@@ -1,3 +1,58 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "hero-image",
+      "description": "A stylish living room scene to showcase modern furniture.",
+      "imageUrl": "https://images.unsplash.com/photo-1675528030415-dc82908eeb73?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxsaXZpbmclMjByb29tJTIwZnVybml0dXJlfGVufDB8fHx8MTc2MzMwODYxOHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "living room furniture"
+    },
+    {
+      "id": "product-1",
+      "description": "A sleek, modern chair.",
+      "imageUrl": "https://images.unsplash.com/photo-1722268994698-b85790171832?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxtb2Rlcm4lMjBjaGFpcnxlbnwwfHx8fDE3NjMyNjgyOTF8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "modern chair"
+    },
+    {
+      "id": "product-2",
+      "description": "A minimalist wooden desk.",
+      "imageUrl": "https://images.unsplash.com/photo-1693391399801-c20ffcb149c9?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHx3b29kZW4lMjBkZXNrfGVufDB8fHx8MTc2MzIzOTQ3N3ww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "wooden desk"
+    },
+    {
+      "id": "product-3",
+      "description": "A stylish sofa.",
+      "imageUrl": "https://images.unsplash.com/photo-1760611656047-3bb4cb4da3e4?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxzdHlsaXNoJTIwc29mYXxlbnwwfHx8fDE3NjMzMDg2MTh8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "stylish sofa"
+    },
+    {
+      "id": "product-4",
+      "description": "A contemporary floor lamp.",
+      "imageUrl": "https://images.unsplash.com/photo-1673939859210-23d8444237ff?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxmbG9vciUyMGxhbXB8ZW58MHx8fHwxNzYzMjIxMDYyfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "floor lamp"
+    },
+    {
+      "id": "product-5",
+      "description": "A modern coffee table.",
+      "imageUrl": "https://images.unsplash.com/photo-1581428982868-e410dd047a90?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxjb2ZmZWUlMjB0YWJsZXxlbnwwfHx8fDE3NjMyNzQ0NzZ8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "coffee table"
+    },
+    {
+      "id": "product-6",
+      "description": "A decorative vase set.",
+      "imageUrl": "https://images.unsplash.com/photo-1640538093387-1e763c53247c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxkZWNvcmF0aXZlJTIwdmFzZXxlbnwwfHx8fDE3NjMzMDg2MTh8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "decorative vase"
+    },
+    {
+      "id": "product-7",
+      "description": "Bookshelf.",
+      "imageUrl": "https://images.unsplash.com/photo-1605116959031-6e2d13a2ee56?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHxib29rc2hlbGZ8ZW58MHx8fHwxNzYzMjE4Njc2fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "bookshelf"
+    },
+    {
+      "id": "product-8",
+      "description": "Area rug.",
+      "imageUrl": "https://images.unsplash.com/photo-1761639502675-442d396c516f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxhcmVhJTIwcnVnfGVufDB8fHx8MTc2MzIyNzM4M3ww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "area rug"
+    }
+  ]
 }
