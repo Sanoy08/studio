@@ -52,7 +52,7 @@ export function Header() {
     <header
       className={cn(
         'sticky top-0 z-40 w-full transition-colors duration-300 ease-in-out',
-        scrolled ? 'bg-background shadow-md' : isHomePage ? 'bg-transparent' : 'bg-primary text-primary-foreground'
+        scrolled || !isHomePage ? 'bg-primary text-primary-foreground' : 'bg-transparent'
       )}
     >
       <div className="container flex items-center justify-between h-16">
