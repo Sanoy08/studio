@@ -7,7 +7,7 @@ export function Footer() {
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           <Logo />
           <p className="text-sm text-muted-foreground">
-            &copy; {new Date().getFullYear()} eShop Revitalize. All rights reserved.
+            &copy; {new Date().getFullYear()} Bumbas Kitchen. All rights reserved.
           </p>
         </div>
       </div>

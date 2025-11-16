@@ -4,8 +4,8 @@ import { Toaster } from '@/components/ui/toaster';
 import { CartProvider } from '@/context/CartProvider';
 
 export const metadata: Metadata = {
-  title: 'eShop Revitalize',
-  description: 'A modern, professional e-commerce platform.',
+  title: 'Bumbas Kitchen',
+  description: 'Your favorite food delivered.',
 };
 
 export default function RootLayout({
