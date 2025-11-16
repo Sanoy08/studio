@@ -1,16 +1,13 @@
 'use client';
 
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetFooter } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter, SheetTrigger } from "@/components/ui/sheet";
 import { useCart } from "@/hooks/useCart";
 import { ShoppingCart, Plus, Minus, Trash2 } from "lucide-react";
 import Image from 'next/image';
 import Link from "next/link";
 import { formatPrice } from "@/lib/utils";
-import { ScrollArea } from "../ui/scroll-area";
-import { Separator } from "../ui/separator";
 import { cn } from "@/lib/utils";
-import { useState, useEffect } from "react";
 
 export function CartSheet({ scrolled }: { scrolled?: boolean }) {
   const { state, itemCount, totalPrice, updateQuantity, removeItem } = useCart();
@@ -34,7 +31,7 @@ export function CartSheet({ scrolled }: { scrolled?: boolean }) {
         </SheetHeader>
         {itemCount > 0 ? (
           <>
-            <ScrollArea className="flex-grow pr-4 -mr-6">
+            <div className="flex-grow overflow-y-auto -mr-6 pr-6">
               <div className="flex flex-col gap-4 py-4">
                 {state.items.map(item => (
                   <div key={item.id} className="flex items-start gap-4">
@@ -60,7 +57,7 @@ export function CartSheet({ scrolled }: { scrolled?: boolean }) {
                   </div>
                 ))}
               </div>
-            </ScrollArea>
+            </div>
             <SheetFooter className="mt-auto border-t pt-4">
                 <div className="w-full space-y-4">
                     <div className="flex justify-between font-semibold text-lg">
