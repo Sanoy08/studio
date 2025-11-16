@@ -52,7 +52,7 @@ export function Header() {
     <header
       className={cn(
         'sticky top-0 z-40 w-full transition-colors duration-300 ease-in-out',
-        scrolled || !isHomePage ? 'bg-primary text-primary-foreground' : 'bg-transparent'
+        scrolled || !isHomePage ? 'bg-primary text-primary-foreground shadow-md' : 'bg-transparent'
       )}
     >
       <div className="container flex items-center justify-between h-16">
@@ -65,7 +65,7 @@ export function Header() {
                 className={cn(
                   'md:hidden',
                   scrolled || !isHomePage
-                    ? 'text-foreground'
+                    ? 'text-primary-foreground hover:bg-primary/80'
                     : 'text-white hover:bg-white/20'
                 )}
               >
@@ -83,7 +83,7 @@ export function Header() {
                         </a>
                     </div>
                  </div>
-              <SheetHeader className="flex flex-row items-center justify-between p-4">
+              <SheetHeader className="flex flex-row items-center justify-between p-4 border-b border-primary-foreground/20">
                  <Logo variant="light" />
                 <div className='flex items-center gap-2'>
                     <CartSheet />
@@ -95,30 +95,30 @@ export function Header() {
                 </div>
               </SheetHeader>
               <nav className="mt-4 text-lg font-medium">
-                <Link href="/" className="block py-3 px-6" onClick={closeMobileMenu}>Home</Link>
-                <Link href="/products" className="block py-3 px-6" onClick={closeMobileMenu}>Menu</Link>
-                <Link href="/cart" className="block py-3 px-6" onClick={closeMobileMenu}>Cart</Link>
-                <Link href="/contact" className="block py-3 px-6" onClick={closeMobileMenu}>Contact</Link>
+                <Link href="/" className="block py-3 px-6 hover:bg-primary/80" onClick={closeMobileMenu}>Home</Link>
+                <Link href="/products" className="block py-3 px-6 hover:bg-primary/80" onClick={closeMobileMenu}>Menu</Link>
+                <Link href="/cart" className="block py-3 px-6 hover:bg-primary/80" onClick={closeMobileMenu}>Cart</Link>
+                <Link href="/contact" className="block py-3 px-6 hover:bg-primary/80" onClick={closeMobileMenu}>Contact</Link>
                 <Separator className="bg-primary-foreground/20 my-2" />
-                <Link href="/login" className="block py-3 px-6" onClick={closeMobileMenu}>My Account</Link>
-                <Link href="#" className="block py-3 px-6" onClick={closeMobileMenu}>Logout</Link>
+                <Link href="/login" className="block py-3 px-6 hover:bg-primary/80" onClick={closeMobileMenu}>My Account</Link>
+                <Link href="#" className="block py-3 px-6 hover:bg-primary/80" onClick={closeMobileMenu}>Logout</Link>
               </nav>
             </SheetContent>
           </Sheet>
-          <div className="hidden md:block">
-            <Logo scrolled={scrolled || !isHomePage} variant={scrolled || !isHomePage ? 'dark' : 'light'} />
+          <div className={cn("hidden md:block", !isHomePage && "md:hidden")}>
+             <Logo scrolled={scrolled || !isHomePage} variant={scrolled || !isHomePage ? 'dark' : 'light'} />
           </div>
         </div>
 
-        <div className={cn("md:hidden flex-1 text-center", isHomePage && "hidden")}>
-            <Logo variant="light" scrolled={false} />
+        <div className={cn("flex-1 text-center", isHomePage && "hidden")}>
+             <Logo variant="light" scrolled={false} />
         </div>
 
         <nav className="hidden md:flex items-center gap-4 text-sm font-medium">
-            <Link href="/" className={cn('transition-colors', scrolled || !isHomePage ? 'text-foreground hover:text-primary' : 'text-white hover:text-white/80')}>Home</Link>
-            <Link href="/products" className={cn('transition-colors', scrolled || !isHomePage ? 'text-foreground hover:text-primary' : 'text-white hover:text-white/80')}>Menu</Link>
-            <Link href="/about" className={cn('transition-colors', scrolled || !isHomePage ? 'text-foreground hover:text-primary' : 'text-white hover:text-white/80')}>About</Link>
-            <Link href="/contact" className={cn('transition-colors', scrolled || !isHomePage ? 'text-foreground hover:text-primary' : 'text-white hover:text-white/80')}>Contact</Link>
+            <Link href="/" className={cn('transition-colors', scrolled || !isHomePage ? 'text-primary-foreground hover:text-primary-foreground/80' : 'text-white hover:text-white/80')}>Home</Link>
+            <Link href="/products" className={cn('transition-colors', scrolled || !isHomePage ? 'text-primary-foreground hover:text-primary-foreground/80' : 'text-white hover:text-white/80')}>Menu</Link>
+            <Link href="/about" className={cn('transition-colors', scrolled || !isHomePage ? 'text-primary-foreground hover:text-primary-foreground/80' : 'text-white hover:text-white/80')}>About</Link>
+            <Link href="/contact" className={cn('transition-colors', scrolled || !isHomePage ? 'text-primary-foreground hover:text-primary-foreground/80' : 'text-white hover:text-white/80')}>Contact</Link>
         </nav>
         
         <div className="flex items-center gap-2">
@@ -126,16 +126,16 @@ export function Header() {
               <Input
                 type="search"
                 placeholder="Search..."
-                className={cn('pl-10 h-9 transition-all duration-300', scrolled ? 'bg-secondary' : 'bg-white/20 text-white placeholder:text-white/70 border-white/30 focus:bg-white focus:text-foreground focus:placeholder:text-muted-foreground')}
+                className={cn('pl-10 h-9 transition-all duration-300', scrolled || !isHomePage ? 'bg-primary/80 border-primary-foreground/30 text-primary-foreground placeholder:text-primary-foreground/70 focus:bg-white focus:text-foreground focus:placeholder:text-muted-foreground' : 'bg-white/20 text-white placeholder:text-white/70 border-white/30 focus:bg-white focus:text-foreground focus:placeholder:text-muted-foreground')}
               />
-              <Search className={cn('absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4', scrolled ? 'text-muted-foreground' : 'text-white/70')} />
+              <Search className={cn('absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4', scrolled || !isHomePage ? 'text-primary-foreground/70' : 'text-white/70')} />
             </div>
 
             <Button
               asChild
               variant="ghost"
               size="icon"
-              className={cn('hidden md:inline-flex', scrolled || !isHomePage ? 'text-foreground hover:bg-accent' : 'text-white hover:bg-white/20')}
+              className={cn('hidden md:inline-flex', scrolled || !isHomePage ? 'text-primary-foreground hover:bg-primary/80' : 'text-white hover:bg-white/20')}
             >
               <Link href="#">
                 <Bell className="h-5 w-5" />
@@ -148,7 +148,7 @@ export function Header() {
                 asChild
                 variant="ghost"
                 size="icon"
-                className={cn('hidden md:inline-flex', scrolled || !isHomePage ? 'text-foreground hover:bg-accent' : 'text-white hover:bg-white/20')}
+                className={cn('hidden md:inline-flex', scrolled || !isHomePage ? 'text-primary-foreground hover:bg-primary/80' : 'text-white hover:bg-white/20')}
               >
                 <Link href="/admin">
                   <User className="h-5 w-5" />
@@ -160,7 +160,7 @@ export function Header() {
                 asChild
                 variant="ghost"
                 size="icon"
-                className={cn('hidden md:inline-flex', scrolled || !isHomePage ? 'text-foreground hover:bg-accent' : 'text-white hover:bg-white/20')}
+                className={cn('hidden md:inline-flex', scrolled || !isHomePage ? 'text-primary-foreground hover:bg-primary/80' : 'text-white hover:bg-white/20')}
               >
                 <Link href="/login">
                   <User className="h-5 w-5" />
