@@ -3,7 +3,7 @@
 import React, { createContext, useReducer, ReactNode, useState, useEffect } from 'react';
 import type { CartItem, Product } from '@/lib/types';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogFooter, AlertDialogAction } from '@/components/ui/alert-dialog';
-import { CheckCircle } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 type CartState = {
@@ -12,8 +12,7 @@ type CartState = {
 
 type AlertState = {
   id: number;
-  title: string;
-  description: string;
+  message: string;
 } | null;
 
 type CartAction =
@@ -85,7 +84,7 @@ export const CartContext = createContext<{
   totalPrice: number;
 } | undefined>(undefined);
 
-const SweetAlertToast = ({ title, description, onDismiss }: { title: string, description: string, onDismiss: () => void }) => {
+const SweetAlertToast = ({ message, onDismiss }: { message: string, onDismiss: () => void }) => {
     const [visible, setVisible] = useState(false);
 
     useEffect(() => {
@@ -93,21 +92,20 @@ const SweetAlertToast = ({ title, description, onDismiss }: { title: string, des
         const timer = setTimeout(() => {
             setVisible(false);
             setTimeout(onDismiss, 300); // Wait for fade-out animation
-        }, 3000);
+        }, 2000);
 
         return () => clearTimeout(timer);
     }, [onDismiss]);
 
     return (
         <div className={cn(
-            "fixed top-5 left-1/2 -translate-x-1/2 z-[100] p-4 rounded-lg shadow-lg bg-background border flex items-center gap-4 transition-all duration-300",
-            visible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-10"
+            "fixed bottom-20 left-1/2 -translate-x-1/2 z-[100] p-3 rounded-lg shadow-lg bg-background border flex items-center gap-3 transition-all duration-300 w-auto",
+            visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
         )}>
-            <CheckCircle className="h-6 w-6 text-green-500" />
-            <div>
-                <p className="font-semibold">{title}</p>
-                <p className="text-sm text-muted-foreground">{description}</p>
+            <div className="flex-shrink-0 h-6 w-6 rounded-full bg-green-500 flex items-center justify-center">
+                <Check className="h-4 w-4 text-white" />
             </div>
+            <p className="text-sm text-foreground whitespace-nowrap">{message}</p>
         </div>
     );
 };
@@ -117,8 +115,8 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [state, dispatch] = useReducer(cartReducer, initialState);
   const [alerts, setAlerts] = useState<AlertState[]>([]);
 
-  const showAlert = (title: string, description: string) => {
-    setAlerts(prevAlerts => [...prevAlerts, { id: Date.now(), title, description }]);
+  const showAlert = (message: string) => {
+    setAlerts(prevAlerts => [...prevAlerts, { id: Date.now(), message }]);
   };
   
   const dismissAlert = (id: number) => {
@@ -127,7 +125,13 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
   const addItem = (product: Product, quantity: number = 1) => {
     dispatch({ type: 'ADD_ITEM', payload: { product, quantity } });
-    showAlert("Added to Cart!", `${quantity} x ${product.name}`);
+    const existingItem = state.items.find(item => item.id === product.id);
+    const newQuantity = existingItem ? existingItem.quantity + quantity : quantity;
+    if (newQuantity > 1 && existingItem) {
+       // Don't show toast for quantity updates, only new items
+    } else {
+       showAlert(`Added ${quantity} "${product.name}" to cart!`);
+    }
   };
 
   const removeItem = (id: string) => {
@@ -151,12 +155,11 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   return (
     <CartContext.Provider value={{ state, addItem, removeItem, updateQuantity, clearCart, itemCount, totalPrice }}>
       {children}
-      <div className="fixed top-0 left-0 right-0 z-[100] p-4 flex flex-col items-center gap-2 pointer-events-none">
+      <div className="fixed bottom-0 left-0 right-0 z-[100] p-4 flex flex-col items-center gap-2 pointer-events-none">
           {alerts.map((alert) => (
             <SweetAlertToast 
                 key={alert.id}
-                title={alert.title}
-                description={alert.description}
+                message={alert.message}
                 onDismiss={() => dismissAlert(alert.id)}
             />
           ))}
