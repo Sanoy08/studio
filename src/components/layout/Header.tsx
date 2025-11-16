@@ -90,8 +90,8 @@ export function Header() {
               placeholder="Search dishes..."
               className={cn(
                 "h-10 rounded-full pl-10 transition-all duration-300 ease-in-out",
-                "w-full max-w-[200px] md:max-w-[250px]",
-                "focus:max-w-[400px]"
+                "w-full max-w-[200px] md:max-w-[400px]",
+                "focus:max-w-[400px] md:focus:max-w-[400px]"
               )}
               onFocus={() => setIsSearchFocused(true)}
               onBlur={() => setIsSearchFocused(false)}
