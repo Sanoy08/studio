@@ -27,8 +27,6 @@ export default function HomePage() {
                   className="object-cover"
                 />
                 <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center text-center text-white p-4">
-                  <h1 className="text-4xl md:text-6xl font-bold font-headline leading-tight">Welcome to Bumba's Kitchen</h1>
-                  <p className="mt-4 text-lg md:text-xl max-w-2xl">Delicious, home-cooked meals delivered right to your door. Experience the taste of tradition.</p>
                   <Button asChild size="lg" className="mt-8">
                     <Link href="/products">Explore Our Menu</Link>
                   </Button>
@@ -45,8 +43,6 @@ export default function HomePage() {
                   className="object-cover"
                 />
                  <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center text-center text-white p-4">
-                  <h1 className="text-4xl md:text-6xl font-bold font-headline leading-tight">Authentic Flavors, Modern Convenience</h1>
-                  <p className="mt-4 text-lg md:text-xl max-w-2xl">From classic Biryani to mouth-watering curries, every dish is prepared with love.</p>
                    <Button asChild size="lg" className="mt-8">
                     <Link href="/products">Order Now</Link>
                   </Button>
