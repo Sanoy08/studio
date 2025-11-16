@@ -41,21 +41,14 @@ export function Header() {
       )}
     >
       {/* This container sets a fixed height to prevent layout shifts during animation */}
-      <div className="container h-[128px] transition-all duration-300 ease-in-out flex flex-col justify-center">
+      <div className={cn(
+          "container flex flex-col justify-center transition-all duration-300 ease-in-out",
+          scrolled ? "h-16" : "h-32"
+        )}>
         {/* Top bar with Logo and Actions */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Logo scrolled={scrolled} />
-            <span
-              className={cn(
-                'font-bold text-orange-400 transition-all duration-300 ease-in-out',
-                scrolled ? 'text-xl' : 'text-2xl',
-                !scrolled && 'text-white' // Ensure text is white when not scrolled
-              )}
-              style={{ fontFamily: "'Hind Siliguri', sans-serif" }}
-            >
-              मंगल থালি
-            </span>
           </div>
           <div className="flex items-center gap-2">
             <Button
