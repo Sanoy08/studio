@@ -3,11 +3,11 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetDescription } from "@/components/ui/sheet";
 import { Search, Menu, User, LogIn } from "lucide-react";
 import { Logo } from "@/components/shared/Logo";
 import { CartSheet } from "@/components/shop/CartSheet";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
@@ -19,13 +19,25 @@ const navLinks = [
 
 export function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const pathname = usePathname();
   const isAuthenticated = false; // Mock authentication state
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 10);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   const closeMobileMenu = () => setIsMobileMenuOpen(false);
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className={cn(
+      "sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 transition-all duration-300",
+      scrolled ? "shadow-md" : ""
+    )}>
       <div className="container flex h-16 items-center">
         <div className="mr-4 hidden md:flex">
           <Logo />
@@ -43,6 +55,7 @@ export function Header() {
               <SheetTitle className="p-4">
                 <Logo />
               </SheetTitle>
+              <SheetDescription className="sr-only">Mobile Navigation Menu</SheetDescription>
             </SheetHeader>
             <nav className="flex flex-col gap-4 p-4">
               {navLinks.map((link) => (
