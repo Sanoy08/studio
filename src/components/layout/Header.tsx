@@ -13,38 +13,57 @@ import { cn } from "@/lib/utils";
 
 export function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const isAuthenticated = false; // Mock authentication state
   const pathname = usePathname();
 
   const closeMobileMenu = () => setIsMobileMenuOpen(false);
 
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 10);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   return (
     <header 
-      className="sticky top-0 z-40 w-full bg-cover bg-center text-white"
-      style={{backgroundImage: "url('/header-bg.png')"}}
+      className={cn(
+        "sticky top-0 z-40 w-full text-white transition-all duration-300",
+        scrolled ? "bg-background/95 shadow-md backdrop-blur-sm" : "bg-transparent"
+      )}
     >
-      <div className="container flex h-28 flex-col justify-center gap-4">
+      <div 
+        className={cn(
+          "container flex flex-col justify-center gap-4 transition-all duration-300",
+          scrolled ? "h-20" : "h-28"
+        )}
+      >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Logo />
-            <span className="text-2xl font-bold text-orange-400" style={{fontFamily: "'Hind Siliguri', sans-serif"}}>মঙ্গল থালি</span>
+            <Logo scrolled={scrolled} />
+            <span className={cn(
+              "font-bold text-orange-400 transition-all duration-300",
+              scrolled ? "text-xl" : "text-2xl"
+            )} style={{fontFamily: "'Hind Siliguri', sans-serif"}}>मंगल থালি</span>
           </div>
           <div className="flex items-center gap-2">
-             <Button asChild variant="ghost" size="icon" className="hover:bg-white/20">
+             <Button asChild variant="ghost" size="icon" className={cn("hover:bg-white/20", scrolled && "text-foreground hover:bg-accent")}>
               <Link href="#">
                 <Bell className="h-5 w-5" />
                 <span className="sr-only">Notifications</span>
               </Link>
             </Button>
             {isAuthenticated ? (
-              <Button asChild variant="ghost" size="icon" className="hover:bg-white/20">
+              <Button asChild variant="ghost" size="icon" className={cn("hover:bg-white/20", scrolled && "text-foreground hover:bg-accent")}>
                 <Link href="/admin">
                   <User className="h-5 w-5" />
                   <span className="sr-only">My Account</span>
                 </Link>
               </Button>
             ) : (
-              <Button asChild variant="ghost" size="icon" className="hover:bg-white/20">
+              <Button asChild variant="ghost" size="icon" className={cn("hover:bg-white/20", scrolled && "text-foreground hover:bg-accent")}>
                 <Link href="/login">
                   <User className="h-5 w-5" />
                    <span className="sr-only">Login</span>
@@ -56,7 +75,7 @@ export function Header() {
             </div>
           </div>
         </div>
-        <div className="relative w-full">
+        <div className={cn("relative w-full transition-all duration-300", scrolled && "hidden")}>
             <Input type="search" placeholder="Search for dishes and more..." className="pl-10 h-12 text-base bg-background text-foreground" />
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
         </div>
