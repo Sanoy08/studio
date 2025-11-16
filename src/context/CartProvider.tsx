@@ -1,17 +1,24 @@
 'use client';
 
-import React, { createContext, useReducer, ReactNode } from 'react';
+import React, { createContext, useReducer, ReactNode, useState, useEffect } from 'react';
 import type { CartItem, Product } from '@/lib/types';
-import { useToast } from '@/hooks/use-toast';
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogFooter, AlertDialogAction } from '@/components/ui/alert-dialog';
+import { CheckCircle } from 'lucide-react';
 
 type CartState = {
   items: CartItem[];
 };
 
+type AlertState = {
+  isOpen: boolean;
+  title: string;
+  description: string;
+} | null;
+
 type CartAction =
   | { type: 'ADD_ITEM'; payload: {product: Product, quantity: number} }
   | { type: 'REMOVE_ITEM'; payload: { id: string } }
-  | { type: 'UPDATE_QUANTITY'; payload: { id: string; quantity: number } }
+  | { type: 'UPDATE_QUANTITY'; payload: { id:string; quantity: number } }
   | { type: 'CLEAR_CART' };
 
 const cartReducer = (state: CartState, action: CartAction): CartState => {
@@ -37,17 +44,12 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
       return { ...state, items: [...state.items, newItem] };
     }
     case 'REMOVE_ITEM': {
-      const itemToRemove = state.items.find(item => item.id === action.payload.id);
-      if (!itemToRemove) return state;
-       return {
+      return {
         ...state,
         items: state.items.filter(item => item.id !== action.payload.id),
       };
     }
     case 'UPDATE_QUANTITY': {
-      const itemToUpdate = state.items.find(item => item.id === action.payload.id);
-      if (!itemToUpdate) return state;
-
       if (action.payload.quantity <= 0) {
         return {
           ...state,
@@ -82,47 +84,58 @@ export const CartContext = createContext<{
   totalPrice: number;
 } | undefined>(undefined);
 
+const SweetAlert = ({ open, onOpenChange, title, description }: { open: boolean, onOpenChange: (open: boolean) => void, title: string, description: string }) => {
+    return (
+        <AlertDialog open={open} onOpenChange={onOpenChange}>
+            <AlertDialogContent className="w-[90vw] max-w-sm rounded-lg">
+                <AlertDialogHeader className="items-center text-center">
+                    <CheckCircle className="h-16 w-16 text-green-500 mb-4" />
+                    <AlertDialogTitle className="text-2xl font-bold">{title}</AlertDialogTitle>
+                    <p className="text-muted-foreground">{description}</p>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogAction onClick={() => onOpenChange(false)} className="w-full">OK</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+    )
+}
+
 export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [state, dispatch] = useReducer(cartReducer, initialState);
-  const { toast } = useToast();
+  const [alertState, setAlertState] = useState<AlertState>(null);
+
+  useEffect(() => {
+    if (alertState?.isOpen) {
+      const timer = setTimeout(() => {
+        setAlertState(null);
+      }, 3000); // Auto-close after 3 seconds
+      return () => clearTimeout(timer);
+    }
+  }, [alertState]);
+
+  const showAlert = (title: string, description: string) => {
+    setAlertState({ isOpen: true, title, description });
+  };
 
   const addItem = (product: Product, quantity: number = 1) => {
     dispatch({ type: 'ADD_ITEM', payload: { product, quantity } });
-    toast({
-      title: "Added to Cart",
-      description: `${quantity} x ${product.name} has been added.`,
-      variant: 'success'
-    });
+    showAlert("Added to Cart!", `${quantity} x ${product.name} has been added.`);
   };
 
   const removeItem = (id: string) => {
     const itemToRemove = state.items.find(item => item.id === id);
     if(itemToRemove){
         dispatch({ type: 'REMOVE_ITEM', payload: { id } });
-        toast({
-            title: "Item Removed",
-            description: `${itemToRemove.name} has been removed from your cart.`,
-            variant: "destructive"
-        });
     }
   };
 
   const updateQuantity = (id: string, quantity: number) => {
-    const itemToUpdate = state.items.find(item => item.id === id);
-    if(itemToUpdate && quantity <= 0) {
-        removeItem(id);
-    } else {
-        dispatch({ type: 'UPDATE_QUANTITY', payload: { id, quantity } });
-    }
+    dispatch({ type: 'UPDATE_QUANTITY', payload: { id, quantity } });
   };
   
   const clearCart = () => {
     dispatch({ type: 'CLEAR_CART' });
-    toast({
-        title: "Cart Cleared",
-        description: "All items have been removed from your cart.",
-        variant: "destructive"
-    });
   };
 
   const itemCount = state.items.reduce((count, item) => count + item.quantity, 0);
@@ -131,6 +144,14 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   return (
     <CartContext.Provider value={{ state, addItem, removeItem, updateQuantity, clearCart, itemCount, totalPrice }}>
       {children}
+      {alertState?.isOpen && (
+        <SweetAlert 
+            open={alertState.isOpen}
+            onOpenChange={(open) => setAlertState(open ? alertState : null)}
+            title={alertState.title}
+            description={alertState.description}
+        />
+      )}
     </CartContext.Provider>
   );
 };
