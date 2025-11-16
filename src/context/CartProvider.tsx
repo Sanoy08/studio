@@ -90,7 +90,8 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     dispatch({ type: 'ADD_ITEM', payload: { product, quantity } });
     toast({
       title: "Added to Cart",
-      description: `${quantity} x ${product.name} has been added to your cart.`,
+      description: `${quantity} x ${product.name} has been added.`,
+      variant: 'success'
     });
   };
 
