@@ -16,14 +16,14 @@ export function MobileNav() {
   const pathname = usePathname();
 
   return (
-    <div className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-gray-900 border-t border-gray-800 shadow-t-lg z-50">
+    <div className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-card border-t border-border shadow-t-lg z-50">
       <nav className="flex justify-around items-center h-full">
         {navLinks.map((link) => {
           const isActive = pathname === link.href;
           return (
             <Link key={link.href} href={link.href} className="flex flex-col items-center justify-center text-center w-full h-full">
-              <link.icon className={cn('h-6 w-6 mb-1', isActive ? 'text-white' : 'text-gray-400')} />
-              <span className={cn('text-xs font-medium', isActive ? 'text-white' : 'text-gray-400')}>
+              <link.icon className={cn('h-6 w-6 mb-1', isActive ? 'text-primary' : 'text-muted-foreground')} />
+              <span className={cn('text-xs font-medium', isActive ? 'text-primary' : 'text-muted-foreground')}>
                 {link.label}
               </span>
             </Link>

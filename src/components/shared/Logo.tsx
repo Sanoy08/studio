@@ -13,6 +13,8 @@ export function Logo({ scrolled, variant = 'dark' }: { scrolled?: boolean, varia
     )
   }
   
+  const textSize = scrolled ? 'text-lg' : 'text-xl';
+
   return (
     <Link href="/" className="flex items-center gap-2">
       <span className={cn(
