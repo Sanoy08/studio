@@ -25,7 +25,7 @@ import {
 } from '@/components/ui/sidebar'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
-import { Logo } from '@/components/shared/Logo'
+import { Logo } from '@/components/layout/Logo'
 import { cn } from '@/lib/utils'
 
 const adminNavLinks = [

@@ -9,21 +9,13 @@ import Link from "next/link";
 import { formatPrice } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
-export function CartSheet({ theme = 'dark' }: { theme?: 'light' | 'dark' }) {
+export function CartSheet() {
   const { state, itemCount, totalPrice, updateQuantity, removeItem } = useCart();
   
-  const iconClasses = cn(
-    "relative",
-    {
-      "text-white hover:text-white/80 hover:bg-white/10": theme === 'light',
-      "text-primary-foreground hover:text-primary-foreground/80 hover:bg-white/10": theme === 'dark'
-    }
-  )
-
   return (
     <Sheet>
       <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" className={iconClasses}>
+        <Button variant="ghost" size="icon" className="relative">
           <ShoppingCart className="h-5 w-5" />
           {itemCount > 0 && (
             <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">

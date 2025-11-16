@@ -13,14 +13,13 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet';
 import { Search, Bell, User, Menu, ShoppingCart, Phone, X } from 'lucide-react';
-import { Logo } from '@/components/layout/Logo';
+import { Logo } from '@/components/shared/Logo';
 import { CartSheet } from '@/components/shop/CartSheet';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Separator } from '../ui/separator';
 
 export function Header() {
-  const pathname = usePathname();
   const [isScrolled, setIsScrolled] = useState(false);
 
   useEffect(() => {
@@ -31,38 +30,13 @@ export function Header() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const isHomePage = pathname === '/';
   const isAuthenticated = false;
   
   const headerClasses = cn(
-    "sticky top-0 z-50 w-full transition-all duration-300",
+    "sticky top-0 z-50 w-full transition-all duration-300 bg-background/80 backdrop-blur-sm",
     {
-      "bg-primary/0": isHomePage && !isScrolled,
-      "bg-primary shadow-md": !isHomePage || isScrolled,
-    }
-  );
-
-  const textClasses = cn(
-    "transition-colors",
-    {
-        "text-white": isHomePage && !isScrolled,
-        "text-primary-foreground": !isHomePage || isScrolled
-    }
-  )
-
-  const inputClasses = cn(
-    "h-10 w-full rounded-full pl-10 transition-colors",
-    {
-        "bg-white/20 placeholder:text-white/80 text-white focus:bg-white/30": isHomePage && !isScrolled,
-        "bg-white text-foreground placeholder:text-muted-foreground focus:bg-white": !isHomePage || isScrolled,
-    }
-  )
-
-  const iconButtonClasses = cn(
-    "transition-colors",
-    {
-        "text-white hover:text-white/80 hover:bg-white/10": isHomePage && !isScrolled,
-        "text-primary-foreground hover:text-primary-foreground/80 hover:bg-white/10": !isHomePage || isScrolled
+      "border-b": isScrolled,
+      "border-transparent": !isScrolled,
     }
   );
 
@@ -74,39 +48,39 @@ export function Header() {
             <div className="md:hidden">
                 <Sheet>
                 <SheetTrigger asChild>
-                    <Button variant="ghost" size="icon" className={iconButtonClasses}>
+                    <Button variant="ghost" size="icon">
                     <Menu className="h-6 w-6" />
                     <span className="sr-only">Open Menu</span>
                     </Button>
                 </SheetTrigger>
-                <SheetContent side="left" className="w-[300px] bg-primary text-primary-foreground p-0">
-                    <SheetHeader className="p-4 border-b border-primary-foreground/20">
+                <SheetContent side="left" className="w-[300px] bg-card p-0">
+                    <SheetHeader className="p-4 border-b">
                       <div className="flex justify-between items-center">
-                            <Logo variant="light" />
+                            <Logo />
                              <SheetClose>
-                                <X className="h-6 w-6 text-primary-foreground" />
+                                <X className="h-6 w-6" />
                             </SheetClose>
                         </div>
                     </SheetHeader>
                     <div className="p-4">
-                    <div className="flex items-center gap-2 bg-white/20 p-2 rounded-lg text-xs">
+                    <div className="flex items-center gap-2 bg-muted p-2 rounded-lg text-xs">
                         <Phone className="h-4 w-4"/>
                         <span>+91 9123456789</span>
                     </div>
                     </div>
                     <nav className="flex flex-col p-4 space-y-2">
-                    <Link href="/" className="py-2 text-lg font-medium hover:text-accent">Home</Link>
-                    <Separator className="bg-primary-foreground/20"/>
-                    <Link href="/products" className="py-2 text-lg font-medium hover:text-accent">Menu</Link>
-                    <Separator className="bg-primary-foreground/20"/>
-                    <Link href="/about" className="py-2 text-lg font-medium hover:text-accent">About Us</Link>
-                    <Separator className="bg-primary-foreground/20"/>
-                    <Link href="/contact" className="py-2 text-lg font-medium hover:text-accent">Contact</Link>
+                    <Link href="/" className="py-2 text-lg font-medium hover:text-primary">Home</Link>
+                    <Separator />
+                    <Link href="/products" className="py-2 text-lg font-medium hover:text-primary">Menu</Link>
+                    <Separator />
+                    <Link href="/about" className="py-2 text-lg font-medium hover:text-primary">About Us</Link>
+                    <Separator />
+                    <Link href="/contact" className="py-2 text-lg font-medium hover:text-primary">Contact</Link>
                     </nav>
                 </SheetContent>
                 </Sheet>
             </div>
-            <Logo isScrolled={isScrolled} isHomePage={isHomePage} />
+            <Logo />
         </div>
         
         {/* Centered Search Bar */}
@@ -115,22 +89,19 @@ export function Header() {
             <Input
               type="search"
               placeholder="Search dishes..."
-              className={inputClasses}
+              className="h-10 w-full rounded-full pl-10"
             />
-            <Search className={cn("absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 transition-colors", {
-                "text-white/80": isHomePage && !isScrolled,
-                "text-muted-foreground": !isHomePage || isScrolled
-            })} />
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
           </div>
         </div>
 
         {/* Right side icons */}
-        <div className={cn("flex items-center gap-1", textClasses)}>
+        <div className="flex items-center gap-1">
           <Button
             asChild
             variant="ghost"
             size="icon"
-            className={cn("hidden md:inline-flex", iconButtonClasses)}
+            className="hidden md:inline-flex"
           >
             <Link href="#">
               <Bell className="h-5 w-5" />
@@ -138,17 +109,17 @@ export function Header() {
             </Link>
           </Button>
 
-          <CartSheet theme={isHomePage && !isScrolled ? 'light' : 'dark'}/>
+          <CartSheet />
 
           {isAuthenticated ? (
-            <Button asChild variant="ghost" size="icon" className={iconButtonClasses}>
+            <Button asChild variant="ghost" size="icon">
               <Link href="/admin">
                 <User className="h-5 w-5" />
                 <span className="sr-only">My Account</span>
               </Link>
             </Button>
           ) : (
-            <Button asChild variant="ghost" size="icon" className={iconButtonClasses}>
+            <Button asChild variant="ghost" size="icon">
               <Link href="/login">
                 <User className="h-5 w-5" />
                 <span className="sr-only">Login</span>
