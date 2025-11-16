@@ -19,26 +19,32 @@ export function Header() {
   const closeMobileMenu = () => setIsMobileMenuOpen(false);
 
   return (
-    <header className="sticky top-0 z-40 w-full bg-primary text-primary-foreground">
+    <header 
+      className="sticky top-0 z-40 w-full bg-cover bg-center text-white"
+      style={{backgroundImage: "url('/header-bg.png')"}}
+    >
       <div className="container flex h-28 flex-col justify-center gap-4">
         <div className="flex items-center justify-between">
-          <Logo />
+          <div className="flex items-center gap-4">
+            <Logo />
+            <span className="text-2xl font-bold text-orange-400" style={{fontFamily: "'Hind Siliguri', sans-serif"}}>মঙ্গল থালি</span>
+          </div>
           <div className="flex items-center gap-2">
-             <Button asChild variant="ghost" size="icon" className="hover:bg-primary/80">
+             <Button asChild variant="ghost" size="icon" className="hover:bg-white/20">
               <Link href="#">
                 <Bell className="h-5 w-5" />
                 <span className="sr-only">Notifications</span>
               </Link>
             </Button>
             {isAuthenticated ? (
-              <Button asChild variant="ghost" size="icon" className="hover:bg-primary/80">
+              <Button asChild variant="ghost" size="icon" className="hover:bg-white/20">
                 <Link href="/admin">
                   <User className="h-5 w-5" />
                   <span className="sr-only">My Account</span>
                 </Link>
               </Button>
             ) : (
-              <Button asChild variant="ghost" size="icon" className="hover:bg-primary/80">
+              <Button asChild variant="ghost" size="icon" className="hover:bg-white/20">
                 <Link href="/login">
                   <User className="h-5 w-5" />
                    <span className="sr-only">Login</span>

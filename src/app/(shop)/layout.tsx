@@ -11,7 +11,7 @@ export default function ShopLayout({
     <div className="flex flex-col min-h-screen">
       <Header />
       <main className="flex-grow pb-16 md:pb-0">{children}</main>
-      <Footer />
+      
       <MobileNav />
     </div>
   );
