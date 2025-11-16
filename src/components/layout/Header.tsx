@@ -21,6 +21,7 @@ import { Separator } from '../ui/separator';
 
 export function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -57,8 +58,13 @@ export function Header() {
                     <SheetHeader className="p-4 border-b">
                       <SheetTitle className="sr-only">Mobile Menu</SheetTitle>
                       <div className="flex justify-between items-center">
-                            <Logo />
-                        </div>
+                        <Logo />
+                        <SheetClose asChild>
+                            <Button variant="ghost" size="icon">
+                                <span className="sr-only">Close</span>
+                            </Button>
+                        </SheetClose>
+                      </div>
                     </SheetHeader>
                     <div className="p-4">
                     <div className="flex items-center gap-2 bg-muted p-2 rounded-lg text-xs">
@@ -83,11 +89,16 @@ export function Header() {
         
         {/* Centered Search Bar */}
         <div className="flex-1 flex justify-center px-4">
-           <div className="relative w-full max-w-md">
+           <div className={cn(
+                "relative w-full max-w-sm transition-all duration-300",
+                isSearchFocused ? "md:max-w-md" : "md:max-w-sm"
+              )}>
             <Input
               type="search"
               placeholder="Search dishes..."
               className="h-10 w-full rounded-full pl-10"
+              onFocus={() => setIsSearchFocused(true)}
+              onBlur={() => setIsSearchFocused(false)}
             />
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
           </div>

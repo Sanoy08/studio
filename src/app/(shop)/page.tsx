@@ -27,9 +27,7 @@ export default function HomePage() {
                   className="object-cover"
                 />
                 <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center text-center text-white p-4">
-                  <Button asChild size="lg" className="mt-8">
-                    <Link href="/products">Explore Our Menu</Link>
-                  </Button>
+                  
                 </div>
               </div>
             </CarouselItem>
