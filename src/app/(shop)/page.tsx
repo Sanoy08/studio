@@ -6,6 +6,7 @@ import { Rating } from '@/components/shared/Rating';
 import Image from 'next/image';
 import Link from 'next/link';
 import { products } from '@/lib/data';
+import { MobileNav } from '@/components/layout/MobileNav';
 
 const bestSellers = products.slice(0, 4);
 
@@ -162,6 +163,7 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+      <MobileNav />
     </div>
   );
 }

@@ -1,6 +1,5 @@
 import { Footer } from "@/components/layout/Footer";
 import { Header } from "@/components/layout/Header";
-import { MobileNav } from "@/components/layout/MobileNav";
 
 export default function ShopLayout({
   children,
@@ -12,7 +11,6 @@ export default function ShopLayout({
       <Header />
       <main className="flex-grow pt-16">{children}</main>
       <Footer />
-      <MobileNav />
     </div>
   );
 }
