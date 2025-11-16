@@ -13,7 +13,8 @@ import { cn } from "@/lib/utils";
 
 const navLinks = [
   { href: "/", label: "Home" },
-  { href: "/products", label: "All Products" },
+  { href: "/products", label: "Menu" },
+  { href: "/cart", label: "Cart" },
 ];
 
 export function Header() {
