@@ -55,6 +55,7 @@ export function Header() {
                 </SheetTrigger>
                 <SheetContent side="left" className="w-[300px] bg-card p-0">
                     <SheetHeader className="p-4 border-b">
+                      <SheetTitle className="sr-only">Mobile Menu</SheetTitle>
                       <div className="flex justify-between items-center">
                             <Logo />
                              <SheetClose>
