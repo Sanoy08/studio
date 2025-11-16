@@ -12,11 +12,15 @@ import { useCart } from '@/hooks/useCart';
 import type { Product } from '@/lib/types';
 import { ProductCard } from '@/components/shop/ProductCard';
 
+function getProductBySlug(slug: string) {
+  return products.find(p => p.slug === slug);
+}
+
 export default function ProductDetailPage({ params }: { params: { slug: string } }) {
   const [quantity, setQuantity] = useState(1);
   const { addItem } = useCart();
   
-  const product = products.find(p => p.slug === params.slug);
+  const product = getProductBySlug(params.slug);
 
   if (!product) {
     notFound();
