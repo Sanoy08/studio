@@ -12,7 +12,7 @@ import {
   SheetClose,
   SheetTrigger,
 } from '@/components/ui/sheet';
-import { Search, Bell, User, Menu, ShoppingCart, Phone, X } from 'lucide-react';
+import { Search, Bell, User, Menu, ShoppingCart, Phone } from 'lucide-react';
 import { Logo } from '@/components/shared/Logo';
 import { CartSheet } from '@/components/shop/CartSheet';
 import { usePathname } from 'next/navigation';
@@ -58,9 +58,6 @@ export function Header() {
                       <SheetTitle className="sr-only">Mobile Menu</SheetTitle>
                       <div className="flex justify-between items-center">
                             <Logo />
-                             <SheetClose>
-                                <X className="h-6 w-6" />
-                            </SheetClose>
                         </div>
                     </SheetHeader>
                     <div className="p-4">
