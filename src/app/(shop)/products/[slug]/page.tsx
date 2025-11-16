@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Rating } from '@/components/shared/Rating';
 import { formatPrice } from '@/lib/utils';
-import { useState } from 'react';
+import { useState, use } from 'react';
 import { Plus, Minus, ShoppingCart } from 'lucide-react';
 import { useCart } from '@/hooks/useCart';
 import type { Product } from '@/lib/types';
