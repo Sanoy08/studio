@@ -19,7 +19,7 @@ export default function ProductDetailPage({ params }: { params: { slug: string }
   const [quantity, setQuantity] = useState(1);
   const { addItem } = useCart();
   
-  const product = products.find(p => p.slug === params.slug);
+  const product = products.find(p => p.slug === use(params).slug);
 
   if (!product) {
     notFound();
