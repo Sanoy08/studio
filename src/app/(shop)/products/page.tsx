@@ -31,10 +31,6 @@ export default function ProductsPage() {
   return (
     <div className="container py-8">
       <div className="mb-8">
-        <div className="relative mb-6">
-          <Input type="search" placeholder="Search by Biryani" className="pl-10 h-12 text-base" />
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-        </div>
         <div className="flex items-center justify-center space-x-2 sm:space-x-4">
             {categories.map(category => {
                 const Icon = categoryIcons[category as keyof typeof categoryIcons] || UtensilsCrossed;

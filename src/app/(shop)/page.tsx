@@ -13,7 +13,7 @@ export default function HomePage() {
   return (
     <div className="bg-background">
       {/* Hero Section with Search and Image Carousel */}
-      <section className="container py-6">
+      <section className="container pt-6">
         <Carousel opts={{ loop: true }}>
           <CarouselContent>
             <CarouselItem>
