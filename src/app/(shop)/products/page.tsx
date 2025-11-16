@@ -5,10 +5,10 @@ import { ProductCard } from '@/components/shop/ProductCard';
 import { products } from '@/lib/data';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, Drumstick, Sprout, Egg, Beef, Thali } from 'lucide-react';
+import { Search, Drumstick, Sprout, Egg, Beef, UtensilsCrossed } from 'lucide-react';
 
 const categoryIcons = {
-  All: Thali,
+  All: UtensilsCrossed,
   Veg: Sprout,
   Chicken: Drumstick,
   Egg: Egg,
@@ -37,7 +37,7 @@ export default function ProductsPage() {
         </div>
         <div className="flex items-center justify-center space-x-2 sm:space-x-4">
             {categories.map(category => {
-                const Icon = categoryIcons[category as keyof typeof categoryIcons] || Thali;
+                const Icon = categoryIcons[category as keyof typeof categoryIcons] || UtensilsCrossed;
                 return (
                     <div key={category} className="text-center">
                         <Button
