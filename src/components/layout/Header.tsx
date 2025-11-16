@@ -14,53 +14,46 @@ import {
 import { Search, Bell, User, Menu, Phone, X } from 'lucide-react';
 import { Logo } from '@/components/shared/Logo';
 import { CartSheet } from '@/components/shop/CartSheet';
-import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Separator } from '../ui/separator';
 
 export function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
-  const pathname = usePathname();
-  const isHomePage = pathname === '/';
-
+  
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 10);
     };
-    if (isHomePage) {
-      window.addEventListener('scroll', handleScroll);
-      return () => window.removeEventListener('scroll', handleScroll);
-    } else {
-        setIsScrolled(true);
-    }
-  }, [isHomePage, pathname]);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
   
   const isAuthenticated = false;
   
   const headerClasses = cn(
-    "sticky top-0 z-50 w-full transition-all duration-300",
-    isHomePage && !isScrolled ? "bg-transparent text-white" : "bg-background/80 backdrop-blur-sm border-b"
+    "sticky top-0 z-50 w-full transition-colors duration-300 bg-background/80 backdrop-blur-sm",
+    isScrolled && "border-b"
   );
 
   return (
     <header className={headerClasses}>
       <div className="container flex h-16 items-center">
         {/* Left side: Mobile Menu & Logo */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 md:gap-4">
             <div className="md:hidden">
                 <Sheet>
                   <SheetTrigger asChild>
-                      <Button variant="ghost" size="icon" className={cn(isHomePage && !isScrolled && "text-white hover:bg-white/10 hover:text-white")}>
+                      <Button variant="ghost" size="icon">
                         <Menu className="h-6 w-6" />
                         <span className="sr-only">Open Menu</span>
                       </Button>
                   </SheetTrigger>
                   <SheetContent side="left" className="w-[300px] bg-card p-0">
                       <SheetHeader className="p-4 border-b">
-                        <SheetTitle className="sr-only">Mobile Menu</SheetTitle>
                         <div className="flex justify-between items-center">
                           <Logo />
                         </div>
+                         <SheetTitle className="sr-only">Mobile Menu</SheetTitle>
                       </SheetHeader>
                       <div className="p-4">
                       <div className="flex items-center gap-2 bg-muted p-2 rounded-lg text-xs">
@@ -69,14 +62,19 @@ export function Header() {
                       </div>
                       </div>
                       <nav className="flex flex-col p-4 space-y-2">
-                      <Link href="/" className="py-2 text-lg font-medium hover:text-primary">Home</Link>
-                      <Separator />
-                      <Link href="/products" className="py-2 text-lg font-medium hover:text-primary">Menu</Link>
-                      <Separator />
-                      <Link href="/about" className="py-2 text-lg font-medium hover:text-primary">About Us</Link>
-                      <Separator />
-                      <Link href="/contact" className="py-2 text-lg font-medium hover:text-primary">Contact</Link>
+                        <Link href="/" className="py-2 text-lg font-medium hover:text-primary">Home</Link>
+                        <Separator />
+                        <Link href="/products" className="py-2 text-lg font-medium hover:text-primary">Menu</Link>
+                        <Separator />
+                        <Link href="/about" className="py-2 text-lg font-medium hover:text-primary">About Us</Link>
+                        <Separator />
+                        <Link href="/contact" className="py-2 text-lg font-medium hover:text-primary">Contact</Link>
                       </nav>
+                      <div className="absolute bottom-4 left-4 right-4">
+                         <Button asChild className="w-full">
+                           <Link href="/login">Login</Link>
+                         </Button>
+                      </div>
                   </SheetContent>
                 </Sheet>
             </div>
@@ -84,13 +82,12 @@ export function Header() {
         </div>
         
         {/* Centered Search Bar */}
-        <div className="flex flex-1 items-center justify-center px-4">
+        <div className="flex-1 flex justify-center px-4">
           <div className="relative w-full max-w-md">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground z-10" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              type="search"
               placeholder="Search dishes..."
-              className="h-10 w-full rounded-full pl-10"
+              className="w-full rounded-full bg-muted pl-10"
             />
           </div>
         </div>
@@ -101,7 +98,7 @@ export function Header() {
             asChild
             variant="ghost"
             size="icon"
-            className={cn("hidden md:inline-flex", isHomePage && !isScrolled && "text-white hover:bg-white/10 hover:text-white")}
+            className="hidden md:inline-flex"
           >
             <Link href="#">
               <Bell className="h-5 w-5" />
@@ -112,14 +109,14 @@ export function Header() {
           <CartSheet />
 
           {isAuthenticated ? (
-            <Button asChild variant="ghost" size="icon" className={cn(isHomePage && !isScrolled && "text-white hover:bg-white/10 hover:text-white")}>
+            <Button asChild variant="ghost" size="icon">
               <Link href="/admin">
                 <User className="h-5 w-5" />
                 <span className="sr-only">My Account</span>
               </Link>
             </Button>
           ) : (
-            <Button asChild variant="ghost" size="icon" className={cn(isHomePage && !isScrolled && "text-white hover:bg-white/10 hover:text-white")}>
+            <Button asChild variant="ghost" size="icon" className="hidden sm:flex">
               <Link href="/login">
                 <User className="h-5 w-5" />
                 <span className="sr-only">Login</span>
