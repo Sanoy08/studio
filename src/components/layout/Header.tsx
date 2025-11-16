@@ -44,7 +44,7 @@ export function Header() {
     <header className={headerClasses}>
       <div className="container flex h-16 items-center">
         {/* Left side: Mobile Menu & Logo */}
-        <div className="flex items-center gap-2 lg:w-1/4">
+        <div className="flex items-center gap-2">
             <div className="md:hidden">
                 <Sheet>
                   <SheetTrigger asChild>
@@ -82,24 +82,25 @@ export function Header() {
         </div>
         
         {/* Centered Search Bar */}
-        <div className="flex flex-1 items-center justify-center px-4 lg:w-1/2">
-           <div className="relative w-full max-w-sm md:max-w-md">
+        <div className="flex flex-1 items-center justify-center px-4">
+           <div className="relative w-full flex justify-center">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground z-10" />
             <Input
               type="search"
               placeholder="Search dishes..."
               className={cn(
-                "h-10 w-full rounded-full pl-10 transition-all duration-300 ease-in-out",
-                isSearchFocused ? "md:w-full" : "md:w-3/4"
+                "h-10 rounded-full pl-10 transition-all duration-300 ease-in-out",
+                "w-full max-w-[200px] md:max-w-[250px]",
+                "focus:max-w-[400px]"
               )}
               onFocus={() => setIsSearchFocused(true)}
               onBlur={() => setIsSearchFocused(false)}
             />
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
           </div>
         </div>
 
         {/* Right side icons */}
-        <div className="flex items-center justify-end gap-1 lg:w-1/4">
+        <div className="flex items-center justify-end gap-1">
           <Button
             asChild
             variant="ghost"
