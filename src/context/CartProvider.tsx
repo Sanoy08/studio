@@ -4,13 +4,14 @@ import React, { createContext, useReducer, ReactNode, useState, useEffect } from
 import type { CartItem, Product } from '@/lib/types';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogFooter, AlertDialogAction } from '@/components/ui/alert-dialog';
 import { CheckCircle } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 type CartState = {
   items: CartItem[];
 };
 
 type AlertState = {
-  isOpen: boolean;
+  id: number;
   title: string;
   description: string;
 } | null;
@@ -84,43 +85,49 @@ export const CartContext = createContext<{
   totalPrice: number;
 } | undefined>(undefined);
 
-const SweetAlert = ({ open, onOpenChange, title, description }: { open: boolean, onOpenChange: (open: boolean) => void, title: string, description: string }) => {
+const SweetAlertToast = ({ title, description, onDismiss }: { title: string, description: string, onDismiss: () => void }) => {
+    const [visible, setVisible] = useState(false);
+
+    useEffect(() => {
+        setVisible(true);
+        const timer = setTimeout(() => {
+            setVisible(false);
+            setTimeout(onDismiss, 300); // Wait for fade-out animation
+        }, 3000);
+
+        return () => clearTimeout(timer);
+    }, [onDismiss]);
+
     return (
-        <AlertDialog open={open} onOpenChange={onOpenChange}>
-            <AlertDialogContent className="w-[90vw] max-w-sm rounded-lg">
-                <AlertDialogHeader className="items-center text-center">
-                    <CheckCircle className="h-16 w-16 text-green-500 mb-4" />
-                    <AlertDialogTitle className="text-2xl font-bold">{title}</AlertDialogTitle>
-                    <p className="text-muted-foreground">{description}</p>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                    <AlertDialogAction onClick={() => onOpenChange(false)} className="w-full">OK</AlertDialogAction>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
-    )
-}
+        <div className={cn(
+            "fixed top-5 left-1/2 -translate-x-1/2 z-[100] p-4 rounded-lg shadow-lg bg-background border flex items-center gap-4 transition-all duration-300",
+            visible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-10"
+        )}>
+            <CheckCircle className="h-6 w-6 text-green-500" />
+            <div>
+                <p className="font-semibold">{title}</p>
+                <p className="text-sm text-muted-foreground">{description}</p>
+            </div>
+        </div>
+    );
+};
+
 
 export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [state, dispatch] = useReducer(cartReducer, initialState);
-  const [alertState, setAlertState] = useState<AlertState>(null);
-
-  useEffect(() => {
-    if (alertState?.isOpen) {
-      const timer = setTimeout(() => {
-        setAlertState(null);
-      }, 3000); // Auto-close after 3 seconds
-      return () => clearTimeout(timer);
-    }
-  }, [alertState]);
+  const [alerts, setAlerts] = useState<AlertState[]>([]);
 
   const showAlert = (title: string, description: string) => {
-    setAlertState({ isOpen: true, title, description });
+    setAlerts(prevAlerts => [...prevAlerts, { id: Date.now(), title, description }]);
   };
+  
+  const dismissAlert = (id: number) => {
+    setAlerts(prevAlerts => prevAlerts.filter(alert => alert.id !== id));
+  }
 
   const addItem = (product: Product, quantity: number = 1) => {
     dispatch({ type: 'ADD_ITEM', payload: { product, quantity } });
-    showAlert("Added to Cart!", `${quantity} x ${product.name} has been added.`);
+    showAlert("Added to Cart!", `${quantity} x ${product.name}`);
   };
 
   const removeItem = (id: string) => {
@@ -144,14 +151,16 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   return (
     <CartContext.Provider value={{ state, addItem, removeItem, updateQuantity, clearCart, itemCount, totalPrice }}>
       {children}
-      {alertState?.isOpen && (
-        <SweetAlert 
-            open={alertState.isOpen}
-            onOpenChange={(open) => setAlertState(open ? alertState : null)}
-            title={alertState.title}
-            description={alertState.description}
-        />
-      )}
+      <div className="fixed top-0 left-0 right-0 z-[100] p-4 flex flex-col items-center gap-2 pointer-events-none">
+          {alerts.map((alert) => (
+            <SweetAlertToast 
+                key={alert.id}
+                title={alert.title}
+                description={alert.description}
+                onDismiss={() => dismissAlert(alert.id)}
+            />
+          ))}
+      </div>
     </CartContext.Provider>
   );
 };
