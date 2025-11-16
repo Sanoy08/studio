@@ -18,12 +18,11 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { MoreHorizontal, PlusCircle } from 'lucide-react'
+import { MoreHorizontal, PlusCircle, Package } from 'lucide-react'
 import Image from 'next/image'
 import { products } from '@/lib/data'
 import { formatPrice } from '@/lib/utils'
@@ -48,6 +47,7 @@ export default function AdminProductsPage() {
         </div>
       </CardHeader>
       <CardContent>
+        {products.length > 0 ? (
         <Table>
           <TableHeader>
             <TableRow>
@@ -112,6 +112,19 @@ export default function AdminProductsPage() {
             ))}
           </TableBody>
         </Table>
+        ) : (
+          <div className="flex flex-col items-center justify-center text-center py-16">
+            <Package className="h-16 w-16 text-muted-foreground" />
+            <h3 className="mt-4 text-lg font-semibold">No Products Found</h3>
+            <p className="mt-2 text-sm text-muted-foreground">
+              You have not added any products yet.
+            </p>
+            <Button size="sm" className="mt-4 gap-1">
+              <PlusCircle className="h-3.5 w-3.5" />
+              <span>Add Product</span>
+            </Button>
+          </div>
+        )}
       </CardContent>
     </Card>
   )

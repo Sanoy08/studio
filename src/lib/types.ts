@@ -30,6 +30,7 @@ export type Product = {
   stock: number;
   reviews: Review[];
   featured: boolean;
+  createdAt?: string;
 };
 
 export type CartItem = {

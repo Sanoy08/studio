@@ -11,7 +11,7 @@ import { Plus, Minus, ShoppingCart } from 'lucide-react';
 import { useCart } from '@/hooks/useCart';
 import type { Product } from '@/lib/types';
 import { Separator } from '@/components/ui/separator';
-import { Card, CardHeader, CardContent } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 
@@ -26,11 +26,8 @@ export default function ProductDetailPage({ params }: { params: { slug: string }
   }
 
   const handleAddToCart = () => {
-    // In a real app, you'd pass the whole product object
     const productToAdd = product as Product;
-    for(let i=0; i < quantity; i++){
-        addItem(productToAdd);
-    }
+    addItem(productToAdd, quantity);
   };
 
   return (
@@ -42,7 +39,7 @@ export default function ProductDetailPage({ params }: { params: { slug: string }
                 <CarouselContent>
                     {product.images.map((image, index) => (
                         <CarouselItem key={index}>
-                            <div className="aspect-square relative overflow-hidden rounded-lg">
+                            <div className="aspect-square relative overflow-hidden rounded-lg border">
                                 <Image
                                     src={image.url}
                                     alt={product.name}
@@ -53,7 +50,6 @@ export default function ProductDetailPage({ params }: { params: { slug: string }
                             </div>
                         </CarouselItem>
                     ))}
-                    {/* Add more images if available */}
                 </CarouselContent>
                 <CarouselPrevious className="left-2" />
                 <CarouselNext className="right-2" />

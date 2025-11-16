@@ -1,4 +1,5 @@
 import type { Product, Category, Review } from './types';
+import { subDays } from 'date-fns';
 
 export const categories: Category[] = [
   { id: 'cat1', name: 'Chairs' },
@@ -30,6 +31,7 @@ export const products: Product[] = [
     stock: 25,
     reviews,
     featured: true,
+    createdAt: subDays(new Date(), 2).toISOString(),
   },
   {
     id: 'prod2',
@@ -44,6 +46,7 @@ export const products: Product[] = [
     stock: 15,
     reviews: [],
     featured: true,
+    createdAt: subDays(new Date(), 5).toISOString(),
   },
   {
     id: 'prod3',
@@ -58,6 +61,7 @@ export const products: Product[] = [
     stock: 8,
     reviews,
     featured: true,
+    createdAt: subDays(new Date(), 10).toISOString(),
   },
   {
     id: 'prod4',
@@ -72,6 +76,7 @@ export const products: Product[] = [
     stock: 30,
     reviews: [],
     featured: true,
+    createdAt: subDays(new Date(), 1).toISOString(),
   },
   {
     id: 'prod5',
@@ -86,6 +91,7 @@ export const products: Product[] = [
     stock: 18,
     reviews: [],
     featured: false,
+     createdAt: subDays(new Date(), 15).toISOString(),
   },
   {
     id: 'prod6',
@@ -100,6 +106,7 @@ export const products: Product[] = [
     stock: 50,
     reviews: [],
     featured: false,
+    createdAt: subDays(new Date(), 20).toISOString(),
   },
   {
     id: 'prod7',
@@ -114,6 +121,7 @@ export const products: Product[] = [
     stock: 22,
     reviews: [],
     featured: false,
+    createdAt: subDays(new Date(), 3).toISOString(),
   },
   {
     id: 'prod8',
@@ -128,5 +136,6 @@ export const products: Product[] = [
     stock: 12,
     reviews: [],
     featured: false,
+    createdAt: subDays(new Date(), 30).toISOString(),
   },
 ];
