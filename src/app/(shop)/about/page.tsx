@@ -25,7 +25,7 @@ export default function AboutUsPage() {
           <CardHeader>
             <CardTitle>Our Story</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4 text-muted-foreground">
+          <CardContent className="space-y-4 text-muted-foreground p-6">
             <p>
               Welcome to Bumba's Kitchen, where passion for authentic flavors meets the convenience of modern dining. Born from a love for traditional home-cooked meals, Bumba's Kitchen started as a small dream in a home kitchen. Our founder, affectionately known as Bumba, believed that everyone deserves to enjoy a delicious, wholesome meal, even on their busiest days.
             </p>
