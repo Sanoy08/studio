@@ -38,7 +38,7 @@ export function Footer() {
           </div>
         </div>
         <div className="border-t mt-8 pt-6 text-center text-sm text-muted-foreground">
-            <p>&copy; {new Date().getFullYear()} Bumbas Kitchen. All rights reserved.</p>
+            <p>&copy; {new Date().getFullYear()} Bumba's Kitchen. All rights reserved.</p>
             <p className="mt-1">
                 <Link href="/terms" className="hover:underline">Terms of Service</Link> | <Link href="/privacy" className="hover:underline">Privacy Policy</Link>
             </p>
