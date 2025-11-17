@@ -100,7 +100,7 @@ export function Header() {
             size="icon"
             className="hidden md:inline-flex"
           >
-            <Link href="#">
+            <Link href="/notifications">
               <Bell className="h-5 w-5" />
               <span className="sr-only">Notifications</span>
             </Link>
