@@ -17,8 +17,8 @@ export default {
     },
     extend: {
       fontFamily: {
-        body: ['Poppins', 'sans-serif'],
-        headline: ['Amarante', 'serif'],
+        body: ['var(--font-poppins)', 'sans-serif'],
+        headline: ['var(--font-amarante)', 'serif'],
         code: ['monospace'],
       },
       colors: {

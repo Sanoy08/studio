@@ -25,6 +25,7 @@ export default function HomePage() {
                   data-ai-hint="food offer"
                   fill
                   className="object-cover"
+                  priority
                 />
                 <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center text-center text-white p-4">
                   
@@ -39,6 +40,7 @@ export default function HomePage() {
                   data-ai-hint="delicious food"
                   fill
                   className="object-cover"
+                  priority
                 />
                  <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center text-center text-white p-4">
                    <Button asChild size="lg" className="mt-8">
@@ -121,7 +123,7 @@ export default function HomePage() {
           <h2 className="text-3xl font-bold text-center mb-12 font-headline">Explore Our Bestsellers</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {bestSellers.map((product) => (
-              <Card key={product.id} className="flex flex-col overflow-hidden text-center transition-shadow hover:shadow-xl border-border">
+              <Card key={product.id} className="flex flex-col overflow-hidden text-center transition-shadow hover:shadow-xl border-border group">
                 <Link href={`/menus/${product.slug}`} className="block relative aspect-square">
                   <Image
                     src={product.images[0].url}
