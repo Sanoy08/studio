@@ -1,4 +1,5 @@
 
+
 'use client'
 
 import Link from 'next/link'
@@ -25,7 +26,7 @@ import {
   SidebarProvider,
 } from '@/components/ui/sidebar'
 import { Button } from '@/components/ui/button'
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { Logo } from '@/components/layout/Logo'
 import { cn } from '@/lib/utils'
 
@@ -95,6 +96,9 @@ function MobileAdminHeader() {
           </Button>
         </SheetTrigger>
         <SheetContent side="left" className="sm:max-w-xs p-0">
+          <SheetHeader className="sr-only">
+            <SheetTitle>Admin Menu</SheetTitle>
+          </SheetHeader>
           <nav className="flex flex-col h-full bg-sidebar text-sidebar-foreground">
             <div className="p-4 border-b border-sidebar-border">
               <Logo />
