@@ -35,16 +35,20 @@ export default function CartPage() {
                   {state.items.map((item) => (
                     <div key={item.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                       <div className="flex items-center gap-4">
-                        <div className="relative h-20 w-20 rounded-md overflow-hidden border">
-                          <Image
-                            src={item.image.url}
-                            alt={item.name}
-                            fill
-                            className="object-cover"
-                          />
-                        </div>
+                        <Link href={`/menus/${item.slug}`}>
+                          <div className="relative h-20 w-20 rounded-md overflow-hidden border">
+                            <Image
+                              src={item.image.url}
+                              alt={item.name}
+                              fill
+                              className="object-cover"
+                            />
+                          </div>
+                        </Link>
                         <div>
-                          <p className="font-semibold">{item.name}</p>
+                          <Link href={`/menus/${item.slug}`}>
+                            <p className="font-semibold hover:text-primary">{item.name}</p>
+                          </Link>
                           <p className="text-sm text-muted-foreground">
                             {formatPrice(item.price)}
                           </p>

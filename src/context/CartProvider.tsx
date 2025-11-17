@@ -29,6 +29,7 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
       }
       const newItem: CartItem = {
         id: product.id,
+        slug: product.slug,
         name: product.name,
         price: product.price,
         image: product.images[0],
@@ -83,11 +84,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
   const addItem = (product: Product, quantity: number = 1) => {
     dispatch({ type: 'ADD_ITEM', payload: { product, quantity } });
-    const existingItem = state.items.find(item => item.id === product.id);
-    const message = existingItem 
-      ? `Increased "${product.name}" quantity`
-      : `Added "${product.name}" to cart`;
-    toast.success(message);
+    toast.success(`Added "${product.name}" to cart`);
   };
 
   const removeItem = (id: string) => {
