@@ -1,5 +1,7 @@
 'use client';
 
+import { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter, SheetTrigger } from "@/components/ui/sheet";
 import { useCart } from "@/hooks/useCart";
@@ -11,9 +13,15 @@ import { cn } from "@/lib/utils";
 
 export function CartSheet() {
   const { state, itemCount, totalPrice, updateQuantity, removeItem } = useCart();
+  const [isOpen, setIsOpen] = useState(false);
+  const pathname = usePathname();
+
+  useEffect(() => {
+    setIsOpen(false);
+  }, [pathname]);
   
   return (
-    <Sheet>
+    <Sheet open={isOpen} onOpenChange={setIsOpen}>
       <SheetTrigger asChild>
         <Button variant="ghost" size="icon" className="relative">
           <ShoppingCart className="h-5 w-5" />
