@@ -1,3 +1,5 @@
+'use client';
+
 export default function DeliveryAndPickupPage() {
   return (
     <div className="bg-[#F1F8E4] text-[#4F4A35] font-sans p-5">
