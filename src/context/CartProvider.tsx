@@ -1,17 +1,11 @@
 'use client';
 
-import React, { createContext, useReducer, ReactNode, useState, useEffect } from 'react';
+import React, { createContext, useReducer, ReactNode } from 'react';
 import type { CartItem, Product } from '@/lib/types';
-import { Check } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 type CartState = {
   items: CartItem[];
-};
-
-type AlertState = {
-  id: number;
-  message: string;
 };
 
 type CartAction =
@@ -83,45 +77,9 @@ export const CartContext = createContext<{
   totalPrice: number;
 } | undefined>(undefined);
 
-const SweetAlertToast = ({ message, onDismiss }: { message: string, onDismiss: () => void }) => {
-    const [visible, setVisible] = useState(false);
-
-    useEffect(() => {
-        setVisible(true);
-        const timer = setTimeout(() => {
-            setVisible(false);
-            setTimeout(onDismiss, 300); // Wait for fade-out animation
-        }, 2700);
-
-        return () => clearTimeout(timer);
-    }, [onDismiss]);
-
-    return (
-        <div className={cn(
-            "fixed bottom-5 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-4 w-auto max-w-md rounded-xl bg-card border shadow-lg p-4 transition-all duration-300 ease-in-out",
-            visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
-        )}>
-            <div className="flex-shrink-0 h-6 w-6 rounded-full bg-emerald-500 flex items-center justify-center ring-4 ring-emerald-500/20">
-                <Check className="h-4 w-4 text-white" strokeWidth={3} />
-            </div>
-            <p className="text-sm font-semibold text-card-foreground">{message}</p>
-        </div>
-    );
-};
-
 
 export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [state, dispatch] = useReducer(cartReducer, initialState);
-  const [alerts, setAlerts] = useState<AlertState[]>([]);
-
-  const showAlert = (message: string) => {
-    // Only show one alert at a time for this design
-    setAlerts([{ id: Date.now(), message }]);
-  };
-  
-  const dismissAlert = (id: number) => {
-    setAlerts(prevAlerts => prevAlerts.filter(alert => alert.id !== id));
-  }
 
   const addItem = (product: Product, quantity: number = 1) => {
     dispatch({ type: 'ADD_ITEM', payload: { product, quantity } });
@@ -129,13 +87,14 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     const message = existingItem 
       ? `Increased "${product.name}" quantity`
       : `Added "${product.name}" to cart`;
-    showAlert(message);
+    toast.success(message);
   };
 
   const removeItem = (id: string) => {
     const itemToRemove = state.items.find(item => item.id === id);
     if(itemToRemove){
         dispatch({ type: 'REMOVE_ITEM', payload: { id } });
+        toast.info(`Removed "${itemToRemove.name}" from cart`);
     }
   };
 
@@ -153,13 +112,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   return (
     <CartContext.Provider value={{ state, addItem, removeItem, updateQuantity, clearCart, itemCount, totalPrice }}>
       {children}
-      {alerts.map((alert) => (
-        <SweetAlertToast 
-            key={alert.id}
-            message={alert.message}
-            onDismiss={() => dismissAlert(alert.id)}
-        />
-      ))}
     </CartContext.Provider>
   );
 };

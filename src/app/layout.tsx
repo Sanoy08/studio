@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { CartProvider } from '@/context/CartProvider';
+import { Toaster } from '@/components/ui/sonner';
 
 export const metadata: Metadata = {
   title: 'Bumbas Kitchen',
@@ -22,6 +23,7 @@ export default function RootLayout({
       <body className="font-body antialiased">
         <CartProvider>
           {children}
+          <Toaster />
         </CartProvider>
       </body>
     </html>
