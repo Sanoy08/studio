@@ -1,3 +1,4 @@
+
 import type { Metadata } from 'next';
 import './globals.css';
 import { CartProvider } from '@/context/CartProvider';
@@ -33,7 +34,7 @@ const poppins = localFont({
 });
 
 const amarante = localFont({
-  src: '../../public/fonts/Amarante-Regular.ttf',
+  src: '../fonts/Amarante-Regular.ttf',
   display: 'swap',
   variable: '--font-amarante',
   weight: '400',
