@@ -100,8 +100,8 @@ export default function AdminDashboardPage() {
           <CardDescription>Last 6 months</CardDescription>
         </CardHeader>
         <CardContent className="pl-2">
-          <ResponsiveContainer width="100%" height={350}>
-            <BarChart data={chartData}>
+           <ChartContainer config={chartConfig} className="min-h-[350px] w-full">
+             <BarChart data={chartData}>
               <CartesianGrid vertical={false} />
               <XAxis
                 dataKey="month"
@@ -123,7 +123,7 @@ export default function AdminDashboardPage() {
               />
               <Bar dataKey="sales" fill="var(--color-sales)" radius={[4, 4, 0, 0]} />
             </BarChart>
-          </ResponsiveContainer>
+          </ChartContainer>
         </CardContent>
       </Card>
     </div>
