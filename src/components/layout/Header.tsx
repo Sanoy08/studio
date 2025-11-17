@@ -75,8 +75,6 @@ export function Header() {
                         <Separator />
                         <Link href="/menus" className="py-2 text-lg font-medium hover:text-primary">Menu</Link>
                         <Separator />
-                        <Link href="/about" className="py-2 text-lg font-medium hover:text-primary">About Us</Link>
-                        <Separator />
                         <Link href="/contact" className="py-2 text-lg font-medium hover:text-primary">Contact</Link>
                       </nav>
                       <div className="absolute bottom-4 left-4 right-4">
