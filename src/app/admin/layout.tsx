@@ -51,12 +51,9 @@ function AdminSidebar() {
                 <SidebarMenuButton
                   isActive={pathname === link.href}
                   className="gap-3"
-                  asChild
                 >
-                  <>
-                    <link.icon className="size-4" />
-                    <span>{link.label}</span>
-                  </>
+                  <link.icon className="size-4" />
+                  <span>{link.label}</span>
                 </SidebarMenuButton>
               </Link>
             </SidebarMenuItem>
