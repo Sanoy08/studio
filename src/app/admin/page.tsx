@@ -1,3 +1,4 @@
+
 'use client'
 
 import {
@@ -20,15 +21,15 @@ import {
   ChartTooltipContent,
   ChartConfig,
 } from '@/components/ui/chart'
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts'
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer } from 'recharts'
 
 const chartData = [
-  { month: 'January', sales: 186 },
-  { month: 'February', sales: 305 },
-  { month: 'March', sales: 237 },
-  { month: 'April', sales: 73 },
-  { month: 'May', sales: 209 },
-  { month: 'June', sales: 214 },
+  { month: 'January', sales: 18600 },
+  { month: 'February', sales: 30500 },
+  { month: 'March', sales: 23700 },
+  { month: 'April', sales: 7300 },
+  { month: 'May', sales: 20900 },
+  { month: 'June', sales: 21400 },
 ]
 
 const chartConfig = {
@@ -40,7 +41,7 @@ const chartConfig = {
 
 export default function AdminDashboardPage() {
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <h1 className="text-3xl font-bold font-headline">Dashboard</h1>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
@@ -98,29 +99,31 @@ export default function AdminDashboardPage() {
           <CardTitle>Sales Trend</CardTitle>
           <CardDescription>Last 6 months</CardDescription>
         </CardHeader>
-        <CardContent>
-          <ChartContainer config={chartConfig} className="h-[300px] w-full">
+        <CardContent className="pl-2">
+          <ResponsiveContainer width="100%" height={350}>
             <BarChart data={chartData}>
               <CartesianGrid vertical={false} />
               <XAxis
                 dataKey="month"
+                stroke="#888888"
+                fontSize={12}
                 tickLine={false}
-                tickMargin={10}
                 axisLine={false}
               />
               <YAxis
+                stroke="#888888"
+                fontSize={12}
                 tickLine={false}
                 axisLine={false}
-                tickMargin={10}
-                tickFormatter={(value) => `$${value}`}
+                tickFormatter={(value) => `$${value / 1000}K`}
               />
               <ChartTooltip
                 cursor={false}
                 content={<ChartTooltipContent indicator="dot" />}
               />
-              <Bar dataKey="sales" fill="var(--color-sales)" radius={4} />
+              <Bar dataKey="sales" fill="var(--color-sales)" radius={[4, 4, 0, 0]} />
             </BarChart>
-          </ChartContainer>
+          </ResponsiveContainer>
         </CardContent>
       </Card>
     </div>
