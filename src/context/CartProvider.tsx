@@ -98,7 +98,7 @@ const SweetAlertToast = ({ message, onDismiss }: { message: string, onDismiss: (
 
     return (
         <div className={cn(
-            "fixed bottom-5 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-4 w-auto max-w-md rounded-xl bg-card border border-border/20 shadow-xl p-4 transition-all duration-300 ease-in-out",
+            "fixed bottom-5 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-4 w-auto max-w-md rounded-xl bg-card border shadow-lg p-4 transition-all duration-300 ease-in-out",
             visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
         )}>
             <div className="flex-shrink-0 h-6 w-6 rounded-full bg-emerald-500 flex items-center justify-center ring-4 ring-emerald-500/20">
