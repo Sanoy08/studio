@@ -35,7 +35,7 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     if (itemCount === 0) {
-      router.push('/products');
+      router.push('/menus');
     }
   }, [itemCount, router]);
 

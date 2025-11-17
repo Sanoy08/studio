@@ -42,7 +42,7 @@ export default function HomePage() {
                 />
                  <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center text-center text-white p-4">
                    <Button asChild size="lg" className="mt-8">
-                    <Link href="/products">Order Now</Link>
+                    <Link href="/menus">Order Now</Link>
                   </Button>
                 </div>
               </div>
@@ -109,7 +109,7 @@ export default function HomePage() {
             </ul>
             <p className="text-3xl font-bold text-accent mt-8 text-center">Price: ₹250</p>
             <Button asChild size="lg" className="mt-6 w-full">
-              <Link href="/products">View Details</Link>
+              <Link href="/menus">View Details</Link>
             </Button>
           </div>
         </div>
@@ -122,7 +122,7 @@ export default function HomePage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {bestSellers.map((product) => (
               <Card key={product.id} className="flex flex-col overflow-hidden text-center transition-shadow hover:shadow-xl border-border">
-                <Link href={`/products/${product.slug}`} className="block relative aspect-square">
+                <Link href={`/menus/${product.slug}`} className="block relative aspect-square">
                   <Image
                     src={product.images[0].url}
                     alt={product.name}

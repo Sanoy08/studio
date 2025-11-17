@@ -39,7 +39,7 @@ export function ProductCard({ product }: ProductCardProps) {
 
   return (
     <Card className="flex flex-col overflow-hidden h-full transition-shadow hover:shadow-lg bg-card group">
-      <Link href={`/products/${product.slug}`} className="block aspect-square relative">
+      <Link href={`/menus/${product.slug}`} className="block aspect-square relative">
         {isNew && (
             <Badge className="absolute top-2 right-2 bg-accent text-accent-foreground">NEW</Badge>
         )}

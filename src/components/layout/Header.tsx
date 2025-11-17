@@ -64,7 +64,7 @@ export function Header() {
                       <nav className="flex flex-col p-4 space-y-2">
                         <Link href="/" className="py-2 text-lg font-medium hover:text-primary">Home</Link>
                         <Separator />
-                        <Link href="/products" className="py-2 text-lg font-medium hover:text-primary">Menu</Link>
+                        <Link href="/menus" className="py-2 text-lg font-medium hover:text-primary">Menu</Link>
                         <Separator />
                         <Link href="/about" className="py-2 text-lg font-medium hover:text-primary">About Us</Link>
                         <Separator />

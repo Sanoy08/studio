@@ -77,7 +77,7 @@ export function CartSheet() {
             <p className="text-sm text-muted-foreground">Add some products to get started.</p>
             <SheetTrigger asChild>
                 <Button asChild variant="link" className="mt-4 text-primary">
-                    <Link href="/products">Continue Shopping</Link>
+                    <Link href="/menus">Continue Shopping</Link>
                 </Button>
             </SheetTrigger>
           </div>
