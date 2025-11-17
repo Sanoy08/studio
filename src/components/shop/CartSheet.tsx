@@ -64,9 +64,14 @@ export function CartSheet() {
                         <span>Subtotal</span>
                         <span>{formatPrice(totalPrice)}</span>
                     </div>
-                    <Button asChild size="lg" className="w-full bg-primary hover:bg-primary/90">
-                        <Link href="/checkout">Proceed to Checkout</Link>
-                    </Button>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button asChild size="lg" variant="outline">
+                          <Link href="/cart">View Cart</Link>
+                      </Button>
+                      <Button asChild size="lg" className="w-full">
+                          <Link href="/checkout">Checkout</Link>
+                      </Button>
+                    </div>
                 </div>
             </SheetFooter>
           </>
