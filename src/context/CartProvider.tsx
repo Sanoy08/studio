@@ -98,7 +98,7 @@ const SweetAlertToast = ({ message, onDismiss }: { message: string, onDismiss: (
 
     return (
         <div className={cn(
-            "fixed bottom-20 left-1/2 -translate-x-1/2 z-[100] p-3 rounded-lg shadow-lg bg-background border flex items-center gap-3 transition-all duration-300 w-auto",
+            "fixed bottom-4 left-1/2 -translate-x-1/2 z-[100] p-3 rounded-lg shadow-lg bg-background border flex items-center gap-3 transition-all duration-300 w-auto max-w-[90vw]",
             visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
         )}>
             <div className="flex-shrink-0 h-6 w-6 rounded-full bg-green-500 flex items-center justify-center">
@@ -126,7 +126,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     dispatch({ type: 'ADD_ITEM', payload: { product, quantity } });
     const existingItem = state.items.find(item => item.id === product.id);
     if (!existingItem) {
-       showAlert(`Added to cart: "${product.name}"`);
+       showAlert(`"${product.name}" added to cart`);
     }
   };
 
