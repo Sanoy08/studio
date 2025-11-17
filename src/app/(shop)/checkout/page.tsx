@@ -7,31 +7,44 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { Separator } from '@/components/ui/separator';
 import { formatPrice } from '@/lib/utils';
 import Image from 'next/image';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { CreditCard, Lock } from 'lucide-react';
+import { CreditCard, Lock, ChevronDown, ChevronUp } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { cn } from '@/lib/utils';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Textarea } from '@/components/ui/textarea';
+
 
 const checkoutSchema = z.object({
-  email: z.string().email(),
-  firstName: z.string().min(1, 'First name is required'),
-  lastName: z.string().min(1, 'Last name is required'),
-  address: z.string().min(1, 'Address is required'),
-  city: z.string().min(1, 'City is required'),
-  state: z.string().min(1, 'State is required'),
-  zip: z.string().min(5, 'Valid ZIP code is required'),
-  cardName: z.string().min(1, 'Name on card is required'),
-  cardNumber: z.string().min(16, 'Valid card number is required').max(16),
-  cardExpiry: z.string().regex(/^(0[1-9]|1[0-2])\/\d{2}$/, 'MM/YY format required'),
-  cardCvc: z.string().min(3, 'CVC is required').max(4),
+  name: z.string().min(2, 'Please enter a valid name.'),
+  address: z.string().min(10, 'Please enter your primary address (at least 10 characters).'),
+  altPhone: z.string().regex(/^[6-9]\d{9}$/, 'Invalid phone number. Please enter a 10-digit Indian number.'),
+  deliveryAddress: z.string().optional(),
+  preferredDate: z.string().min(1, 'Please select a preferred date.'),
+  mealTime: z.enum(['lunch', 'dinner']),
+  instructions: z.string().optional(),
+  terms: z.boolean().refine(val => val === true, {
+    message: "You must agree to the Terms and Conditions."
+  }),
+  shareLocation: z.boolean().optional(),
 });
 
 export default function CheckoutPage() {
   const { state, totalPrice, itemCount, clearCart } = useCart();
   const router = useRouter();
+  const [orderType, setOrderType] = useState<'delivery' | 'pickup'>('delivery');
+  const [isSummaryExpanded, setIsSummaryExpanded] = useState(false);
 
   useEffect(() => {
     if (itemCount === 0) {
@@ -42,19 +55,30 @@ export default function CheckoutPage() {
   const form = useForm<z.infer<typeof checkoutSchema>>({
     resolver: zodResolver(checkoutSchema),
     defaultValues: {
-      email: '',
-      firstName: '',
-      lastName: '',
+      name: '',
       address: '',
-      city: '',
-      state: '',
-      zip: '',
-      cardName: '',
-      cardNumber: '',
-      cardExpiry: '',
-      cardCvc: '',
+      altPhone: '',
+      deliveryAddress: '',
+      mealTime: 'lunch',
+      instructions: '',
+      terms: false,
+      shareLocation: false,
     },
   });
+  
+  const { watch, setValue } = form;
+  const primaryAddress = watch('address');
+  const isSameAsAddress = watch('sameAsAddress');
+
+  useEffect(() => {
+    const subscription = watch((value, { name, type }) => {
+      if (name === 'address' && isSameAsAddress) {
+        setValue('deliveryAddress', value.address);
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [watch, isSameAsAddress, setValue]);
+
 
   function onSubmit(values: z.infer<typeof checkoutSchema>) {
     console.log('Checkout submitted', values);
@@ -68,119 +92,216 @@ export default function CheckoutPage() {
     return null; // or a loading spinner
   }
 
+  const FloatingLabelInput = ({ field, label, type = 'text' }: any) => (
+    <div className="relative">
+      <Input type={type} placeholder=" " {...field} className="pt-6 peer" />
+      <FormLabel className="absolute text-sm text-muted-foreground duration-300 transform -translate-y-3 scale-75 top-4 z-10 origin-[0] start-4 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-3 rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto">
+        {label}
+      </FormLabel>
+    </div>
+  );
+
+  const FloatingLabelTextarea = ({ field, label }: any) => (
+    <div className="relative">
+      <Textarea placeholder=" " {...field} className="pt-6 peer min-h-[100px]" />
+      <FormLabel className="absolute text-sm text-muted-foreground duration-300 transform -translate-y-3 scale-75 top-4 z-10 origin-[0] start-4 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-3 rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto">
+        {label}
+      </FormLabel>
+    </div>
+  );
+  
+  const OrderSummaryContent = () => (
+    <>
+      <h3 className="font-bold text-lg mb-4">Your Order</h3>
+       <div className="space-y-4">
+        {state.items.map(item => (
+          <div key={item.id} className="flex items-center gap-4">
+            <div className="relative h-16 w-16 rounded-md overflow-hidden border">
+              <Image src={item.image.url} alt={item.name} fill className="object-cover" />
+               <div className="absolute -top-2 -right-2 bg-primary text-primary-foreground text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                  {item.quantity}
+                </div>
+            </div>
+            <div className="flex-grow">
+              <p className="font-medium text-sm">{item.name}</p>
+            </div>
+            <p className="font-semibold text-sm">{formatPrice(item.price * item.quantity)}</p>
+          </div>
+        ))}
+      </div>
+      <Separator className="my-4" />
+      <div className="space-y-2">
+        <div className="flex justify-between">
+          <p className="text-muted-foreground">Subtotal</p>
+          <p>{formatPrice(totalPrice)}</p>
+        </div>
+        <div className="flex justify-between">
+          <p className="text-muted-foreground">Shipping</p>
+          <p>Free</p>
+        </div>
+        <div className="flex justify-between">
+          <p className="text-muted-foreground">Taxes</p>
+          <p>Calculated at next step</p>
+        </div>
+      </div>
+      <Separator className="my-4" />
+      <div className="flex justify-between font-bold text-lg">
+        <p>Total</p>
+        <p>{formatPrice(totalPrice)}</p>
+      </div>
+    </>
+  );
+
   return (
-    <div className="container py-12">
-      <h1 className="text-3xl md:text-4xl font-bold font-headline mb-8 text-center">Checkout</h1>
+    <div className="container py-8 md:py-12">
+      <div className="lg:hidden mb-4">
+        <Card>
+            <CardHeader className="flex flex-row items-center justify-between p-4 cursor-pointer" onClick={() => setIsSummaryExpanded(!isSummaryExpanded)}>
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-semibold">Order Summary</h2>
+                {isSummaryExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              </div>
+              <p className="font-bold text-lg">{formatPrice(totalPrice)}</p>
+            </CardHeader>
+            {isSummaryExpanded && (
+              <CardContent className="p-4 border-t">
+                  <OrderSummaryContent />
+              </CardContent>
+            )}
+        </Card>
+      </div>
+
+       <h1 className="text-3xl md:text-4xl font-bold font-headline mb-8 text-center">
+        Enter Your Details
+      </h1>
+
       <div className="grid lg:grid-cols-2 gap-12 items-start">
         <div className="lg:col-span-1">
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Shipping Information</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <FormField control={form.control} name="email" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email Address</FormLabel>
-                        <FormControl><Input placeholder="you@example.com" {...field} /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )} />
-                  <div className="grid sm:grid-cols-2 gap-4">
-                    <FormField control={form.control} name="firstName" render={({ field }) => (
-                        <FormItem><FormLabel>First Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                    <FormField control={form.control} name="lastName" render={({ field }) => (
-                        <FormItem><FormLabel>Last Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                  </div>
-                  <FormField control={form.control} name="address" render={({ field }) => (
-                      <FormItem><FormLabel>Address</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                  )} />
-                  <div className="grid sm:grid-cols-3 gap-4">
-                    <FormField control={form.control} name="city" render={({ field }) => (
-                        <FormItem><FormLabel>City</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                     <FormField control={form.control} name="state" render={({ field }) => (
-                        <FormItem><FormLabel>State</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                     <FormField control={form.control} name="zip" render={({ field }) => (
-                        <FormItem><FormLabel>ZIP Code</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                  </div>
-                </CardContent>
-              </Card>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              
+              <FormField control={form.control} name="name" render={({ field }) => (
+                  <FormItem><FormControl><FloatingLabelInput field={field} label="Name" /></FormControl><FormMessage /></FormItem>
+              )} />
+              
+              <FormField control={form.control} name="address" render={({ field }) => (
+                  <FormItem><FormControl><FloatingLabelInput field={field} label="Address" /></FormControl><FormMessage /></FormItem>
+              )} />
+              
+              <FormField control={form.control} name="altPhone" render={({ field }) => (
+                  <FormItem><FormControl><FloatingLabelInput field={field} label="Alternate Phone Number" type="tel" /></FormControl><FormMessage /></FormItem>
+              )} />
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Payment Details</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <FormField control={form.control} name="cardName" render={({ field }) => (
-                        <FormItem><FormLabel>Name on Card</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+              <div className="flex gap-4">
+                  <Button type="button" onClick={() => setOrderType('delivery')} className={cn("flex-1", orderType !== 'delivery' && 'bg-muted text-muted-foreground hover:bg-muted/80')}>Delivery</Button>
+                  <Button type="button" onClick={() => setOrderType('pickup')} className={cn("flex-1", orderType !== 'pickup' && 'bg-muted text-muted-foreground hover:bg-muted/80')}>Pickup</Button>
+              </div>
+
+              {orderType === 'delivery' && (
+                <div className="space-y-6 p-4 border rounded-lg animate-in fade-in-50">
+                    <FormField control={form.control} name="deliveryAddress" render={({ field }) => (
+                        <FormItem><FormControl><FloatingLabelInput field={field} label="Delivery Address" /></FormControl><FormMessage /></FormItem>
                     )} />
-                    <FormField control={form.control} name="cardNumber" render={({ field }) => (
-                        <FormItem><FormLabel>Card Number</FormLabel><FormControl><div className="relative"><CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input className="pl-10" {...field} /></div></FormControl><FormMessage /></FormItem>
-                    )} />
-                    <div className="grid grid-cols-2 gap-4">
-                        <FormField control={form.control} name="cardExpiry" render={({ field }) => (
-                            <FormItem><FormLabel>MM/YY</FormLabel><FormControl><Input placeholder="MM/YY" {...field} /></FormControl><FormMessage /></FormItem>
-                        )} />
-                        <FormField control={form.control} name="cardCvc" render={({ field }) => (
-                            <FormItem><FormLabel>CVC</FormLabel><FormControl><Input placeholder="CVC" {...field} /></FormControl><FormMessage /></FormItem>
-                        )} />
+                    <Controller
+                        control={form.control}
+                        name="sameAsAddress"
+                        render={({ field }) => (
+                           <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value}
+                                onCheckedChange={(checked) => {
+                                  field.onChange(checked);
+                                  if (checked) {
+                                    setValue('deliveryAddress', primaryAddress);
+                                  } else {
+                                    setValue('deliveryAddress', '');
+                                  }
+                                }}
+                              />
+                            </FormControl>
+                            <div className="space-y-1 leading-none">
+                              <FormLabel>
+                                Same as your address
+                              </FormLabel>
+                            </div>
+                          </FormItem>
+                        )}
+                    />
+                </div>
+              )}
+              
+               {orderType === 'pickup' && (
+                <div className="p-4 border rounded-lg bg-muted/50 animate-in fade-in-50">
+                    <p><strong>Pickup Address:</strong> Janai, Garbagan, Hooghly</p>
+                    <p><strong>Google Maps:</strong> <a href="https://maps.app.goo.gl/WV2JF8GJRJW9JwtW8" target="_blank" rel="noopener noreferrer" className="text-primary underline">View on Google Maps</a></p>
+                </div>
+              )}
+
+              <h3 className="text-2xl font-bold font-headline text-center pt-4">Delivery Details</h3>
+
+              <FormField control={form.control} name="preferredDate" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Delivery Date</FormLabel>
+                  <FormControl><Input type="date" {...field} min={new Date().toISOString().split("T")[0]} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              
+               <FormField control={form.control} name="mealTime" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Meal Time</FormLabel>
+                   <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a meal time" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="lunch">Lunch</SelectItem>
+                      <SelectItem value="dinner">Dinner</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )} />
+
+              <FormField control={form.control} name="instructions" render={({ field }) => (
+                  <FormItem><FormControl><FloatingLabelTextarea field={field} label="Special Instructions" /></FormControl><FormMessage /></FormItem>
+              )} />
+              
+              {orderType === 'delivery' && (
+                <FormField control={form.control} name="shareLocation" render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                    <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                    <div className="space-y-1 leading-none"><FormLabel>Share my live location</FormLabel></div>
+                  </FormItem>
+                )} />
+              )}
+              
+              <FormField control={form.control} name="terms" render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                    <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                    <div className="space-y-1 leading-none">
+                        <FormLabel>I agree to the <a href="/terms" target="_blank" className="underline text-primary">Terms and Conditions</a></FormLabel>
+                        <FormMessage />
                     </div>
-                </CardContent>
-              </Card>
+                  </FormItem>
+              )} />
+
               <Button type="submit" size="lg" className="w-full">
                 <Lock className="mr-2 h-4 w-4" /> Place Order
               </Button>
             </form>
           </Form>
         </div>
-        <div className="lg:col-span-1">
+        <div className="lg:col-span-1 hidden lg:block">
           <Card className="sticky top-24 bg-card">
             <CardHeader>
               <CardTitle>Order Summary</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {state.items.map(item => (
-                  <div key={item.id} className="flex justify-between items-center">
-                    <div className="flex items-center gap-4">
-                      <div className="relative h-16 w-16 rounded-md overflow-hidden border">
-                        <Image src={item.image.url} alt={item.name} fill className="object-cover" />
-                      </div>
-                      <div>
-                        <p className="font-medium">{item.name}</p>
-                        <p className="text-sm text-muted-foreground">Qty: {item.quantity}</p>
-                      </div>
-                    </div>
-                    <p>{formatPrice(item.price * item.quantity)}</p>
-                  </div>
-                ))}
-              </div>
-              <Separator className="my-4" />
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <p className="text-muted-foreground">Subtotal</p>
-                  <p>{formatPrice(totalPrice)}</p>
-                </div>
-                <div className="flex justify-between">
-                  <p className="text-muted-foreground">Shipping</p>
-                  <p>Free</p>
-                </div>
-                <div className="flex justify-between">
-                  <p className="text-muted-foreground">Taxes</p>
-                  <p>Calculated at next step</p>
-                </div>
-              </div>
-              <Separator className="my-4" />
-              <div className="flex justify-between font-bold text-lg">
-                <p>Total</p>
-                <p>{formatPrice(totalPrice)}</p>
-              </div>
+                <OrderSummaryContent />
             </CardContent>
           </Card>
         </div>
