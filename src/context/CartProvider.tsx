@@ -91,20 +91,20 @@ const SweetAlertToast = ({ message, onDismiss }: { message: string, onDismiss: (
         const timer = setTimeout(() => {
             setVisible(false);
             setTimeout(onDismiss, 300); // Wait for fade-out animation
-        }, 2000);
+        }, 2700);
 
         return () => clearTimeout(timer);
     }, [onDismiss]);
 
     return (
         <div className={cn(
-            "fixed bottom-4 left-1/2 -translate-x-1/2 z-[100] p-3 rounded-lg shadow-lg bg-background border flex items-center gap-3 transition-all duration-300 w-auto max-w-[90vw]",
-            visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
+            "fixed bottom-5 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-4 w-auto max-w-md rounded-xl bg-card border border-border/20 shadow-xl p-4 transition-all duration-300 ease-in-out",
+            visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
         )}>
-            <div className="flex-shrink-0 h-6 w-6 rounded-full bg-green-500 flex items-center justify-center">
-                <Check className="h-4 w-4 text-white" />
+            <div className="flex-shrink-0 h-6 w-6 rounded-full bg-emerald-500 flex items-center justify-center ring-4 ring-emerald-500/20">
+                <Check className="h-4 w-4 text-white" strokeWidth={3} />
             </div>
-            <p className="text-sm text-foreground whitespace-nowrap">{message}</p>
+            <p className="text-sm font-semibold text-card-foreground">{message}</p>
         </div>
     );
 };
@@ -115,7 +115,8 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [alerts, setAlerts] = useState<AlertState[]>([]);
 
   const showAlert = (message: string) => {
-    setAlerts(prevAlerts => [...prevAlerts, { id: Date.now(), message }]);
+    // Only show one alert at a time for this design
+    setAlerts([{ id: Date.now(), message }]);
   };
   
   const dismissAlert = (id: number) => {
@@ -125,9 +126,10 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const addItem = (product: Product, quantity: number = 1) => {
     dispatch({ type: 'ADD_ITEM', payload: { product, quantity } });
     const existingItem = state.items.find(item => item.id === product.id);
-    if (!existingItem) {
-       showAlert(`"${product.name}" added to cart`);
-    }
+    const message = existingItem 
+      ? `Increased "${product.name}" quantity`
+      : `Added "${product.name}" to cart`;
+    showAlert(message);
   };
 
   const removeItem = (id: string) => {
