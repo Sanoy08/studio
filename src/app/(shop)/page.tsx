@@ -1,4 +1,7 @@
 
+'use client'
+
+import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
@@ -8,6 +11,7 @@ import Link from 'next/link';
 import { products } from '@/lib/data';
 import { MobileNav } from '@/components/layout/MobileNav';
 import { ProductCard } from '@/components/shop/ProductCard';
+import Autoplay from "embla-carousel-autoplay"
 
 const bestSellers = products.slice(0, 8);
 
@@ -39,11 +43,22 @@ const testimonials = [
 ];
 
 export default function HomePage() {
+  const plugin = React.useRef(
+    Autoplay({ delay: 3000, stopOnInteraction: true })
+  )
+
   return (
     <div className="bg-background">
       {/* Hero Section with Search and Image Carousel */}
       <section className="relative -mt-16">
-        <Carousel opts={{ loop: true }}>
+        <Carousel 
+          opts={{ loop: true }}
+          plugins={[
+            Autoplay({
+              delay: 5000,
+            }),
+          ]}
+        >
           <CarouselContent>
             <CarouselItem>
               <div className="relative h-screen overflow-hidden">
@@ -176,11 +191,14 @@ export default function HomePage() {
         <div className="container">
           <h2 className="text-3xl font-bold text-center mb-12 font-headline">What Our Customers Say</h2>
             <Carousel
+                plugins={[plugin.current]}
                 opts={{
-                align: "start",
-                loop: true,
+                  align: "start",
+                  loop: true,
                 }}
                 className="w-full max-w-2xl mx-auto"
+                onMouseEnter={plugin.current.stop}
+                onMouseLeave={plugin.current.reset}
             >
                 <CarouselContent>
                     {testimonials.map((testimonial, index) => (
