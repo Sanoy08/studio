@@ -127,19 +127,19 @@ export default function HomePage() {
               align: "start",
               loop: true,
             }}
-            className="w-full"
+            className="w-full max-w-xs mx-auto"
           >
             <CarouselContent>
               {bestSellers.map((product) => (
-                <CarouselItem key={product.id} className="basis-1/2 sm:basis-1/3 md:basis-1/4 lg:basis-1/5">
-                  <div className="p-2">
+                <CarouselItem key={product.id}>
+                  <div className="p-1">
                     <ProductCard product={product} />
                   </div>
                 </CarouselItem>
               ))}
             </CarouselContent>
-            <CarouselPrevious className="left-[-1rem] sm:left-[-2rem]" />
-            <CarouselNext className="right-[-1rem] sm:right-[-2rem]" />
+            <CarouselPrevious />
+            <CarouselNext />
           </Carousel>
         </div>
       </section>
