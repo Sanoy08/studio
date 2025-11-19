@@ -1,4 +1,5 @@
 
+
 'use client'
 
 import React from 'react';
@@ -196,7 +197,7 @@ export default function HomePage() {
                   align: "start",
                   loop: true,
                 }}
-                className="w-full max-w-2xl mx-auto"
+                className="w-full max-w-2xl mx-auto embla-fade"
                 onMouseEnter={plugin.current.stop}
                 onMouseLeave={plugin.current.reset}
             >

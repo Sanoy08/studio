@@ -87,3 +87,13 @@
     display: none; /* Chrome, Safari, and Opera */
   }
 }
+
+@layer utilities {
+  .embla-fade .embla__slide {
+    opacity: 0;
+    transition: opacity 0.4s ease-in-out;
+  }
+  .embla-fade .embla__slide.is-in-view {
+    opacity: 1;
+  }
+}
