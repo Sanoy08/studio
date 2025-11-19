@@ -127,11 +127,11 @@ export default function HomePage() {
               align: "start",
               loop: true,
             }}
-            className="w-full max-w-xs mx-auto"
+            className="w-full max-w-xs sm:max-w-xl md:max-w-2xl lg:max-w-4xl xl:max-w-6xl mx-auto"
           >
             <CarouselContent>
               {bestSellers.map((product) => (
-                <CarouselItem key={product.id}>
+                <CarouselItem key={product.id} className="basis-full md:basis-1/2 lg:basis-1/4">
                   <div className="p-1">
                     <ProductCard product={product} />
                   </div>
