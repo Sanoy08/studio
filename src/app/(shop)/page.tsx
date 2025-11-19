@@ -11,6 +11,33 @@ import { ProductCard } from '@/components/shop/ProductCard';
 
 const bestSellers = products.slice(0, 8);
 
+const testimonials = [
+    {
+      name: 'Ishita M.',
+      location: 'Kolkata',
+      rating: 5,
+      quote: "The food is very tasty and the price is reasonable. A must try for all food lovers."
+    },
+    {
+      name: 'Rohan G.',
+      location: 'Hooghly',
+      rating: 4.5,
+      quote: "Amazing home-style food! The chicken kosha was simply out of this world. Delivery was on time too."
+    },
+    {
+      name: 'Priya S.',
+      location: 'Serampore',
+      rating: 5,
+      quote: "Bumba's Kitchen is my go-to for weekend meals. The quality is always consistent and the taste is authentic Bengali."
+    },
+    {
+        name: 'Ankit B.',
+        location: 'Konnagar',
+        rating: 4,
+        quote: "I ordered the veg thali and it was wholesome and delicious. Great value for money. Highly recommended!"
+    }
+];
+
 export default function HomePage() {
   return (
     <div className="bg-background">
@@ -131,7 +158,7 @@ export default function HomePage() {
           >
             <CarouselContent>
               {bestSellers.map((product) => (
-                <CarouselItem key={product.id} className="basis-full sm:basis-1/2 lg:basis-1/4">
+                <CarouselItem key={product.id} className="basis-full sm:basis-1/2 md:basis-1/3 lg:basis-1/4">
                   <div className="p-1">
                     <ProductCard product={product} />
                   </div>
@@ -148,16 +175,30 @@ export default function HomePage() {
       <section className="py-12 md:py-24 bg-card">
         <div className="container">
           <h2 className="text-3xl font-bold text-center mb-12 font-headline">What Our Customers Say</h2>
-          <div className="max-w-2xl mx-auto">
-            <Card>
-              <CardContent className="p-8 text-center">
-                <Rating rating={5} className="justify-center mb-4" />
-                <blockquote className="text-lg italic text-muted-foreground">"The food is very tasty and the price is reasonable. A must try for all food lovers."</blockquote>
-                <p className="font-bold mt-6">- Ishita M.</p>
-                <p className="text-sm text-muted-foreground">Kolkata</p>
-              </CardContent>
-            </Card>
-          </div>
+            <Carousel
+                opts={{
+                align: "start",
+                loop: true,
+                }}
+                className="w-full max-w-2xl mx-auto"
+            >
+                <CarouselContent>
+                    {testimonials.map((testimonial, index) => (
+                        <CarouselItem key={index}>
+                            <Card>
+                                <CardContent className="p-8 text-center">
+                                    <Rating rating={testimonial.rating} className="justify-center mb-4" />
+                                    <blockquote className="text-lg italic text-muted-foreground">"{testimonial.quote}"</blockquote>
+                                    <p className="font-bold mt-6">- {testimonial.name}</p>
+                                    <p className="text-sm text-muted-foreground">{testimonial.location}</p>
+                                </CardContent>
+                            </Card>
+                        </CarouselItem>
+                    ))}
+                </CarouselContent>
+                <CarouselPrevious className="-left-4 md:-left-12" />
+                <CarouselNext className="-right-4 md:-right-12" />
+            </Carousel>
         </div>
       </section>
       <MobileNav />
