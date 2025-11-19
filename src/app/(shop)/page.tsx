@@ -7,8 +7,9 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { products } from '@/lib/data';
 import { MobileNav } from '@/components/layout/MobileNav';
+import { ProductCard } from '@/components/shop/ProductCard';
 
-const bestSellers = products.slice(0, 4);
+const bestSellers = products.slice(0, 8);
 
 export default function HomePage() {
   return (
@@ -118,28 +119,28 @@ export default function HomePage() {
       </section>
 
       {/* Explore Our Bestsellers */}
-      <section className="py-16 md:py-24">
+       <section className="py-16 md:py-24">
         <div className="container">
           <h2 className="text-3xl font-bold text-center mb-12 font-headline">Explore Our Bestsellers</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {bestSellers.map((product) => (
-              <Card key={product.id} className="flex flex-col overflow-hidden text-center transition-shadow hover:shadow-xl border-border group">
-                <Link href={`/menus/${product.slug}`} className="block relative aspect-square">
-                  <Image
-                    src={product.images[0].url}
-                    alt={product.name}
-                    data-ai-hint="indian food"
-                    fill
-                    className="object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                </Link>
-                <CardContent className="p-4 flex-grow flex flex-col bg-card">
-                  <h3 className="font-semibold text-lg mt-1 flex-grow">{product.name}</h3>
-                  <p className="font-bold text-accent text-xl mt-auto pt-2">₹{product.price}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          <Carousel
+            opts={{
+              align: "start",
+              loop: true,
+            }}
+            className="w-full"
+          >
+            <CarouselContent>
+              {bestSellers.map((product) => (
+                <CarouselItem key={product.id} className="basis-1/2 sm:basis-1/3 md:basis-1/4 lg:basis-1/5">
+                  <div className="p-2">
+                    <ProductCard product={product} />
+                  </div>
+                </CarouselItem>
+              ))}
+            </CarouselContent>
+            <CarouselPrevious className="left-[-1rem] sm:left-[-2rem]" />
+            <CarouselNext className="right-[-1rem] sm:right-[-2rem]" />
+          </Carousel>
         </div>
       </section>
 
