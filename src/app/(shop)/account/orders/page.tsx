@@ -1,3 +1,6 @@
+'use client';
+
+import { useState } from 'react';
 import {
   Table,
   TableBody,
@@ -17,7 +20,8 @@ import {
 } from '@/components/ui/card';
 import { formatPrice } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
+import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
+
 
 const orders = [
     {
@@ -43,7 +47,19 @@ const orders = [
         date: '2023-07-01',
         status: 'Pending',
         total: 450.50,
-    }
+    },
+    {
+        id: 'ORD005',
+        date: '2023-07-05',
+        status: 'Fulfilled',
+        total: 50.25,
+    },
+    {
+        id: 'ORD006',
+        date: '2023-07-10',
+        status: 'Pending',
+        total: 200.00,
+    },
 ];
 
 const statusVariant: { [key: string]: 'default' | 'secondary' | 'destructive' | 'outline' } = {
@@ -52,7 +68,23 @@ const statusVariant: { [key: string]: 'default' | 'secondary' | 'destructive' | 
   Cancelled: 'destructive',
 };
 
+const ORDERS_PER_PAGE = 5;
+
 export default function AccountOrdersPage() {
+  const [currentPage, setCurrentPage] = useState(1);
+  const totalPages = Math.ceil(orders.length / ORDERS_PER_PAGE);
+  const currentOrders = orders.slice(
+    (currentPage - 1) * ORDERS_PER_PAGE,
+    currentPage * ORDERS_PER_PAGE
+  );
+
+  const handlePageChange = (page: number) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    }
+  };
+
+
   return (
     <Card>
       <CardHeader>
@@ -73,7 +105,7 @@ export default function AccountOrdersPage() {
                 </TableRow>
             </TableHeader>
             <TableBody>
-                {orders.map((order) => (
+                {currentOrders.map((order) => (
                 <TableRow key={order.id}>
                     <TableCell className="font-medium">{order.id}</TableCell>
                     <TableCell>{order.date}</TableCell>
@@ -93,7 +125,7 @@ export default function AccountOrdersPage() {
         </div>
         {/* Mobile View */}
         <div className="md:hidden space-y-4">
-            {orders.map(order => (
+            {currentOrders.map(order => (
                  <Card key={order.id}>
                     <CardHeader className="flex flex-row justify-between items-center pb-2">
                         <CardTitle className="text-base font-medium">{order.id}</CardTitle>
@@ -118,6 +150,27 @@ export default function AccountOrdersPage() {
             ))}
         </div>
       </CardContent>
+      {totalPages > 1 && (
+        <CardFooter className="border-t pt-6 justify-center">
+            <Pagination>
+                <PaginationContent>
+                    <PaginationItem>
+                        <PaginationPrevious href="#" onClick={(e) => {e.preventDefault(); handlePageChange(currentPage - 1)}} aria-disabled={currentPage === 1} />
+                    </PaginationItem>
+                    {[...Array(totalPages)].map((_, i) => (
+                         <PaginationItem key={i}>
+                            <PaginationLink href="#" onClick={(e) => {e.preventDefault(); handlePageChange(i + 1)}} isActive={currentPage === i + 1}>
+                                {i + 1}
+                            </PaginationLink>
+                        </PaginationItem>
+                    ))}
+                    <PaginationItem>
+                        <PaginationNext href="#" onClick={(e) => {e.preventDefault(); handlePageChange(currentPage + 1)}} aria-disabled={currentPage === totalPages} />
+                    </PaginationItem>
+                </PaginationContent>
+            </Pagination>
+        </CardFooter>
+      )}
     </Card>
   );
 }
