@@ -59,7 +59,7 @@ export default function AccountLayout({ children }: AccountLayoutProps) {
 
   if (isUserLoading || !user) {
     return (
-        <div className="container py-12">
+        <div className="container py-8 md:py-12">
             <h1 className="text-3xl md:text-4xl font-bold font-headline mb-8 text-center">
                 My Account
             </h1>
@@ -82,20 +82,20 @@ export default function AccountLayout({ children }: AccountLayoutProps) {
   }
 
   return (
-    <div className="container py-12">
+    <div className="container py-8 md:py-12">
       <div className="max-w-6xl mx-auto">
         <h1 className="text-3xl md:text-4xl font-bold font-headline mb-8 text-center">
           My Account
         </h1>
         <div className="flex flex-col space-y-8 lg:flex-row lg:space-x-12 lg:space-y-0">
           <aside className="lg:w-1/4">
-            <nav className="flex space-x-2 lg:flex-col lg:space-x-0 lg:space-y-1">
+            <nav className="flex space-x-2 lg:flex-col lg:space-x-0 lg:space-y-1 overflow-x-auto pb-2 lg:pb-0">
               {sidebarNavItems.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    'flex items-center gap-3 rounded-lg px-3 py-2 transition-all text-sm',
+                    'flex items-center gap-3 rounded-lg px-3 py-2 transition-all text-sm flex-shrink-0',
                     pathname === item.href
                       ? 'bg-primary text-primary-foreground'
                       : 'hover:bg-muted'
@@ -109,7 +109,7 @@ export default function AccountLayout({ children }: AccountLayoutProps) {
               <button
                   onClick={handleLogout}
                   className={cn(
-                    'flex items-center gap-3 rounded-lg px-3 py-2 transition-all text-sm text-destructive w-full',
+                    'flex items-center gap-3 rounded-lg px-3 py-2 transition-all text-sm text-destructive flex-shrink-0 w-full',
                     'hover:bg-muted'
                   )}
                 >
