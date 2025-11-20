@@ -1,10 +1,15 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { User, ShoppingBag, MapPin, Heart, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
+import { useAuth, useUser } from '@/firebase';
+import { signOut } from 'firebase/auth';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const sidebarNavItems = [
   {
@@ -30,6 +35,44 @@ interface AccountLayoutProps {
 
 export default function AccountLayout({ children }: AccountLayoutProps) {
   const pathname = usePathname();
+  const auth = useAuth();
+  const { user, isUserLoading } = useUser();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      toast.success('Logged out successfully');
+      router.push('/login');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to log out');
+    }
+  };
+
+  if (isUserLoading) {
+    return (
+        <div className="container py-12">
+            <Skeleton className="h-12 w-1/4 mb-8" />
+            <div className="flex flex-col space-y-8 lg:flex-row lg:space-x-12 lg:space-y-0">
+                <aside className="lg:w-1/4">
+                    <div className="space-y-2">
+                        <Skeleton className="h-10 w-full" />
+                        <Skeleton className="h-10 w-full" />
+                        <Skeleton className="h-10 w-full" />
+                    </div>
+                </aside>
+                <main className="flex-1">
+                    <AccountLoading />
+                </main>
+            </div>
+        </div>
+    )
+  }
+
+  if (!user) {
+    router.push('/login');
+    return null;
+  }
 
   return (
     <div className="container py-12">
@@ -55,16 +98,16 @@ export default function AccountLayout({ children }: AccountLayoutProps) {
               </Link>
             ))}
              <Separator className="my-4 hidden lg:block" />
-             <Link
-                href="/login"
+             <button
+                onClick={handleLogout}
                 className={cn(
-                  'flex items-center gap-3 rounded-lg px-3 py-2 transition-all text-sm text-destructive',
+                  'flex items-center gap-3 rounded-lg px-3 py-2 transition-all text-sm text-destructive w-full',
                    'hover:bg-muted'
                 )}
               >
                 <LogOut className="h-4 w-4" />
                 <span className="truncate">Logout</span>
-              </Link>
+              </button>
           </nav>
         </aside>
         <main className="flex-1">{children}</main>

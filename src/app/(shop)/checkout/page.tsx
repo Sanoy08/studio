@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Textarea } from '@/components/ui/textarea';
+import { useUser } from '@/firebase';
 
 
 const checkoutSchema = z.object({
@@ -42,15 +43,19 @@ const checkoutSchema = z.object({
 
 export default function CheckoutPage() {
   const { state, totalPrice, itemCount, clearCart } = useCart();
+  const { user, isUserLoading } = useUser();
   const router = useRouter();
   const [orderType, setOrderType] = useState<'delivery' | 'pickup'>('delivery');
   const [isSummaryExpanded, setIsSummaryExpanded] = useState(false);
 
   useEffect(() => {
+    if (!isUserLoading && !user) {
+      router.push('/login');
+    }
     if (itemCount === 0) {
       router.push('/menus');
     }
-  }, [itemCount, router]);
+  }, [itemCount, user, isUserLoading, router]);
 
   const form = useForm<z.infer<typeof checkoutSchema>>({
     resolver: zodResolver(checkoutSchema),
@@ -66,18 +71,29 @@ export default function CheckoutPage() {
     },
   });
   
-  const { watch, setValue } = form;
+  const { watch, setValue, reset } = form;
   const primaryAddress = watch('address');
-  const isSameAsAddress = watch('sameAsAddress');
+  
+  // Use a state for the checkbox to avoid re-renders on address change
+  const [isSameAsAddress, setIsSameAsAddress] = useState(false);
 
   useEffect(() => {
-    const subscription = watch((value, { name, type }) => {
-      if (name === 'address' && isSameAsAddress) {
-        setValue('deliveryAddress', value.address);
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, [watch, isSameAsAddress, setValue]);
+    if(user) {
+        reset({
+            name: user.displayName || '',
+            altPhone: user.phoneNumber || '',
+        })
+    }
+  }, [user, reset])
+
+
+  useEffect(() => {
+    if (isSameAsAddress) {
+        setValue('deliveryAddress', primaryAddress);
+    } else {
+        setValue('deliveryAddress', '');
+    }
+  }, [isSameAsAddress, primaryAddress, setValue]);
 
 
   function onSubmit(values: z.infer<typeof checkoutSchema>) {
@@ -88,7 +104,7 @@ export default function CheckoutPage() {
     router.push('/');
   }
 
-  if (itemCount === 0) {
+  if (itemCount === 0 || isUserLoading || !user) {
     return null; // or a loading spinner
   }
 
@@ -202,32 +218,19 @@ export default function CheckoutPage() {
                     <FormField control={form.control} name="deliveryAddress" render={({ field }) => (
                         <FormItem><FormControl><FloatingLabelInput field={field} label="Delivery Address" /></FormControl><FormMessage /></FormItem>
                     )} />
-                    <Controller
-                        control={form.control}
-                        name="sameAsAddress"
-                        render={({ field }) => (
-                           <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                            <FormControl>
-                              <Checkbox
-                                checked={field.value}
-                                onCheckedChange={(checked) => {
-                                  field.onChange(checked);
-                                  if (checked) {
-                                    setValue('deliveryAddress', primaryAddress);
-                                  } else {
-                                    setValue('deliveryAddress', '');
-                                  }
-                                }}
-                              />
-                            </FormControl>
-                            <div className="space-y-1 leading-none">
-                              <FormLabel>
-                                Same as your address
-                              </FormLabel>
-                            </div>
-                          </FormItem>
-                        )}
-                    />
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                        <FormControl>
+                            <Checkbox
+                            checked={isSameAsAddress}
+                            onCheckedChange={() => setIsSameAsAddress(prev => !prev)}
+                            />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                            <FormLabel>
+                            Same as your address
+                            </FormLabel>
+                        </div>
+                    </FormItem>
                 </div>
               )}
               

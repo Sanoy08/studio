@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -14,12 +15,17 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from 'sonner';
+import { useAuth, useFirestore, useUser } from '@/firebase';
+import { updateProfile, reauthenticateWithCredential, EmailAuthProvider, updatePassword } from 'firebase/auth';
+import { doc, serverTimestamp, updateDoc } from 'firebase/firestore';
 
 const profileFormSchema = z.object({
-  name: z.string().min(2, {
+  firstName: z.string().min(2, {
+    message: 'Name must be at least 2 characters.',
+  }),
+  lastName: z.string().min(2, {
     message: 'Name must be at least 2 characters.',
   }),
   email: z.string().email(),
@@ -41,13 +47,17 @@ type PasswordFormValues = z.infer<typeof passwordFormSchema>;
 
 
 export default function AccountProfilePage() {
+  const { user } = useUser();
+  const auth = useAuth();
+  const firestore = useFirestore();
 
   const profileForm = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
     defaultValues: {
-      name: 'Bumba Das',
-      email: 'bumba.das@example.com',
-      phone: '+91 9123456789',
+      firstName: '',
+      lastName: '',
+      email: '',
+      phone: '',
     },
   });
 
@@ -60,16 +70,58 @@ export default function AccountProfilePage() {
     }
   });
 
+  useEffect(() => {
+    if (user) {
+      const nameParts = user.displayName?.split(' ') || ['', ''];
+      profileForm.reset({
+        firstName: nameParts[0],
+        lastName: nameParts.slice(1).join(' '),
+        email: user.email || '',
+        phone: user.phoneNumber || '',
+      })
+    }
+  }, [user, profileForm]);
 
-  function onProfileSubmit(data: ProfileFormValues) {
-    console.log(data);
-    toast.success('Profile updated successfully!');
+
+  async function onProfileSubmit(data: ProfileFormValues) {
+    if (!user) return;
+    try {
+      const newDisplayName = `${data.firstName} ${data.lastName}`;
+      await updateProfile(user, {
+        displayName: newDisplayName,
+        // The phone number update needs verification, usually done via a separate flow
+      });
+      const userDocRef = doc(firestore, 'users', user.uid);
+      await updateDoc(userDocRef, {
+        firstName: data.firstName,
+        lastName: data.lastName,
+        updatedAt: serverTimestamp(),
+      });
+      toast.success('Profile updated successfully!');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to update profile.');
+    }
   }
 
-  function onPasswordSubmit(data: PasswordFormValues) {
-    console.log(data);
-    toast.success('Password changed successfully!');
-    passwordForm.reset();
+  async function onPasswordSubmit(data: PasswordFormValues) {
+    if (!user || !user.email) {
+        toast.error("User not found or email is missing.");
+        return;
+    }
+
+    try {
+        const credential = EmailAuthProvider.credential(user.email, data.currentPassword);
+        await reauthenticateWithCredential(user, credential);
+        await updatePassword(user, data.newPassword);
+        toast.success('Password changed successfully!');
+        passwordForm.reset();
+    } catch (error: any) {
+        toast.error(error.message || 'Failed to change password.');
+    }
+  }
+
+  const getInitials = (name: string) => {
+    return name.split(' ').map(n => n[0]).join('').toUpperCase();
   }
 
   return (
@@ -84,29 +136,44 @@ export default function AccountProfilePage() {
           <CardContent>
             <div className="flex items-center gap-4 mb-6">
                 <Avatar className="h-20 w-20">
-                    <AvatarImage src="/avatars/01.png" alt="Bumba Das" />
-                    <AvatarFallback>BD</AvatarFallback>
+                    <AvatarImage src={user?.photoURL || ''} alt={user?.displayName || ''} />
+                    <AvatarFallback>{user?.displayName ? getInitials(user.displayName) : ''}</AvatarFallback>
                 </Avatar>
                 <div>
-                    <h3 className="text-xl font-bold">{profileForm.watch('name')}</h3>
-                    <p className="text-sm text-muted-foreground">{profileForm.watch('email')}</p>
+                    <h3 className="text-xl font-bold">{user?.displayName}</h3>
+                    <p className="text-sm text-muted-foreground">{user?.email}</p>
                 </div>
             </div>
             <Form {...profileForm}>
                 <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
                   <FormField
                     control={profileForm.control}
-                    name="name"
+                    name="firstName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Name</FormLabel>
+                        <FormLabel>First Name</FormLabel>
                         <FormControl>
-                          <Input placeholder="Your Name" {...field} />
+                          <Input placeholder="Your First Name" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
+                  <FormField
+                    control={profileForm.control}
+                    name="lastName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Last Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Your Last Name" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  </div>
                   <FormField
                     control={profileForm.control}
                     name="email"
@@ -133,7 +200,9 @@ export default function AccountProfilePage() {
                       </FormItem>
                     )}
                   />
-                  <Button type="submit">Update Profile</Button>
+                  <Button type="submit" disabled={profileForm.formState.isSubmitting}>
+                    {profileForm.formState.isSubmitting ? 'Updating...' : 'Update Profile'}
+                  </Button>
                 </form>
             </Form>
           </CardContent>
@@ -188,7 +257,9 @@ export default function AccountProfilePage() {
                                 </FormItem>
                             )}
                         />
-                        <Button type="submit">Change Password</Button>
+                        <Button type="submit" disabled={passwordForm.formState.isSubmitting}>
+                          {passwordForm.formState.isSubmitting ? 'Changing...' : 'Change Password'}
+                        </Button>
                     </form>
                  </Form>
             </CardContent>

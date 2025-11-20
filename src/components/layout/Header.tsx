@@ -17,11 +17,13 @@ import { Logo } from '@/components/shared/Logo';
 import { CartSheet } from '@/components/shop/CartSheet';
 import { cn } from '@/lib/utils';
 import { Separator } from '../ui/separator';
+import { useUser } from '@/firebase';
 
 export function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
+  const { user } = useUser();
   
   useEffect(() => {
     const handleScroll = () => {
@@ -36,8 +38,6 @@ export function Header() {
       setIsMobileMenuOpen(false);
     }
   }, [pathname]);
-  
-  const isAuthenticated = false;
   
   const headerClasses = cn(
     "sticky top-0 z-50 w-full transition-colors duration-300 bg-background/80 backdrop-blur-sm",
@@ -78,9 +78,15 @@ export function Header() {
                         <Link href="/contact" className="py-2 text-lg font-medium hover:text-primary">Contact</Link>
                       </nav>
                       <div className="absolute bottom-4 left-4 right-4">
-                         <Button asChild className="w-full">
-                           <Link href="/login">Login</Link>
-                         </Button>
+                         {user ? (
+                            <Button asChild className="w-full">
+                                <Link href="/account">My Account</Link>
+                            </Button>
+                         ) : (
+                            <Button asChild className="w-full">
+                                <Link href="/login">Login</Link>
+                            </Button>
+                         )}
                       </div>
                   </SheetContent>
                 </Sheet>
@@ -115,7 +121,7 @@ export function Header() {
 
           <CartSheet />
 
-          {isAuthenticated ? (
+          {user ? (
             <Button asChild variant="ghost" size="icon">
               <Link href="/account">
                 <User className="h-5 w-5" />
