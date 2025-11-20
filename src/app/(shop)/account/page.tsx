@@ -17,9 +17,10 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from 'sonner';
-import { useAuth, useFirestore, useUser } from '@/firebase';
+import { useFirestore, useUser } from '@/firebase';
 import { updateProfile, reauthenticateWithCredential, EmailAuthProvider, updatePassword } from 'firebase/auth';
 import { doc, serverTimestamp, updateDoc } from 'firebase/firestore';
+import { Loader2 } from 'lucide-react';
 
 const profileFormSchema = z.object({
   firstName: z.string().min(2, {
@@ -29,7 +30,6 @@ const profileFormSchema = z.object({
     message: 'Name must be at least 2 characters.',
   }),
   email: z.string().email(),
-  phone: z.string().optional(),
 });
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
@@ -48,7 +48,6 @@ type PasswordFormValues = z.infer<typeof passwordFormSchema>;
 
 export default function AccountProfilePage() {
   const { user } = useUser();
-  const auth = useAuth();
   const firestore = useFirestore();
 
   const profileForm = useForm<ProfileFormValues>({
@@ -57,7 +56,6 @@ export default function AccountProfilePage() {
       firstName: '',
       lastName: '',
       email: '',
-      phone: '',
     },
   });
 
@@ -77,7 +75,6 @@ export default function AccountProfilePage() {
         firstName: nameParts[0],
         lastName: nameParts.slice(1).join(' '),
         email: user.email || '',
-        phone: user.phoneNumber || '',
       })
     }
   }, [user, profileForm]);
@@ -87,10 +84,12 @@ export default function AccountProfilePage() {
     if (!user) return;
     try {
       const newDisplayName = `${data.firstName} ${data.lastName}`;
-      await updateProfile(user, {
-        displayName: newDisplayName,
-        // The phone number update needs verification, usually done via a separate flow
-      });
+      if (user.displayName !== newDisplayName) {
+        await updateProfile(user, {
+          displayName: newDisplayName,
+        });
+      }
+
       const userDocRef = doc(firestore, 'users', user.uid);
       await updateDoc(userDocRef, {
         firstName: data.firstName,
@@ -123,6 +122,9 @@ export default function AccountProfilePage() {
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
   }
+  
+  const { isSubmitting: isProfileSubmitting } = profileForm.formState;
+  const { isSubmitting: isPasswordSubmitting } = passwordForm.formState;
 
   return (
     <div className="space-y-8">
@@ -134,7 +136,7 @@ export default function AccountProfilePage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center gap-4 mb-6">
+            <div className="flex items-center gap-4 mb-8">
                 <Avatar className="h-20 w-20">
                     <AvatarImage src={user?.photoURL || ''} alt={user?.displayName || ''} />
                     <AvatarFallback>{user?.displayName ? getInitials(user.displayName) : ''}</AvatarFallback>
@@ -146,7 +148,7 @@ export default function AccountProfilePage() {
             </div>
             <Form {...profileForm}>
                 <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField
                     control={profileForm.control}
                     name="firstName"
@@ -187,21 +189,9 @@ export default function AccountProfilePage() {
                       </FormItem>
                     )}
                   />
-                  <FormField
-                    control={profileForm.control}
-                    name="phone"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Phone Number</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Your Phone Number" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <Button type="submit" disabled={profileForm.formState.isSubmitting}>
-                    {profileForm.formState.isSubmitting ? 'Updating...' : 'Update Profile'}
+                  <Button type="submit" disabled={isProfileSubmitting}>
+                    {isProfileSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Update Profile
                   </Button>
                 </form>
             </Form>
@@ -212,7 +202,7 @@ export default function AccountProfilePage() {
            <CardHeader>
                 <CardTitle>Change Password</CardTitle>
                 <CardDescription>
-                    Update your password here. Choose a strong one!
+                    For your security, please choose a strong password.
                 </CardDescription>
             </CardHeader>
             <CardContent>
@@ -257,8 +247,9 @@ export default function AccountProfilePage() {
                                 </FormItem>
                             )}
                         />
-                        <Button type="submit" disabled={passwordForm.formState.isSubmitting}>
-                          {passwordForm.formState.isSubmitting ? 'Changing...' : 'Change Password'}
+                        <Button type="submit" disabled={isPasswordSubmitting}>
+                          {isPasswordSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                          Change Password
                         </Button>
                     </form>
                  </Form>

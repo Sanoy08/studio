@@ -62,8 +62,8 @@ export default function AccountOrdersPage() {
           <TableHeader>
             <TableRow>
               <TableHead>Order</TableHead>
-              <TableHead>Date</TableHead>
-              <TableHead>Status</TableHead>
+              <TableHead className="hidden sm:table-cell">Date</TableHead>
+              <TableHead className="hidden sm:table-cell">Status</TableHead>
               <TableHead className="text-right">Total</TableHead>
               <TableHead><span className="sr-only">Actions</span></TableHead>
             </TableRow>
@@ -72,9 +72,9 @@ export default function AccountOrdersPage() {
             {orders.map((order) => (
               <TableRow key={order.id}>
                 <TableCell className="font-medium">{order.id}</TableCell>
-                <TableCell>{order.date}</TableCell>
-                <TableCell>
-                  <Badge variant={statusVariant[order.status] || 'outline'}>
+                <TableCell className="hidden sm:table-cell">{order.date}</TableCell>
+                <TableCell className="hidden sm:table-cell">
+                  <Badge variant={statusVariant[order.status] || 'outline'} className={statusVariant[order.status] === 'default' ? 'bg-green-600' : ''}>
                     {order.status}
                   </Badge>
                 </TableCell>
