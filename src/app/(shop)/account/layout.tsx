@@ -10,6 +10,8 @@ import { signOut } from 'firebase/auth';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useEffect } from 'react';
+import AccountLoading from './loading';
 
 const sidebarNavItems = [
   {
@@ -39,6 +41,12 @@ export default function AccountLayout({ children }: AccountLayoutProps) {
   const { user, isUserLoading } = useUser();
   const router = useRouter();
 
+  useEffect(() => {
+    if (!isUserLoading && !user) {
+      router.push('/login');
+    }
+  }, [user, isUserLoading, router]);
+
   const handleLogout = async () => {
     try {
       await signOut(auth);
@@ -49,10 +57,12 @@ export default function AccountLayout({ children }: AccountLayoutProps) {
     }
   };
 
-  if (isUserLoading) {
+  if (isUserLoading || !user) {
     return (
         <div className="container py-12">
-            <Skeleton className="h-12 w-1/4 mb-8" />
+            <h1 className="text-3xl md:text-4xl font-bold font-headline mb-8 text-center">
+                My Account
+            </h1>
             <div className="flex flex-col space-y-8 lg:flex-row lg:space-x-12 lg:space-y-0">
                 <aside className="lg:w-1/4">
                     <div className="space-y-2">
@@ -67,11 +77,6 @@ export default function AccountLayout({ children }: AccountLayoutProps) {
             </div>
         </div>
     )
-  }
-
-  if (!user) {
-    router.push('/login');
-    return null;
   }
 
   return (
