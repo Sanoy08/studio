@@ -117,7 +117,7 @@ export function Header() {
 
           {isAuthenticated ? (
             <Button asChild variant="ghost" size="icon">
-              <Link href="/admin">
+              <Link href="/account">
                 <User className="h-5 w-5" />
                 <span className="sr-only">My Account</span>
               </Link>
