@@ -5,7 +5,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious, type CarouselApi } from '@/components/ui/carousel';
 import { Rating } from '@/components/shared/Rating';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -47,12 +47,31 @@ export default function HomePage() {
   const plugin = React.useRef(
     Autoplay({ delay: 3000, stopOnInteraction: true })
   )
+  
+  const [api, setApi] = React.useState<CarouselApi>()
+  const [current, setCurrent] = React.useState(0)
+  const [count, setCount] = React.useState(0)
+
+  React.useEffect(() => {
+    if (!api) {
+      return
+    }
+
+    setCount(api.scrollSnapList().length)
+    setCurrent(api.selectedScrollSnap())
+
+    api.on("select", () => {
+      setCurrent(api.selectedScrollSnap())
+    })
+  }, [api])
+
 
   return (
     <div className="bg-background">
       {/* Hero Section with Search and Image Carousel */}
       <section className="relative -mt-16">
-        <Carousel 
+        <Carousel
+          setApi={setApi}
           opts={{ loop: true }}
           plugins={[
             Autoplay({
@@ -97,6 +116,15 @@ export default function HomePage() {
           <CarouselPrevious className="left-4" />
           <CarouselNext className="right-4" />
         </Carousel>
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 flex gap-2">
+          {Array.from({ length: count }).map((_, index) => (
+            <button
+              key={index}
+              onClick={() => api?.scrollTo(index)}
+              className={`h-2 rounded-full transition-all ${current === index ? 'w-6 bg-primary' : 'w-2 bg-white/50'}`}
+            />
+          ))}
+        </div>
       </section>
 
       {/* Upcoming Special Offers */}
@@ -192,14 +220,16 @@ export default function HomePage() {
         <div className="container">
           <h2 className="text-3xl font-bold text-center mb-12 font-headline">What Our Customers Say</h2>
             <Carousel
-                plugins={[plugin.current]}
+                plugins={[
+                  Autoplay({
+                    delay: 3000,
+                  }),
+                ]}
                 opts={{
                   align: "start",
                   loop: true,
                 }}
                 className="w-full max-w-2xl mx-auto embla-fade"
-                onMouseEnter={plugin.current.stop}
-                onMouseLeave={plugin.current.reset}
             >
                 <CarouselContent>
                     {testimonials.map((testimonial, index) => (
