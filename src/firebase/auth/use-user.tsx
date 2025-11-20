@@ -1,7 +1,7 @@
 'use client';
 
-import { useMemo } from 'react';
-import { onAuthStateChanged, User } from 'firebase/auth';
+import { useMemo, useCallback } from 'react';
+import { onAuthStateChanged, User, Auth } from 'firebase/auth';
 import { useAuth } from '@/firebase/provider';
 import { useSyncExternalStore } from 'react';
 
@@ -18,16 +18,24 @@ let serverState: AuthState = {
   error: null,
 };
 
+let listeners: (() => void)[] = [];
+
 // A function to subscribe to auth state changes
-function subscribe(callback: () => void) {
-  const auth = useAuth();
-  return onAuthStateChanged(auth, (user) => {
-    serverState = { ...serverState, user, isLoading: false };
-    callback();
-  }, (error) => {
-    serverState = { ...serverState, error, isLoading: false };
-    callback();
-  });
+function subscribe(auth: Auth, callback: () => void) {
+  if (listeners.length === 0) {
+    onAuthStateChanged(auth, (user) => {
+      serverState = { ...serverState, user, isLoading: false };
+      listeners.forEach(l => l());
+    }, (error) => {
+      serverState = { ...serverState, error, isLoading: false };
+      listeners.forEach(l => l());
+    });
+  }
+
+  listeners.push(callback);
+  return () => {
+    listeners = listeners.filter(l => l !== callback);
+  };
 }
 
 // A function to get the current snapshot of the auth state
@@ -42,6 +50,12 @@ function getSnapshot(): AuthState {
  * @returns {AuthState} An object containing the user, loading state, and error.
  */
 export function useUser(): AuthState {
-  const authState = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+  const auth = useAuth();
+  
+  const subscribeCallback = useCallback((callback: () => void) => {
+    return subscribe(auth, callback);
+  }, [auth]);
+
+  const authState = useSyncExternalStore(subscribeCallback, getSnapshot, getSnapshot);
   return useMemo(() => authState, [authState.user, authState.isLoading, authState.error]);
 }
