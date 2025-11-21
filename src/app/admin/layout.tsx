@@ -13,6 +13,9 @@ import {
   PanelLeft,
   Home,
   Tag, // এই আইকনটি import করুন
+  TicketPercent,
+  ImageIcon,
+  Bell,
 } from 'lucide-react';  
 
 import {
@@ -37,6 +40,9 @@ const adminNavLinks = [
   { href: '/admin/orders', label: 'Orders', icon: ShoppingBag },
   { href: '/admin/users', label: 'Customers', icon: Users },
   { href: '/admin/offers', label: 'Offers', icon: Tag }, // নতুন লিংক
+  { href: '/admin/coupons', label: 'Coupons', icon: TicketPercent },
+  { href: '/admin/hero-slides', label: 'Hero Slides', icon: ImageIcon },
+  { href: '/admin/notifications', label: 'Notifications', icon: Bell }, // নতুন লিংক // নতুন লিংক
 ]
 
 function AdminSidebar() {
