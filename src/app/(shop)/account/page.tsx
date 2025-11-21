@@ -21,6 +21,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
+import { NotificationPermission } from '@/components/shared/NotificationPermission'; // IMPORT THIS
 
 const profileFormSchema = z.object({
   firstName: z.string().min(2, {
@@ -152,10 +153,14 @@ export default function AccountProfilePage() {
     <div className="space-y-8">
       <Card>
           <CardHeader>
-            <CardTitle>Profile</CardTitle>
-            <CardDescription>
-                This is how others will see you on the site.
-            </CardDescription>
+            <div className="flex items-center justify-between">
+                <div>
+                    <CardTitle>Profile</CardTitle>
+                    <CardDescription>This is how others will see you on the site.</CardDescription>
+                </div>
+                {/* ADD THIS BUTTON HERE */}
+                <NotificationPermission /> 
+            </div>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-4 mb-8">
