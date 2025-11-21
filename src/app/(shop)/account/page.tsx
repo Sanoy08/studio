@@ -1,3 +1,5 @@
+// src/app/(shop)/account/page.tsx
+
 'use client';
 
 import { useEffect } from 'react';
@@ -17,10 +19,8 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from 'sonner';
-import { useFirestore, useUser } from '@/firebase';
-import { updateProfile, reauthenticateWithCredential, EmailAuthProvider, updatePassword } from 'firebase/auth';
-import { doc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { Loader2 } from 'lucide-react';
+import { useAuth } from '@/hooks/use-auth';
 
 const profileFormSchema = z.object({
   firstName: z.string().min(2, {
@@ -47,8 +47,7 @@ type PasswordFormValues = z.infer<typeof passwordFormSchema>;
 
 
 export default function AccountProfilePage() {
-  const { user } = useUser();
-  const firestore = useFirestore();
+  const { user, login } = useAuth(); // login ফাংশনটি দরকার আপডেট করার জন্য
 
   const profileForm = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -70,49 +69,72 @@ export default function AccountProfilePage() {
 
   useEffect(() => {
     if (user) {
-      const nameParts = user.displayName?.split(' ') || ['', ''];
+      const nameParts = user.name?.split(' ') || ['', ''];
       profileForm.reset({
         firstName: nameParts[0],
         lastName: nameParts.slice(1).join(' '),
         email: user.email || '',
       })
     }
-  }, [user, profileForm]);
+  }, [user?.email, user?.name, profileForm]);
 
 
   async function onProfileSubmit(data: ProfileFormValues) {
     if (!user) return;
-    try {
-      const newDisplayName = `${data.firstName} ${data.lastName}`;
-      if (user.displayName !== newDisplayName) {
-        await updateProfile(user, {
-          displayName: newDisplayName,
-        });
-      }
+    const token = localStorage.getItem('token');
 
-      const userDocRef = doc(firestore, 'users', user.uid);
-      await updateDoc(userDocRef, {
-        firstName: data.firstName,
-        lastName: data.lastName,
-        updatedAt: serverTimestamp(),
+    try {
+      const res = await fetch('/api/auth/update-profile', {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+            firstName: data.firstName,
+            lastName: data.lastName
+        }),
       });
-      toast.success('Profile updated successfully!');
+
+      const responseData = await res.json();
+
+      if (!res.ok) {
+        throw new Error(responseData.error || 'Failed to update profile');
+      }
+      
+      // লোকাল স্টেট আপডেট করা (যাতে রিফ্রেশ ছাড়াই নাম পরিবর্তন হয়)
+      login(responseData.user, token || '');
+      
+      toast.success(responseData.message);
     } catch (error: any) {
       toast.error(error.message || 'Failed to update profile.');
     }
   }
 
   async function onPasswordSubmit(data: PasswordFormValues) {
-    if (!user || !user.email) {
-        toast.error("User not found or email is missing.");
-        return;
-    }
+    if (!user) return;
+    const token = localStorage.getItem('token');
 
     try {
-        const credential = EmailAuthProvider.credential(user.email, data.currentPassword);
-        await reauthenticateWithCredential(user, credential);
-        await updatePassword(user, data.newPassword);
-        toast.success('Password changed successfully!');
+        const res = await fetch('/api/auth/change-password', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                currentPassword: data.currentPassword,
+                newPassword: data.newPassword
+            }),
+        });
+
+        const responseData = await res.json();
+
+        if (!res.ok) {
+            throw new Error(responseData.error || 'Failed to change password');
+        }
+
+        toast.success(responseData.message);
         passwordForm.reset();
     } catch (error: any) {
         toast.error(error.message || 'Failed to change password.');
@@ -120,7 +142,7 @@ export default function AccountProfilePage() {
   }
 
   const getInitials = (name: string) => {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase();
+    return name ? name.split(' ').map(n => n[0]).join('').toUpperCase() : 'U';
   }
   
   const { isSubmitting: isProfileSubmitting } = profileForm.formState;
@@ -138,11 +160,11 @@ export default function AccountProfilePage() {
           <CardContent>
             <div className="flex items-center gap-4 mb-8">
                 <Avatar className="h-20 w-20">
-                    <AvatarImage src={user?.photoURL || ''} alt={user?.displayName || ''} />
-                    <AvatarFallback>{user?.displayName ? getInitials(user.displayName) : ''}</AvatarFallback>
+                    <AvatarImage src={user?.picture || ''} alt={user?.name || ''} />
+                    <AvatarFallback>{user?.name ? getInitials(user.name) : ''}</AvatarFallback>
                 </Avatar>
                 <div>
-                    <h3 className="text-xl font-bold">{user?.displayName}</h3>
+                    <h3 className="text-xl font-bold">{user?.name}</h3>
                     <p className="text-sm text-muted-foreground">{user?.email}</p>
                 </div>
             </div>

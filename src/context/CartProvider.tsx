@@ -1,29 +1,37 @@
+// src/context/CartProvider.tsx
+
 'use client';
 
-import React, { createContext, useReducer, ReactNode } from 'react';
+import React, { createContext, useReducer, ReactNode, useEffect } from 'react';
 import type { CartItem, Product } from '@/lib/types';
 import { toast } from 'sonner';
+
+// লোকাল স্টোরেজ কী (Key)
+const CART_STORAGE_KEY = 'bumbas-kitchen-cart';
 
 type CartState = {
   items: CartItem[];
 };
 
 type CartAction =
-  | { type: 'ADD_ITEM'; payload: {product: Product, quantity: number} }
+  | { type: 'ADD_ITEM'; payload: { product: Product; quantity: number } }
   | { type: 'REMOVE_ITEM'; payload: { id: string } }
-  | { type: 'UPDATE_QUANTITY'; payload: { id:string; quantity: number } }
-  | { type: 'CLEAR_CART' };
+  | { type: 'UPDATE_QUANTITY'; payload: { id: string; quantity: number } }
+  | { type: 'CLEAR_CART' }
+  | { type: 'SET_CART'; payload: CartState }; // নতুন অ্যাকশন টাইপ
 
 const cartReducer = (state: CartState, action: CartAction): CartState => {
   switch (action.type) {
     case 'ADD_ITEM': {
       const { product, quantity } = action.payload;
-      const existingItem = state.items.find(item => item.id === product.id);
+      const existingItem = state.items.find((item) => item.id === product.id);
       if (existingItem) {
         return {
           ...state,
-          items: state.items.map(item =>
-            item.id === product.id ? { ...item, quantity: item.quantity + quantity } : item
+          items: state.items.map((item) =>
+            item.id === product.id
+              ? { ...item, quantity: item.quantity + quantity }
+              : item
           ),
         };
       }
@@ -32,7 +40,7 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
         slug: product.slug,
         name: product.name,
         price: product.price,
-        image: product.images[0],
+        image: product.images[0], // মনে রাখবেন, এখানে ইমেজ নিশ্চিত করতে হবে
         quantity: quantity,
       };
       return { ...state, items: [...state.items, newItem] };
@@ -40,25 +48,29 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
     case 'REMOVE_ITEM': {
       return {
         ...state,
-        items: state.items.filter(item => item.id !== action.payload.id),
+        items: state.items.filter((item) => item.id !== action.payload.id),
       };
     }
     case 'UPDATE_QUANTITY': {
       if (action.payload.quantity <= 0) {
         return {
           ...state,
-          items: state.items.filter(item => item.id !== action.payload.id),
+          items: state.items.filter((item) => item.id !== action.payload.id),
         };
       }
       return {
         ...state,
-        items: state.items.map(item =>
-          item.id === action.payload.id ? { ...item, quantity: action.payload.quantity } : item
+        items: state.items.map((item) =>
+          item.id === action.payload.id
+            ? { ...item, quantity: action.payload.quantity }
+            : item
         ),
       };
     }
     case 'CLEAR_CART':
       return { ...state, items: [] };
+    case 'SET_CART': // লোকাল স্টোরেজ থেকে ডেটা সেট করার জন্য
+      return action.payload;
     default:
       return state;
   }
@@ -68,19 +80,44 @@ const initialState: CartState = {
   items: [],
 };
 
-export const CartContext = createContext<{
-  state: CartState;
-  addItem: (product: Product, quantity?: number) => void;
-  removeItem: (id: string) => void;
-  updateQuantity: (id: string, quantity: number) => void;
-  clearCart: () => void;
-  itemCount: number;
-  totalPrice: number;
-} | undefined>(undefined);
-
+export const CartContext = createContext<
+  | {
+      state: CartState;
+      addItem: (product: Product, quantity?: number) => void;
+      removeItem: (id: string) => void;
+      updateQuantity: (id: string, quantity: number) => void;
+      clearCart: () => void;
+      itemCount: number;
+      totalPrice: number;
+    }
+  | undefined
+>(undefined);
 
 export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [state, dispatch] = useReducer(cartReducer, initialState);
+
+  // ১. মাউন্ট হওয়ার সময় লোকাল স্টোরেজ থেকে ডেটা লোড করা
+  useEffect(() => {
+    const storedCart = localStorage.getItem(CART_STORAGE_KEY);
+    if (storedCart) {
+      try {
+        const parsedCart = JSON.parse(storedCart);
+        if (parsedCart && Array.isArray(parsedCart.items)) {
+          dispatch({ type: 'SET_CART', payload: parsedCart });
+        }
+      } catch (error) {
+        console.error('Failed to load cart from localStorage:', error);
+        localStorage.removeItem(CART_STORAGE_KEY);
+      }
+    }
+  }, []);
+
+  // ২. যখনই কার্ট স্টেট পরিবর্তন হবে, তা লোকাল স্টোরেজে সেভ করা
+  useEffect(() => {
+    // আমরা শুধুমাত্র তখনই সেভ করব যখন ইনিশিয়াল লোড হয়ে গেছে (state পরিবর্তন হলে)
+    // তবে খালি অ্যারে হলেও সেভ করা উচিত যাতে কার্ট ক্লিয়ার করলে স্টোরেজও ক্লিয়ার হয়
+    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(state));
+  }, [state]);
 
   const addItem = (product: Product, quantity: number = 1) => {
     dispatch({ type: 'ADD_ITEM', payload: { product, quantity } });
@@ -88,26 +125,39 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const removeItem = (id: string) => {
-    const itemToRemove = state.items.find(item => item.id === id);
-    if(itemToRemove){
-        dispatch({ type: 'REMOVE_ITEM', payload: { id } });
-        toast.info(`Removed "${itemToRemove.name}" from cart`);
+    const itemToRemove = state.items.find((item) => item.id === id);
+    if (itemToRemove) {
+      dispatch({ type: 'REMOVE_ITEM', payload: { id } });
+      toast.info(`Removed "${itemToRemove.name}" from cart`);
     }
   };
 
   const updateQuantity = (id: string, quantity: number) => {
     dispatch({ type: 'UPDATE_QUANTITY', payload: { id, quantity } });
   };
-  
+
   const clearCart = () => {
     dispatch({ type: 'CLEAR_CART' });
   };
 
   const itemCount = state.items.reduce((count, item) => count + item.quantity, 0);
-  const totalPrice = state.items.reduce((total, item) => total + item.price * item.quantity, 0);
+  const totalPrice = state.items.reduce(
+    (total, item) => total + item.price * item.quantity,
+    0
+  );
 
   return (
-    <CartContext.Provider value={{ state, addItem, removeItem, updateQuantity, clearCart, itemCount, totalPrice }}>
+    <CartContext.Provider
+      value={{
+        state,
+        addItem,
+        removeItem,
+        updateQuantity,
+        clearCart,
+        itemCount,
+        totalPrice,
+      }}
+    >
       {children}
     </CartContext.Provider>
   );

@@ -5,7 +5,6 @@ import './globals.css';
 import { CartProvider } from '@/context/CartProvider';
 import { Toaster } from '@/components/ui/sonner';
 import { cn } from '@/lib/utils';
-import { FirebaseClientProvider } from '@/firebase/client-provider';
 
 const poppins = Poppins({
   subsets: ['latin'],
@@ -34,12 +33,12 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={cn('font-sans antialiased', poppins.variable, amarante.variable)}>
-        <FirebaseClientProvider>
+        {/* <FirebaseClientProvider> // REMOVED */}
           <CartProvider>
             {children}
             <Toaster />
           </CartProvider>
-        </FirebaseClientProvider>
+        {/* </FirebaseClientProvider> // REMOVED */}
       </body>
     </html>
   );

@@ -1,3 +1,5 @@
+// src/components/layout/Header.tsx
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -17,13 +19,16 @@ import { Logo } from '@/components/shared/Logo';
 import { CartSheet } from '@/components/shop/CartSheet';
 import { cn } from '@/lib/utils';
 import { Separator } from '../ui/separator';
-import { useUser } from '@/firebase';
+// import { useUserMock } from '@/hooks/use-auth-mock'; // DELETE THIS LINE
+import { useAuth } from '@/hooks/use-auth'; // ADD THIS LINE
 
 export function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
-  const { user } = useUser();
+  const { user } = useAuth(); // UPDATED: useAuth instead of useUserMock
+  
+  // ... rest of the file remains same ...
   
   useEffect(() => {
     const handleScroll = () => {

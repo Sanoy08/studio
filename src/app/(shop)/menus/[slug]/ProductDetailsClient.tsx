@@ -1,3 +1,7 @@
+// src/app/(shop)/menus/[slug]/ProductDetailsClient.tsx
+// AND
+// src/app/(shop)/products/[slug]/ProductDetailsClient.tsx
+
 'use client';
 
 import { useState } from 'react';
@@ -6,14 +10,24 @@ import { Button } from '@/components/ui/button';
 import { formatPrice } from '@/lib/utils';
 import { Plus, Minus, Star } from 'lucide-react';
 import { useCart } from '@/hooks/useCart';
-import type { Product } from '@/lib/types';
+import type { Product, Image as ProductImage } from '@/lib/types';
 import { ProductCard } from '@/components/shop/ProductCard';
+import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants'; // ADDED
+
+// Define a safe fallback image object
+const fallbackImage: ProductImage = { 
+  id: 'placeholder', 
+  url: PLACEHOLDER_IMAGE_URL, 
+  alt: 'Placeholder Image' 
+};
+
 
 export function ProductDetailsClient({ product, relatedProducts }: { product: Product, relatedProducts: Product[] }) {
   const [quantity, setQuantity] = useState(1);
   const { addItem } = useCart();
   
-  const [mainImage, setMainImage] = useState(product.images[0]);
+  // UPDATED: Safely initialize mainImage with fallback if product.images is empty or null
+  const [mainImage, setMainImage] = useState(product.images.length > 0 ? product.images[0] : fallbackImage);
 
   const handleAddToCart = () => {
     addItem(product, quantity);

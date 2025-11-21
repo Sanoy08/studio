@@ -1,6 +1,8 @@
+// src/app/(auth)/login/page.tsx
+
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -10,11 +12,11 @@ import Link from "next/link";
 import { useRouter } from 'next/navigation';
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { useAuth, useUser } from '@/firebase';
-import { signInWithEmailAndPassword } from 'firebase/auth';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
+import { useAuth } from '@/hooks/use-auth'; // ADD THIS LINE
 
+// ... formSchema ...
 const formSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email." }),
   password: z.string().min(1, { message: "Password is required." }),
@@ -22,27 +24,35 @@ const formSchema = z.object({
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
+  const { login } = useAuth(); // ADD THIS LINE
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: { email: "", password: "" },
   });
-  
-  const auth = useAuth();
-  const { user, isUserLoading } = useUser();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (user && !isUserLoading) {
-      router.push('/account');
-    }
-  }, [user, isUserLoading, router]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, values.email, values.password);
-      toast.success("Logged in successfully!");
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(values),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Login failed');
+      }
+
+      // Use the login function from useAuth hook to update global state
+      login(data.user, data.token); // UPDATED
+
+      toast.success(data.message || "Logged in successfully!");
       router.push('/account');
+
     } catch (error: any) {
       console.error(error);
       toast.error(error.message || "An unexpected error occurred.");
@@ -50,15 +60,8 @@ export default function LoginPage() {
       setIsLoading(false);
     }
   }
-
-  if (isUserLoading || user) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
-  }
-
+  
+  // ... rest of the component (UI) remains same ...
   return (
     <Card className="w-full max-w-sm">
       <CardHeader>

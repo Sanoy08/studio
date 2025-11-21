@@ -1,17 +1,18 @@
+// src/app/(shop)/account/layout.tsx
+
 'use client';
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { User, ShoppingBag, MapPin, Heart, LogOut } from 'lucide-react';
+import { User, ShoppingBag, MapPin, LogOut } from 'lucide-react'; // Removed Heart
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
-import { useAuth, useUser } from '@/firebase';
-import { signOut } from 'firebase/auth';
 import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useEffect } from 'react';
 import AccountLoading from './loading';
+// import { useUserMock, useMockAuth } from '@/hooks/use-auth-mock'; // DELETE THIS LINE
+import { useAuth } from '@/hooks/use-auth'; // ADD THIS LINE
 
 const sidebarNavItems = [
   {
@@ -37,27 +38,26 @@ interface AccountLayoutProps {
 
 export default function AccountLayout({ children }: AccountLayoutProps) {
   const pathname = usePathname();
-  const auth = useAuth();
-  const { user, isUserLoading } = useUser();
+  const { user, isLoading, logout } = useAuth(); // UPDATED: useAuth hook
   const router = useRouter();
 
   useEffect(() => {
-    if (!isUserLoading && !user) {
+    if (!isLoading && !user) {
       router.push('/login');
     }
-  }, [user, isUserLoading, router]);
+  }, [user, isLoading, router]);
 
   const handleLogout = async () => {
     try {
-      await signOut(auth);
+      logout(); // UPDATED: use real logout function
       toast.success('Logged out successfully');
-      router.push('/login');
+      // router.push('/login'); // logout function handles redirect
     } catch (error: any) {
-      toast.error(error.message || 'Failed to log out');
+      toast.error('Failed to log out');
     }
   };
 
-  if (isUserLoading || !user) {
+  if (isLoading || !user) {
     return (
         <div className="container py-8 md:py-12">
             <h1 className="text-3xl md:text-4xl font-bold font-headline mb-8 text-center">

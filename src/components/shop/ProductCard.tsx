@@ -1,3 +1,4 @@
+// sanoy08/studio/studio-aa52e24a282afd08f6d0f650cbc4061b0fabac53/src/components/shop/ProductCard.tsx
 
 'use client';
 
@@ -11,6 +12,7 @@ import { Plus, Minus, ShoppingCart } from 'lucide-react';
 import { useCart } from '@/hooks/useCart';
 import { Badge } from '../ui/badge';
 import { differenceInDays } from 'date-fns';
+import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants';
 
 type ProductCardProps = {
   product: Product;
@@ -43,6 +45,8 @@ export function ProductCard({ product }: ProductCardProps) {
   };
 
   const isNew = product.createdAt && differenceInDays(new Date(), new Date(product.createdAt)) < 7;
+  
+  const imageSrc = product.images.length > 0 ? product.images[0].url : PLACEHOLDER_IMAGE_URL;
 
   return (
     <Card className="flex flex-col overflow-hidden h-full transition-shadow hover:shadow-lg bg-card group">
@@ -51,7 +55,7 @@ export function ProductCard({ product }: ProductCardProps) {
             <Badge className="absolute top-2 right-2 bg-accent text-accent-foreground z-10">NEW</Badge>
         )}
         <Image
-          src={product.images[0].url}
+          src={imageSrc}
           alt={product.name}
           width={300}
           height={300}

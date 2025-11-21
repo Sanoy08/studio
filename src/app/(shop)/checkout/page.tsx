@@ -1,17 +1,19 @@
+// src/app/(shop)/checkout/page.tsx
+
 'use client';
 
 import { useCart } from '@/hooks/useCart';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { formatPrice } from '@/lib/utils';
 import Image from 'next/image';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { CreditCard, Lock, ChevronDown, ChevronUp } from 'lucide-react';
+import { Lock, ChevronDown, ChevronUp } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -24,8 +26,8 @@ import {
 } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Textarea } from '@/components/ui/textarea';
-import { useUser } from '@/firebase';
-
+import { useAuth } from '@/hooks/use-auth'; // Custom Auth Hook
+import { toast } from 'sonner'; // Import toast for notifications
 
 const checkoutSchema = z.object({
   name: z.string().min(2, 'Please enter a valid name.'),
@@ -43,19 +45,21 @@ const checkoutSchema = z.object({
 
 export default function CheckoutPage() {
   const { state, totalPrice, itemCount, clearCart } = useCart();
-  const { user, isUserLoading } = useUser();
+  const { user, isLoading } = useAuth();
   const router = useRouter();
   const [orderType, setOrderType] = useState<'delivery' | 'pickup'>('delivery');
   const [isSummaryExpanded, setIsSummaryExpanded] = useState(false);
 
+  // Redirect if not logged in or cart is empty
   useEffect(() => {
-    if (!isUserLoading && !user) {
+    if (!isLoading && !user) {
+      toast.error("Please login to checkout.");
       router.push('/login');
     }
     if (itemCount === 0) {
       router.push('/menus');
     }
-  }, [itemCount, user, isUserLoading, router]);
+  }, [itemCount, user, isLoading, router]);
 
   const form = useForm<z.infer<typeof checkoutSchema>>({
     resolver: zodResolver(checkoutSchema),
@@ -77,37 +81,79 @@ export default function CheckoutPage() {
   // Use a state for the checkbox to avoid re-renders on address change
   const [isSameAsAddress, setIsSameAsAddress] = useState(false);
 
+  // Pre-fill form with user data if available
   useEffect(() => {
-    if(user) {
+    if (user) {
         reset({
-            name: user.displayName || '',
-            altPhone: user.phoneNumber || '',
+            name: user.name || '',
+            // If user object has phone/address in future, map them here.
+            // Currently assuming user object structure from useAuth hook.
         })
     }
   }, [user, reset])
 
-
+  // Handle "Same as primary address" logic
   useEffect(() => {
     if (isSameAsAddress) {
         setValue('deliveryAddress', primaryAddress);
     } else {
-        setValue('deliveryAddress', '');
+        // Only clear if we are unchecking it, to allow manual edits
+        if (watch('deliveryAddress') === primaryAddress) {
+            setValue('deliveryAddress', '');
+        }
     }
-  }, [isSameAsAddress, primaryAddress, setValue]);
+  }, [isSameAsAddress, primaryAddress, setValue, watch]);
 
 
-  function onSubmit(values: z.infer<typeof checkoutSchema>) {
-    console.log('Checkout submitted', values);
-    // Here you would integrate with a payment processor
-    alert('Order placed successfully! (This is a demo)');
-    clearCart();
-    router.push('/');
+  async function onSubmit(values: z.infer<typeof checkoutSchema>) {
+    const token = localStorage.getItem('token');
+    
+    try {
+        // Construct the order payload matching the API expectation
+        const orderPayload = {
+            ...values,
+            items: state.items,
+            subtotal: totalPrice,
+            total: totalPrice, // If you add discount logic later, update this
+            orderType: orderType,
+            // Ensure delivery address is sent only if order type is delivery
+            deliveryAddress: orderType === 'delivery' ? (values.deliveryAddress || values.address) : undefined,
+        };
+
+        const res = await fetch('/api/orders', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': token ? `Bearer ${token}` : ''
+            },
+            body: JSON.stringify(orderPayload),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+            throw new Error(data.error || 'Order placement failed');
+        }
+
+        toast.success('Order placed successfully!');
+        clearCart();
+        router.push('/account/orders'); // Redirect to order history
+
+    } catch (error: any) {
+        console.error("Checkout Error:", error);
+        toast.error(error.message || "Failed to place order. Please try again.");
+    }
   }
 
-  if (itemCount === 0 || isUserLoading || !user) {
-    return null; // or a loading spinner
+  if (itemCount === 0 || isLoading || !user) {
+    return (
+        <div className="container py-12 text-center">
+            <p>Loading checkout...</p>
+        </div>
+    );
   }
 
+  // Helper components for form fields
   const FloatingLabelInput = ({ field, label, type = 'text' }: any) => (
     <div className="relative">
       <Input type={type} placeholder=" " {...field} className="pt-6 peer" />
@@ -157,7 +203,7 @@ export default function CheckoutPage() {
         </div>
         <div className="flex justify-between">
           <p className="text-muted-foreground">Taxes</p>
-          <p>Calculated at next step</p>
+          <p>Calculated included</p>
         </div>
       </div>
       <Separator className="my-4" />

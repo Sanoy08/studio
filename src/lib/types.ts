@@ -1,3 +1,5 @@
+// sanoy08/studio/studio-aa52e24a282afd08f6d0f650cbc4061b0fabac53/src/lib/types.ts
+
 export type Image = {
   id: string;
   url: string;
@@ -17,19 +19,20 @@ export type Category = {
   name: string;
 };
 
+// UPDATED: Reflects MongoDB structure (camelCase conversion for JS/TS naming convention)
 export type Product = {
-  id: string;
-  name: string;
+  id: string; // Will use MongoDB's _id as string
+  name: string; // Maps to 'Name'
   slug: string;
   description: string;
-  price: number;
-  category: Category;
-  images: Image[];
+  price: number; // Maps to 'Price'
+  category: Category; // Mapped from 'Category' string for uniformity
+  images: Image[]; // Mapped from 'ImageURLs' array of strings
   rating: number;
   reviewCount: number;
-  stock: number;
+  stock: number; // Mapped from 'InStock' (needs conversion logic)
   reviews: Review[];
-  featured: boolean;
+  featured: boolean; // Mapped from 'Bestseller'
   createdAt?: string;
 };
 

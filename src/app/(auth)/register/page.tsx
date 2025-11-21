@@ -1,6 +1,8 @@
+// src/app/(auth)/register/page.tsx
+
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -10,60 +12,59 @@ import Link from "next/link";
 import { useRouter } from 'next/navigation';
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { useAuth, useFirestore, useUser } from '@/firebase';
-import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
+// import { useUserMock } from '@/hooks/use-auth-mock'; // DELETE THIS LINE
+import { useAuth } from '@/hooks/use-auth'; // ADD THIS LINE
 
+// ... formSchema ...
 const formSchema = z.object({
   firstName: z.string().min(1, { message: "First name is required." }),
   lastName: z.string().min(1, { message: "Last name is required." }),
   email: z.string().email({ message: "Please enter a valid email." }),
-  password: z.string().min(8, { message: "Password must be at least 8 characters." }),
+  // password field might not be needed here if only sending OTP initially, 
+  // but let's keep it if you want to capture it early or verify it later
+  // password: z.string().min(8, { message: "Password must be at least 8 characters." }), 
 });
 
 export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
+  const { user, isLoading: isAuthLoading } = useAuth(); // UPDATED
+
+  // Simplified form for initial OTP step
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: { firstName: "", lastName: "", email: "", password: "" },
+    defaultValues: { firstName: "", lastName: "", email: "" },
   });
 
-  const auth = useAuth();
-  const firestore = useFirestore();
-  const { user, isUserLoading } = useUser();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (user && !isUserLoading) {
+  // Redirect if already logged in
+  if (!isAuthLoading && user) {
       router.push('/account');
-    }
-  }, [user, isUserLoading, router]);
+  }
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
-      const newUser = userCredential.user;
+        const res = await fetch('/api/auth/send-otp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                email: values.email,
+                name: `${values.firstName} ${values.lastName}`
+            }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+            throw new Error(data.error || 'Failed to send OTP');
+        }
       
-      await updateProfile(newUser, {
-        displayName: `${values.firstName} ${values.lastName}`,
-      });
-
-      const userDocRef = doc(firestore, 'users', newUser.uid);
-      await setDoc(userDocRef, {
-        id: newUser.uid,
-        email: newUser.email,
-        firstName: values.firstName,
-        lastName: values.lastName,
-        isAdmin: false,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
-
-      toast.success("Account created successfully!");
-      router.push('/account');
+      toast.success("OTP sent to your email!");
+      // Redirect to OTP verification page (you need to create this page)
+      // Passing email via query param or context for the next step
+      router.push(`/verify-otp?email=${encodeURIComponent(values.email)}&name=${encodeURIComponent(values.firstName + ' ' + values.lastName)}`);
 
     } catch (error: any) {
       console.error(error);
@@ -73,14 +74,7 @@ export default function RegisterPage() {
     }
   }
 
-  if (isUserLoading || user) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
-  }
-
+  // ... Rest of the component (UI) ...
   return (
     <Card className="w-full max-w-sm">
       <CardHeader>
@@ -131,24 +125,12 @@ export default function RegisterPage() {
                 </FormItem>
               )}
             />
-            <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Password</FormLabel>
-                  <FormControl>
-                    <Input type="password" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {/* Password field removed for initial OTP step, or keep if flow differs */}
           </CardContent>
           <CardFooter className="flex flex-col">
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Create Account
+              Send OTP
             </Button>
             <div className="mt-4 text-center text-sm">
               Already have an account?{" "}
