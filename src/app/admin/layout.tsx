@@ -12,7 +12,8 @@ import {
   LogOut,
   PanelLeft,
   Home,
-} from 'lucide-react'
+  Tag, // এই আইকনটি import করুন
+} from 'lucide-react';  
 
 import {
   Sidebar,
@@ -35,6 +36,7 @@ const adminNavLinks = [
   { href: '/admin/products', label: 'Products', icon: Package },
   { href: '/admin/orders', label: 'Orders', icon: ShoppingBag },
   { href: '/admin/users', label: 'Customers', icon: Users },
+  { href: '/admin/offers', label: 'Offers', icon: Tag }, // নতুন লিংক
 ]
 
 function AdminSidebar() {
