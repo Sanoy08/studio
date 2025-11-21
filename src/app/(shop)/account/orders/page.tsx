@@ -14,7 +14,6 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { formatPrice } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -25,6 +24,7 @@ type Order = {
   Timestamp: string;
   Status: string;
   FinalPrice: number;
+  Items: any[];
 };
 
 export default function AccountOrdersPage() {
@@ -34,7 +34,10 @@ export default function AccountOrdersPage() {
   useEffect(() => {
     const fetchOrders = async () => {
       const token = localStorage.getItem('token');
-      if (!token) return;
+      if (!token) {
+        setIsLoading(false);
+        return;
+      }
 
       try {
         const res = await fetch('/api/orders/user', {
@@ -45,10 +48,12 @@ export default function AccountOrdersPage() {
         if (data.success) {
           setOrders(data.orders);
         } else {
-          toast.error("Failed to load orders.");
+          // টোকেন এক্সপায়ার হলে বা অন্য এরর হলে
+          console.error("Failed to load orders:", data.error);
         }
       } catch (error) {
         console.error(error);
+        toast.error("Could not load order history.");
       } finally {
         setIsLoading(false);
       }
@@ -77,6 +82,7 @@ export default function AccountOrdersPage() {
                 <TableRow>
                   <TableHead>Order No</TableHead>
                   <TableHead>Date</TableHead>
+                  <TableHead>Items</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Total</TableHead>
                 </TableRow>
@@ -86,8 +92,11 @@ export default function AccountOrdersPage() {
                   <TableRow key={order._id}>
                     <TableCell className="font-medium">{order.OrderNumber}</TableCell>
                     <TableCell>{new Date(order.Timestamp).toLocaleDateString()}</TableCell>
+                    <TableCell>{order.Items?.length || 0} items</TableCell>
                     <TableCell>
-                      <Badge variant="outline">{order.Status}</Badge>
+                      <Badge variant={order.Status === 'Received' ? 'default' : 'secondary'}>
+                        {order.Status}
+                      </Badge>
                     </TableCell>
                     <TableCell className="text-right">{formatPrice(order.FinalPrice)}</TableCell>
                   </TableRow>

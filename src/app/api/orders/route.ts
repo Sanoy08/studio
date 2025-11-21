@@ -7,7 +7,6 @@ import jwt from 'jsonwebtoken';
 
 const DB_NAME = 'BumbasKitchenDB';
 const ORDERS_COLLECTION = 'orders';
-const USERS_COLLECTION = 'users';
 const JWT_SECRET = process.env.JWT_SECRET || 'default_secret';
 
 export async function POST(request: NextRequest) {
@@ -39,19 +38,19 @@ export async function POST(request: NextRequest) {
     const ordersCollection = db.collection(ORDERS_COLLECTION);
 
     // ৪. অর্ডার ডকুমেন্ট তৈরি
+    // (দ্রষ্টব্য: আপনার পুরনো কোডে 'wallet' বা 'coins' এর লজিক ছিল, আমি আপাতত সেটা বাদ দিয়েছি যাতে বেসিক অর্ডার কাজ করে)
     const newOrder = {
       OrderNumber: orderNumber,
       userId: userIdToSave, // লগইন করা থাকলে ID, না থাকলে null
       Timestamp: new Date(),
       Name: orderData.name,
-      Phone: orderData.altPhone || orderData.phone, // চেকআউট ফর্মের ফিল্ড অনুযায়ী
+      Phone: orderData.altPhone || orderData.phone,
       Address: orderData.address,
       DeliveryAddress: orderData.deliveryAddress || orderData.address,
-      OrderType: orderData.deliveryAddress ? 'Delivery' : 'Pickup',
+      OrderType: orderData.orderType || 'Delivery',
       MealTime: orderData.mealTime,
       PreferredDate: new Date(orderData.preferredDate),
       Instructions: orderData.instructions,
-      // কার্ট থেকে আসা ডেটা
       Subtotal: parseFloat(orderData.subtotal),
       FinalPrice: parseFloat(orderData.total),
       Items: orderData.items, 
@@ -62,9 +61,6 @@ export async function POST(request: NextRequest) {
     const result = await ordersCollection.insertOne(newOrder);
 
     if (result.acknowledged) {
-      // TODO: Push Notification এবং Coin Earning লজিক এখানে যোগ করা যেতে পারে
-      // আপাতত আমরা শুধু অর্ডার সেভ করছি।
-      
       return NextResponse.json({ 
         success: true, 
         message: "Order placed successfully!",
