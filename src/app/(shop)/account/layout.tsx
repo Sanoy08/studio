@@ -4,7 +4,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { User, ShoppingBag, MapPin, LogOut } from 'lucide-react'; // Removed Heart
+import { User, ShoppingBag, MapPin, Wallet, LogOut } from 'lucide-react'; // Removed Heart
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
@@ -25,6 +25,9 @@ const sidebarNavItems = [
     href: '/account/orders',
     icon: ShoppingBag,
   },
+  { title: 'Wallet',
+    href: '/account/wallet',
+    icon: Wallet },
   {
     title: 'Addresses',
     href: '/account/addresses',
