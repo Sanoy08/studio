@@ -1,6 +1,4 @@
 // src/app/(shop)/menus/[slug]/ProductDetailsClient.tsx
-// AND
-// src/app/(shop)/products/[slug]/ProductDetailsClient.tsx
 
 'use client';
 
@@ -8,122 +6,125 @@ import { useState } from 'react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { formatPrice } from '@/lib/utils';
-import { Plus, Minus, Star } from 'lucide-react';
+import { Plus, Minus, Star, ShoppingCart } from 'lucide-react';
 import { useCart } from '@/hooks/useCart';
 import type { Product, Image as ProductImage } from '@/lib/types';
 import { ProductCard } from '@/components/shop/ProductCard';
-import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants'; // ADDED
+import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants';
+import { toast } from 'sonner';
 
-// Define a safe fallback image object
 const fallbackImage: ProductImage = { 
   id: 'placeholder', 
   url: PLACEHOLDER_IMAGE_URL, 
   alt: 'Placeholder Image' 
 };
 
-
 export function ProductDetailsClient({ product, relatedProducts }: { product: Product, relatedProducts: Product[] }) {
   const [quantity, setQuantity] = useState(1);
   const { addItem } = useCart();
   
-  // UPDATED: Safely initialize mainImage with fallback if product.images is empty or null
-  const [mainImage, setMainImage] = useState(product.images.length > 0 ? product.images[0] : fallbackImage);
+  // সেফ ইমেজ সিলেকশন
+  const initialImage = (product.images && product.images.length > 0) ? product.images[0] : fallbackImage;
+  const [mainImage, setMainImage] = useState(initialImage);
 
   const handleAddToCart = () => {
     addItem(product, quantity);
+    // addItem ফাংশনের ভেতরেই টোস্ট আছে, তাই এখানে আলাদা টোস্ট দরকার নেই যদি সেখানে থাকে
   };
   
-  const isNonVeg = product.category.name === 'Chicken' || product.category.name === 'Mutton' || product.category.name === 'Egg';
+  const isNonVeg = ['Chicken', 'Mutton', 'Egg', 'Fish'].includes(product.category.name);
 
   return (
-    <div className="bg-background">
-      <div className="container py-8">
-        <div className="grid md:grid-cols-2 gap-8">
+    <div className="bg-background min-h-screen">
+      <div className="container py-8 md:py-12">
+        <div className="grid md:grid-cols-2 gap-8 lg:gap-12">
           {/* Left Column - Image Gallery */}
-          <div>
-            <div className="relative aspect-square rounded-lg overflow-hidden border mb-4">
+          <div className="space-y-4">
+            <div className="relative aspect-square rounded-xl overflow-hidden border bg-card">
               <Image
                 src={mainImage.url}
-                alt={product.name}
+                alt={mainImage.alt || product.name}
                 fill
                 className="object-cover"
+                priority
               />
             </div>
-            <div className="grid grid-cols-4 gap-2">
-              {product.images.map((image) => (
-                <div
-                  key={image.id}
-                  className={`relative aspect-square rounded-md overflow-hidden border-2 cursor-pointer ${mainImage.id === image.id ? 'border-primary' : 'border-transparent'}`}
-                  onClick={() => setMainImage(image)}
-                >
-                  <Image
-                    src={image.url}
-                    alt={image.alt}
-                    fill
-                    className="object-cover"
-                  />
-                </div>
-              ))}
-            </div>
+            {product.images.length > 1 && (
+              <div className="flex gap-2 overflow-x-auto pb-2">
+                {product.images.map((image) => (
+                  <button
+                    key={image.id}
+                    className={`relative w-20 h-20 rounded-md overflow-hidden border-2 flex-shrink-0 transition-all ${
+                      mainImage.id === image.id ? 'border-primary' : 'border-transparent hover:border-primary/50'
+                    }`}
+                    onClick={() => setMainImage(image)}
+                  >
+                    <Image
+                      src={image.url}
+                      alt={image.alt}
+                      fill
+                      className="object-cover"
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
           
           {/* Right Column - Product Details */}
-          <div className="pt-8">
-            <div className="flex items-center gap-4 mb-2">
-                <div className={`w-5 h-5 border flex items-center justify-center ${isNonVeg ? 'border-red-600' : 'border-green-600'}`}>
-                    <div className={`w-3 h-3 rounded-full ${isNonVeg ? 'bg-red-600' : 'bg-green-600'}`}></div>
+          <div className="flex flex-col h-full">
+            <div className="space-y-2">
+                <div className="flex items-center gap-3">
+                    <div className={`border px-2 py-0.5 text-xs font-bold rounded flex items-center gap-1 ${isNonVeg ? 'border-red-500 text-red-500' : 'border-green-500 text-green-500'}`}>
+                        <div className={`w-2 h-2 rounded-full ${isNonVeg ? 'bg-red-500' : 'bg-green-500'}`}></div>
+                        {isNonVeg ? 'Non-Veg' : 'Veg'}
+                    </div>
+                    <div className="flex items-center gap-1 bg-amber-100 text-amber-800 px-2 py-0.5 rounded text-xs font-bold">
+                        <Star className="w-3 h-3 fill-amber-800" />
+                        <span>{product.rating}</span>
+                    </div>
                 </div>
-                <div className="flex items-center gap-1">
-                    <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
-                    <span className="font-bold">{product.rating}</span>
-                </div>
+                
+                <h1 className="text-3xl md:text-4xl font-bold font-headline text-foreground">{product.name}</h1>
+                <p className="text-muted-foreground">{product.category.name}</p>
             </div>
             
-            <h1 className="text-3xl md:text-4xl font-bold font-headline">{product.name}</h1>
-            
-            <p className="text-3xl font-bold text-accent my-4">{formatPrice(product.price)}</p>
-
-            <div className="flex items-center gap-4 mb-6">
-              <p className="font-medium">Quantity</p>
-              <div className="flex items-center border rounded-md">
-                  <Button variant="ghost" size="icon" className="h-10 w-10" onClick={() => setQuantity(q => Math.max(1, q - 1))}>
-                      <Minus className="h-4 w-4" />
-                  </Button>
-                  <span className="w-10 text-center font-medium">{quantity}</span>
-                  <Button variant="ghost" size="icon" className="h-10 w-10" onClick={() => setQuantity(q => q + 1)}>
-                      <Plus className="h-4 w-4" />
-                  </Button>
-              </div>
+            <div className="mt-6">
+                <p className="text-3xl font-bold text-primary">{formatPrice(product.price)}</p>
+                <p className="text-sm text-muted-foreground">inclusive of all taxes</p>
             </div>
 
-            <Button size="lg" className="w-full" onClick={handleAddToCart}>
-                Add to Cart
-            </Button>
+            <div className="mt-8 space-y-6">
+                <div className="flex items-center gap-6">
+                    <div className="flex items-center border rounded-lg bg-card">
+                        <Button variant="ghost" size="icon" className="h-12 w-12" onClick={() => setQuantity(q => Math.max(1, q - 1))}>
+                            <Minus className="h-4 w-4" />
+                        </Button>
+                        <span className="w-8 text-center font-bold text-lg">{quantity}</span>
+                        <Button variant="ghost" size="icon" className="h-12 w-12" onClick={() => setQuantity(q => q + 1)}>
+                            <Plus className="h-4 w-4" />
+                        </Button>
+                    </div>
+                    <Button size="lg" className="flex-1 h-12 text-lg gap-2" onClick={handleAddToCart}>
+                        <ShoppingCart className="h-5 w-5" /> Add to Cart
+                    </Button>
+                </div>
+            </div>
+
+            <div className="mt-10">
+                <h2 className="text-xl font-bold mb-3 font-headline">Description</h2>
+                <p className="text-muted-foreground leading-relaxed whitespace-pre-line">
+                    {product.description || "No description available for this delicious dish."}
+                </p>
+            </div>
           </div>
         </div>
 
-        <div className="mt-12">
-            <h2 className="text-2xl font-bold font-headline mb-4">About This Item</h2>
-            <p className="text-muted-foreground">{product.description}</p>
-        </div>
-        
-        {/* Rating Section */}
-        <div className="mt-12 text-center bg-card p-8 rounded-lg">
-            <h3 className="text-xl font-semibold mb-2">Enjoyed the meal? Rate it!</h3>
-            <div className="flex justify-center gap-2 my-4">
-                {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="h-8 w-8 text-gray-300 cursor-pointer hover:text-amber-400" />
-                ))}
-            </div>
-            <Button>Submit Rating</Button>
-        </div>
-
-
         {/* Related Products */}
         {relatedProducts.length > 0 && (
-            <div className="mt-16">
-                <h2 className="text-2xl font-bold font-headline mb-6 text-center">You May Also Like</h2>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            <div className="mt-20">
+                <h2 className="text-2xl font-bold font-headline mb-8">You May Also Like</h2>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
                     {relatedProducts.map((p) => (
                         <ProductCard key={p.id} product={p} />
                     ))}
