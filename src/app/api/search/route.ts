@@ -20,56 +20,17 @@ export async function GET(request: NextRequest) {
     const db = client.db(DB_NAME);
     const collection = db.collection(COLLECTION_NAME);
 
-    // MongoDB Atlas Search Pipeline
-    const pipeline = [
-        {
-            $search: {
-                index: 'menu_search_index', // আপনার তৈরি করা ইনডেক্সের নাম
-                compound: {
-                    should: [
-                        {
-                            autocomplete: {
-                                query: query,
-                                path: 'Name',
-                                fuzzy: { maxEdits: 1, prefixLength: 2 },
-                                score: { boost: { value: 5 } }
-                            }
-                        },
-                        {
-                            text: {
-                                query: query,
-                                path: 'Description',
-                                fuzzy: { maxEdits: 1 }
-                            }
-                        },
-                        {
-                            text: {
-                                query: query,
-                                path: 'Category',
-                                score: { boost: { value: 3 } }
-                            }
-                        }
-                    ]
-                }
-            }
-        },
-        {
-            $project: {
-                _id: 1,
-                Name: 1,
-                Price: 1,
-                Category: 1,
-                Description: 1,
-                ImageURLs: 1,
-                InStock: 1,
-                Bestseller: 1,
-                score: { $meta: "searchScore" }
-            }
-        },
-        { $limit: 20 }
-    ];
+    // আমরা 'Atlas Search' ($search) এর পরিবর্তে সাধারণ 'Regex' ($regex) ব্যবহার করছি।
+    // এটি কোনো কনফিগারেশন ছাড়াই কাজ করবে।
+    const regex = new RegExp(query, 'i'); // 'i' মানে ছোট/বড় হাতের অক্ষর ম্যাটার করবে না
 
-    const results = await collection.aggregate(pipeline).toArray();
+    const results = await collection.find({
+        $or: [
+            { Name: { $regex: regex } },
+            { Description: { $regex: regex } },
+            { Category: { $regex: regex } }
+        ]
+    }).limit(20).toArray();
 
     // ফ্রন্টএন্ডের Product টাইপে কনভার্ট করা
     const products: Product[] = results.map((item: any) => ({
