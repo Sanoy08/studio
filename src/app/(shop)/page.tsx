@@ -1,298 +1,75 @@
 // src/app/(shop)/page.tsx
 
-'use client'
+import { HomeClient } from '@/components/shop/HomeClient';
+import { clientPromise } from '@/lib/mongodb';
+import { Product } from '@/lib/types';
 
-import React, { useEffect, useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious, type CarouselApi } from '@/components/ui/carousel';
-import { Rating } from '@/components/shared/Rating';
-import Image from 'next/image';
-import Link from 'next/link';
-import { MobileNav } from '@/components/layout/MobileNav';
-import { ProductCard } from '@/components/shop/ProductCard';
-import Autoplay from "embla-carousel-autoplay"
-import { Skeleton } from '@/components/ui/skeleton';
-import { formatPrice } from '@/lib/utils';
-import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants';
-import type { Product } from '@/lib/types';
+// এই পেজটি প্রতি ৬০ সেকেন্ড পর পর সার্ভারে নতুন করে ক্যাশ হবে (ISR)
+export const revalidate = 60; 
 
-// টাইপ ডেফিনিশন
-type HeroSlide = {
-  id: string;
-  imageUrl: string;
-  clickUrl: string;
-};
+async function getHomePageData() {
+  try {
+    const client = await clientPromise;
+    const db = client.db('BumbasKitchenDB');
 
-type Offer = {
-  id: string;
-  title: string;
-  description: string;
-  price: number;
-  imageUrl: string;
-};
+    // Parallel fetching for max speed
+    const [slidesData, offersData, productsData] = await Promise.all([
+      db.collection('heroSlides').find({}).sort({ order: 1 }).toArray(),
+      db.collection('offers').find({ active: true }).toArray(),
+      db.collection('menuItems').find({}).toArray()
+    ]);
 
-const testimonials = [
-    {
-      name: 'Ishita M.',
-      location: 'Kolkata',
-      rating: 5,
-      quote: "The food is very tasty and the price is reasonable. A must try for all food lovers."
-    },
-    {
-      name: 'Rohan G.',
-      location: 'Hooghly',
+    // Data serialization (MongoDB Object ID to String)
+    const heroSlides = slidesData.map(slide => ({
+      id: slide._id.toString(),
+      imageUrl: slide.imageUrl,
+      clickUrl: slide.clickUrl,
+    }));
+
+    const offers = offersData.map(offer => ({
+      id: offer._id.toString(),
+      title: offer.title,
+      description: offer.description,
+      price: offer.price,
+      imageUrl: offer.imageUrl,
+    }));
+
+    const allProducts = productsData.map(item => ({
+      id: item._id.toString(),
+      name: item.Name,
+      slug: item.Name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-*|-*$/g, ''),
+      description: item.Description || '',
+      price: item.Price,
+      category: { id: item.Category?.toLowerCase(), name: item.Category },
+      images: item.ImageURLs?.map((url: string, i: number) => ({ id: `img-${i}`, url, alt: item.Name })) || [],
       rating: 4.5,
-      quote: "Amazing home-style food! The chicken kosha was simply out of this world. Delivery was on time too."
-    },
-    {
-      name: 'Priya S.',
-      location: 'Serampore',
-      rating: 5,
-      quote: "Bumba's Kitchen is my go-to for weekend meals. The quality is always consistent and the taste is authentic Bengali."
-    },
-    {
-        name: 'Ankit B.',
-        location: 'Konnagar',
-        rating: 4,
-        quote: "I ordered the veg thali and it was wholesome and delicious. Great value for money. Highly recommended!"
-    }
-];
+      reviewCount: 0,
+      stock: item.InStock ? 100 : 0,
+      featured: item.Bestseller === true,
+      reviews: [],
+      createdAt: item.CreatedAt ? new Date(item.CreatedAt).toISOString() : undefined
+    }));
 
-export default function HomePage() {
-  const [api, setApi] = useState<CarouselApi>()
-  const [current, setCurrent] = useState(0)
-  const [count, setCount] = useState(0)
+    // Filter bestsellers
+    const featured = allProducts.filter((p: any) => p.featured);
+    const bestsellers = featured.length > 0 ? featured : allProducts.slice(0, 8);
 
-  // State for Dynamic Data
-  const [heroSlides, setHeroSlides] = useState<HeroSlide[]>([]);
-  const [offers, setOffers] = useState<Offer[]>([]);
-  const [bestsellers, setBestsellers] = useState<Product[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+    return { heroSlides, offers, bestsellers };
 
-  useEffect(() => {
-    if (!api) return
-    setCount(api.scrollSnapList().length)
-    setCurrent(api.selectedScrollSnap())
-    api.on("select", () => setCurrent(api.selectedScrollSnap()))
-  }, [api])
+  } catch (error) {
+    console.error("Error fetching homepage data:", error);
+    return { heroSlides: [], offers: [], bestsellers: [] };
+  }
+}
 
-  // Fetch Data from APIs
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // 1. Fetch Hero Slides
-        const slidesRes = await fetch('/api/admin/hero-slides');
-        const slidesData = await slidesRes.json();
-        if (slidesData.success) setHeroSlides(slidesData.slides);
-
-        // 2. Fetch Offers
-        const offersRes = await fetch('/api/admin/offers');
-        const offersData = await offersRes.json();
-        if (offersData.success) setOffers(offersData.offers);
-
-        // 3. Fetch Products (Bestsellers)
-        const productsRes = await fetch('/api/admin/products');
-        const productsData = await productsRes.json();
-        if (productsData.success) {
-          // Filter products that are marked as featured/bestseller
-          const featured = productsData.products.filter((p: Product) => p.featured);
-          // If no featured products, show the first 8
-          setBestsellers(featured.length > 0 ? featured : productsData.products.slice(0, 8));
-        }
-      } catch (error) {
-        console.error("Error fetching homepage data:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchData();
-  }, []);
+export default async function HomePage() {
+  const data = await getHomePageData();
 
   return (
-    <div className="bg-background pb-20 md:pb-0"> {/* Added padding for mobile nav */}
-      
-      {/* Hero Section */}
-      <section className="relative -mt-16">
-        {isLoading ? (
-           <div className="w-full h-[50vh] md:h-screen bg-muted animate-pulse" />
-        ) : heroSlides.length > 0 ? (
-          <>
-            <Carousel
-              setApi={setApi}
-              opts={{ loop: true }}
-              plugins={[Autoplay({ delay: 5000 })]}
-            >
-              <CarouselContent>
-                {heroSlides.map((slide) => (
-                  <CarouselItem key={slide.id}>
-                    <Link href={slide.clickUrl} className="block relative h-[50vh] md:h-screen overflow-hidden">
-                      <Image
-                        src={slide.imageUrl}
-                        alt="Hero Slide"
-                        fill
-                        className="object-cover"
-                        priority
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent flex flex-col justify-end p-8 pb-20 md:pb-8">
-                         {/* Optional text overlay could go here */}
-                      </div>
-                    </Link>
-                  </CarouselItem>
-                ))}
-              </CarouselContent>
-              <CarouselPrevious className="left-4 hidden md:flex" />
-              <CarouselNext className="right-4 hidden md:flex" />
-            </Carousel>
-            {/* Dots Indicator */}
-            <div className="absolute bottom-4 md:bottom-8 left-1/2 -translate-x-1/2 z-10 flex gap-2">
-              {Array.from({ length: count }).map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => api?.scrollTo(index)}
-                  className={`h-2 rounded-full transition-all shadow-sm ${current === index ? 'w-6 bg-primary' : 'w-2 bg-white/70'}`}
-                />
-              ))}
-            </div>
-          </>
-        ) : (
-           // Fallback if no slides
-           <div className="relative h-[50vh] md:h-screen overflow-hidden bg-gray-100 flex items-center justify-center">
-              <div className="text-center">
-                  <h1 className="text-4xl md:text-6xl font-bold text-primary mb-4">Bumba's Kitchen</h1>
-                  <p className="text-xl text-muted-foreground mb-8">Delicious food delivered to you.</p>
-                  <Button asChild size="lg"><Link href="/menus">Order Now</Link></Button>
-              </div>
-           </div>
-        )}
-      </section>
-
-      {/* Upcoming Special Offers */}
-      {isLoading || offers.length > 0 ? (
-        <section className="py-12 md:py-24">
-          <div className="container">
-            <h2 className="text-3xl font-bold text-center mb-12 font-headline">Upcoming Special Offers</h2>
-            {isLoading ? (
-               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {[1,2,3].map(i => <Skeleton key={i} className="h-64 w-full rounded-lg" />)}
-               </div>
-            ) : (
-              <Carousel opts={{ align: "start", loop: true }} className="w-full">
-                <CarouselContent>
-                  {offers.map((offer) => (
-                    <CarouselItem key={offer.id} className="md:basis-1/2 lg:basis-1/3">
-                      <div className="p-1 h-full">
-                        <Card className="overflow-hidden group h-full border-none shadow-md">
-                          <CardContent className="p-0 relative aspect-[4/3]">
-                            <Image
-                              src={offer.imageUrl || PLACEHOLDER_IMAGE_URL}
-                              alt={offer.title}
-                              fill
-                              className="object-cover transition-transform duration-300 group-hover:scale-105"
-                            />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-6 text-white">
-                                <h3 className="text-2xl font-bold mb-1">{offer.title}</h3>
-                                <p className="text-sm text-gray-200 line-clamp-2 mb-2">{offer.description}</p>
-                                <p className="text-xl font-bold text-accent">{formatPrice(offer.price)}</p>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </div>
-                    </CarouselItem>
-                  ))}
-                </CarouselContent>
-                <CarouselPrevious className="left-2" />
-                <CarouselNext className="right-2" />
-              </Carousel>
-            )}
-          </div>
-        </section>
-      ) : null}
-
-      {/* Veg Thali Menu (Static for now, can be made dynamic later) */}
-      <section className="py-12 md:py-24 bg-muted/30">
-        <div className="container text-center">
-          <h2 className="text-3xl font-bold mb-2 font-headline">Veg Thali Menu</h2>
-          <p className="text-muted-foreground mb-8">Today's Special</p>
-          <div className="max-w-md mx-auto text-left bg-background p-8 rounded-xl shadow-lg border border-border">
-            <ul className="space-y-3 list-disc list-inside text-lg">
-              <li>ভাত, ডাল (Rice, Dal)</li>
-              <li>পাঁচমিশালি সবজি (Mixed Vegetables)</li>
-              <li>বেগুন ভাজা (Fried Eggplant)</li>
-              <li>আমের চাটনি (Mango Chutney)</li>
-              <li>মিষ্টি দই (Sweet Yogurt)</li>
-              <li>রসগোল্লা (Rasgulla)</li>
-            </ul>
-            <p className="text-3xl font-bold text-accent mt-8 text-center">₹250</p>
-            <Button asChild size="lg" className="mt-6 w-full rounded-full">
-              <Link href="/menus">View Details</Link>
-            </Button>
-          </div>
-        </div>
-      </section>
-
-      {/* Explore Our Bestsellers */}
-       <section className="py-16 md:py-24">
-        <div className="container">
-          <h2 className="text-3xl font-bold text-center mb-12 font-headline">Explore Our Bestsellers</h2>
-          {isLoading ? (
-             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {[1,2,3,4].map(i => <Skeleton key={i} className="h-80 w-full rounded-lg" />)}
-             </div>
-          ) : bestsellers.length > 0 ? (
-            <Carousel
-              opts={{ align: "start", loop: true }}
-              className="w-full max-w-sm sm:max-w-xl md:max-w-3xl lg:max-w-6xl mx-auto"
-            >
-              <CarouselContent>
-                {bestsellers.map((product) => (
-                  <CarouselItem key={product.id} className="basis-full sm:basis-1/2 md:basis-1/3 lg:basis-1/4">
-                    <div className="p-1 h-full">
-                      <ProductCard product={product} />
-                    </div>
-                  </CarouselItem>
-                ))}
-              </CarouselContent>
-              <CarouselPrevious />
-              <CarouselNext />
-            </Carousel>
-          ) : (
-            <p className="text-center text-muted-foreground">No products found.</p>
-          )}
-        </div>
-      </section>
-
-      {/* What Our Customers Say */}
-      <section className="py-12 md:py-24 bg-primary/5">
-        <div className="container">
-          <h2 className="text-3xl font-bold text-center mb-12 font-headline">What Our Customers Say</h2>
-            <Carousel
-                plugins={[Autoplay({ delay: 4000 })]}
-                opts={{ align: "start", loop: true }}
-                className="w-full max-w-2xl mx-auto"
-            >
-                <CarouselContent>
-                    {testimonials.map((testimonial, index) => (
-                        <CarouselItem key={index}>
-                            <Card className="border-none shadow-none bg-transparent">
-                                <CardContent className="p-8 text-center">
-                                    <Rating rating={testimonial.rating} className="justify-center mb-6" />
-                                    <blockquote className="text-xl md:text-2xl italic text-foreground/80 font-medium leading-relaxed">"{testimonial.quote}"</blockquote>
-                                    <div className="mt-8">
-                                        <p className="font-bold text-lg text-primary">{testimonial.name}</p>
-                                        <p className="text-sm text-muted-foreground">{testimonial.location}</p>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </CarouselItem>
-                    ))}
-                </CarouselContent>
-            </Carousel>
-        </div>
-      </section>
-      
-      <MobileNav />
-    </div>
+    <HomeClient 
+      heroSlides={data.heroSlides} 
+      offers={data.offers} 
+      bestsellers={data.bestsellers} // টাইপ ঠিক করার জন্য 'as Product[]' লাগতে পারে যদি টাইপ মিসম্যাচ হয়
+    />
   );
 }
