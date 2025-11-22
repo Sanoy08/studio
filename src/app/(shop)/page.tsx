@@ -2,9 +2,8 @@
 
 import { HomeClient } from '@/components/shop/HomeClient';
 import { clientPromise } from '@/lib/mongodb';
-import { Product } from '@/lib/types';
+// import { Product } from '@/lib/types'; // টাইপ ইম্পোর্ট যদি দরকার হয়
 
-// এই পেজটি প্রতি ৬০ সেকেন্ড পর পর সার্ভারে নতুন করে ক্যাশ হবে (ISR)
 export const revalidate = 60; 
 
 async function getHomePageData() {
@@ -12,14 +11,14 @@ async function getHomePageData() {
     const client = await clientPromise;
     const db = client.db('BumbasKitchenDB');
 
-    // Parallel fetching for max speed
+    // Parallel fetching
     const [slidesData, offersData, productsData] = await Promise.all([
       db.collection('heroSlides').find({}).sort({ order: 1 }).toArray(),
       db.collection('offers').find({ active: true }).toArray(),
       db.collection('menuItems').find({}).toArray()
     ]);
 
-    // Data serialization (MongoDB Object ID to String)
+    // Data serialization
     const heroSlides = slidesData.map(slide => ({
       id: slide._id.toString(),
       imageUrl: slide.imageUrl,
@@ -45,14 +44,27 @@ async function getHomePageData() {
       rating: 4.5,
       reviewCount: 0,
       stock: item.InStock ? 100 : 0,
-      featured: item.Bestseller === true,
+      featured: item.Bestseller === true || item.Bestseller === "true", // স্ট্রিং চেক যোগ করা হলো সেফটির জন্য
       reviews: [],
       createdAt: item.CreatedAt ? new Date(item.CreatedAt).toISOString() : undefined
     }));
 
-    // Filter bestsellers
-    const featured = allProducts.filter((p: any) => p.featured);
-    const bestsellers = featured.length > 0 ? featured : allProducts.slice(0, 8);
+    // --- আপগ্রেড করা Bestseller লজিক ---
+    
+    // ১. প্রথমে যাদের Bestseller মার্ক করা আছে তাদের নাও
+    let bestsellers = allProducts.filter((p: any) => p.featured);
+
+    // ২. যদি ৮টির কম হয়, তাহলে বাকিগুলো সাধারণ আইটেম দিয়ে পূরণ করো
+    if (bestsellers.length < 8) {
+        const remainingCount = 8 - bestsellers.length;
+        // যারা অলরেডি bestsellers-এ নেই, তাদের থেকে নাও
+        const others = allProducts
+            .filter((p: any) => !p.featured)
+            .slice(0, remainingCount);
+        
+        bestsellers = [...bestsellers, ...others];
+    }
+    // ----------------------------------
 
     return { heroSlides, offers, bestsellers };
 
@@ -69,7 +81,7 @@ export default async function HomePage() {
     <HomeClient 
       heroSlides={data.heroSlides} 
       offers={data.offers} 
-      bestsellers={data.bestsellers} // টাইপ ঠিক করার জন্য 'as Product[]' লাগতে পারে যদি টাইপ মিসম্যাচ হয়
+      bestsellers={data.bestsellers} 
     />
   );
 }
