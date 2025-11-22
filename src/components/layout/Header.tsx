@@ -100,15 +100,18 @@ export function Header() {
         </div>
         
         {/* Centered Search Bar */}
-        <div className="flex-1 flex justify-center px-4">
-          <div className="relative w-full max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search dishes..."
-              className="w-full rounded-full bg-muted pl-10"
-            />
-          </div>
-        </div>
+<div className="flex-1 flex justify-center px-4">
+  <Link href="/search" className="w-full max-w-md relative">
+    <div className="relative w-full">
+      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      <Input
+        placeholder="Search dishes..."
+        className="w-full rounded-full bg-muted pl-10 cursor-pointer pointer-events-none" // pointer-events-none prevents typing here
+        readOnly
+      />
+    </div>
+  </Link>
+</div>
 
         {/* Right side icons */}
         <div className="flex items-center justify-end gap-1">
