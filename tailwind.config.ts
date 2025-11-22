@@ -1,4 +1,6 @@
-import type {Config} from 'tailwindcss';
+// tailwind.config.ts
+
+import type { Config } from 'tailwindcss';
 
 export default {
   darkMode: ['class'],
@@ -10,17 +12,26 @@ export default {
   theme: {
     container: {
       center: true,
-      padding: '1rem',
+      // ★★★ শুধুমাত্র এই অংশটি পরিবর্তন করা হয়েছে (Responsive Padding) ★★★
+      padding: {
+        DEFAULT: '1rem', // মোবাইলে ১ রেম (১৬ পিক্সেল) গ্যাপ
+        sm: '2rem',
+        lg: '4rem',
+        xl: '5rem',
+        '2xl': '6rem',
+      },
       screens: {
         '2xl': '1400px',
       },
     },
     extend: {
+      // আপনার এক্সিস্টিং ফন্ট সেটিংস (অপরিবর্তিত)
       fontFamily: {
         sans: ['var(--font-sans)', 'sans-serif'],
         headline: ['var(--font-headline)', 'serif'],
         code: ['monospace'],
       },
+      // আপনার এক্সিস্টিং কালার সেটিংস (অপরিবর্তিত)
       colors: {
         background: 'hsl(var(--background))',
         foreground: 'hsl(var(--foreground))',

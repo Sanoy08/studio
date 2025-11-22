@@ -1,76 +1,70 @@
+/* src/app/globals.css */
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --background: 220 100% 97%; /* --background-light: #F1F8E4; */
-    --foreground: 47 21% 29%; /* --text-color: #4F4A35; */
-    --card: 0 0% 100%; /* --background-white: #FFFFFF; */
-    --card-foreground: 47 21% 29%; /* --text-color: #4F4A35; */
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+
     --popover: 0 0% 100%;
-    --popover-foreground: 47 21% 29%;
-    --primary: 84 43% 55%; /* --primary-color: #A3C86C; */
-    --primary-foreground: 0 0% 100%; /* --text-on-primary: #FFFFFF; */
-    --secondary: 82 46% 94%; /* --primary-extra-light: #F3F7E1; */
-    --secondary-foreground: 47 21% 29%;
-    --muted: 82 46% 94%;
-    --muted-foreground: 50 14% 48%; /* --text-light: #7D7B55; */
-    --accent: 45 93% 65%; /* --accent-color: #F9D34E; */
-    --accent-foreground: 47 21% 29%;
-    --destructive: 0 72% 41%; /* --error-red: #B71C1C; */
-    --destructive-foreground: 0 0% 100%;
-    --border: 84 43% 55% / 0.2; /* --divider-color: rgba(163, 200, 108, 0.2); */
-    --input: 84 43% 55% / 0.2;
-    --ring: 84 43% 55%;
-    --chart-1: 84 43% 55%;
-    --chart-2: 45 93% 65%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
+    --popover-foreground: 222.2 84% 4.9%;
+
+    --primary: 84 34% 45%; /* আপনার ওয়েবসাইটের সবুজ থিম */
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    --accent: 45 93% 47%; /* আপনার ওয়েবসাইটের হলুদ/অ্যাম্বার থিম */
+    --accent-foreground: 222.2 47.4% 11.2%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 84 34% 45%;
+
     --radius: 0.5rem;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
   }
+
   .dark {
-    --background: 47 21% 29%;
-    --foreground: 82 46% 94%;
-    --card: 48 10% 20%;
-    --card-foreground: 82 46% 94%;
-    --popover: 47 21% 29%;
-    --popover-foreground: 82 46% 94%;
-    --primary: 84 31% 45%; /* --primary-dark: #7D9A4D; */
-    --primary-foreground: 0 0% 100%;
-    --secondary: 48 10% 20%;
-    --secondary-foreground: 82 46% 94%;
-    --muted: 48 10% 20%;
-    --muted-foreground: 60 9% 60%; /* --text-lighter: #A4A38F; */
-    --accent: 43 75% 59%; /* --accent-dark: #E1B93F; */
-    --accent-foreground: 47 21% 29%;
-    --destructive: 0 100% 30%; /* --error-red-dark: #9A0000; */
-    --destructive-foreground: 0 0% 100%;
-    --border: 84 43% 55% / 0.2;
-    --input: 84 43% 55% / 0.2;
-    --ring: 84 31% 45%;
-    --chart-1: 84 31% 45%;
-    --chart-2: 43 75% 59%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 84 34% 45%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 45 93% 47%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 84 34% 45%;
   }
 }
 
@@ -80,20 +74,13 @@
   }
   body {
     @apply bg-background text-foreground;
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none;  /* IE and Edge */
-  }
-  body::-webkit-scrollbar {
-    display: none; /* Chrome, Safari, and Opera */
+    /* এই লাইনটি হরাইজন্টাল স্ক্রল ফিক্স করবে */
+    overflow-x: hidden; 
   }
 }
 
-@layer utilities {
-  .embla-fade .embla__slide {
-    opacity: 0;
-    transition: opacity 0.4s ease-in-out;
-  }
-  .embla-fade .embla__slide.is-in-view {
-    opacity: 1;
-  }
+/* ইমেজ রেসপন্সিভনেস */
+img {
+  max-width: 100%;
+  height: auto;
 }

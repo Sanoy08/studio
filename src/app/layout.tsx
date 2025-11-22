@@ -1,10 +1,11 @@
 
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Poppins, Amarante } from 'next/font/google';
 import './globals.css';
 import { CartProvider } from '@/context/CartProvider';
 import { Toaster } from '@/components/ui/sonner';
 import { cn } from '@/lib/utils';
+
 
 const poppins = Poppins({
   subsets: ['latin'],
@@ -43,3 +44,17 @@ export default function RootLayout({
     </html>
   );
 }
+
+
+
+// ★★★ এই অংশটি যোগ করুন ★★★
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false, // অ্যাপের মতো ফিলিংস দেওয়ার জন্য জুম বন্ধ করা হলো (অপশনাল)
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: 'white' },
+    { media: '(prefers-color-scheme: dark)', color: 'black' },
+  ],
+};
