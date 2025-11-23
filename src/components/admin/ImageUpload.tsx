@@ -30,12 +30,12 @@ export function ImageUpload({ value, onChange, maxFiles = 1, folder = 'general' 
     const uploadedUrls: string[] = [...value];
 
     // এনভায়রনমেন্ট ভেরিয়েবল থেকে কনফিগ নেওয়া
-    let cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME; 
+    let cloudName = process.env.CLOUDINARY_CLOUD_NAME; 
     let uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
 
     if (folder === 'dish') {
-        cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME_DISHES;
-        uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET_DISHES;
+        cloudName = process.env.CLOUDINARY_CLOUD_NAME_DISHES;
+        uploadPreset = process.env.CLOUDINARY_UPLOAD_PRESET_DISHES;
     }
 
     // কনফিগ চেক
