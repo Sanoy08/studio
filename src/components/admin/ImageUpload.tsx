@@ -29,19 +29,24 @@ export function ImageUpload({ value, onChange, maxFiles = 1, folder = 'general' 
     setIsUploading(true);
     const uploadedUrls: string[] = [...value];
 
-    // এনভায়রনমেন্ট ভেরিয়েবল থেকে কনফিগ নেওয়া
-    let cloudName = process.env.CLOUDINARY_CLOUD_NAME; 
+    // 1. এনভায়রনমেন্ট ভেরিয়েবল থেকে কনফিগ নেওয়া (NEXT_PUBLIC_ সহ)
+    let cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME; 
     let uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
 
+    // যদি 'dish' ফোল্ডার হয়, তবে Dishes এর ক্রেডেনশিয়াল ব্যবহার হবে
     if (folder === 'dish') {
-        cloudName = process.env.CLOUDINARY_CLOUD_NAME_DISHES;
-        uploadPreset = process.env.CLOUDINARY_UPLOAD_PRESET_DISHES;
+        cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME_DISHES;
+        uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET_DISHES;
     }
 
-    // কনফিগ চেক
+    // কনফিগ চেক এবং ডিবাগিং
     if (!cloudName || !uploadPreset) {
-        toast.error("Cloudinary configuration missing in .env.local");
-        console.error("Missing Cloudinary Config:", { cloudName, uploadPreset, folder });
+        console.error("Missing Config:", { 
+            type: folder, 
+            cloudName, 
+            uploadPreset 
+        });
+        toast.error(`Cloudinary config missing for ${folder}. Check .env.local`);
         setIsUploading(false);
         return;
     }
@@ -53,18 +58,16 @@ export function ImageUpload({ value, onChange, maxFiles = 1, folder = 'general' 
             formData.append('file', file);
             formData.append('upload_preset', uploadPreset);
 
-            // ডিবাগিংয়ের জন্য লগ
-            console.log(`Uploading to: https://api.cloudinary.com/v1_1/${cloudName}/image/upload`);
-
+            // আপলোড রিকোয়েস্ট পাঠানো
             const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
                 method: 'POST',
                 body: formData,
             });
 
             if (!res.ok) {
-                const errorText = await res.text();
-                console.error("Cloudinary Upload Failed:", res.status, errorText);
-                throw new Error(`Cloudinary Error (${res.status}): ${errorText}`);
+                const errorData = await res.json();
+                console.error("Cloudinary Error Response:", errorData);
+                throw new Error(errorData.error?.message || `Upload failed with status ${res.status}`);
             }
 
             const data = await res.json();
@@ -77,8 +80,8 @@ export function ImageUpload({ value, onChange, maxFiles = 1, folder = 'general' 
         onChange(uploadedUrls);
         toast.success('Image uploaded successfully!');
     } catch (error: any) {
-        console.error("Upload Error Details:", error);
-        toast.error(`Upload failed. Check console for details.`);
+        console.error("Upload Logic Error:", error);
+        toast.error(`Upload failed: ${error.message}`);
     } finally {
         setIsUploading(false);
     }
