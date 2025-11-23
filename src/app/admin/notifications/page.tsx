@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Loader2, Send, Bell } from 'lucide-react';
 import { toast } from 'sonner';
+import { ImageUpload } from '@/components/admin/ImageUpload';
 
 export default function AdminNotificationsPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -83,14 +84,17 @@ export default function AdminNotificationsPage() {
                     placeholder="Enter your message here..."
                 />
             </div>
+            
+            {/* DRAG & DROP UPLOAD */}
             <div className="space-y-2">
-                <Label>Image URL (Optional)</Label>
-                <Input 
-                    value={formData.image} 
-                    onChange={(e) => setFormData({...formData, image: e.target.value})} 
-                    placeholder="https://..."
+                <Label>Notification Image (Optional)</Label>
+                <ImageUpload 
+                    value={formData.image ? [formData.image] : []}
+                    onChange={(urls) => setFormData({...formData, image: urls[0] || ''})}
+                    maxFiles={1}
                 />
             </div>
+
             <div className="space-y-2">
                 <Label>Link URL (Optional)</Label>
                 <Input 

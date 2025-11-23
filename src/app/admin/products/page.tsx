@@ -4,9 +4,9 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -16,6 +16,7 @@ import { toast } from 'sonner';
 import { formatPrice } from '@/lib/utils';
 import Image from 'next/image';
 import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants';
+import { ImageUpload } from '@/components/admin/ImageUpload';
 
 type Product = {
   id: string;
@@ -34,13 +35,12 @@ export default function AdminProductsPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
-  // Form States
   const [formData, setFormData] = useState({
     name: '',
     category: '',
     price: '',
     description: '',
-    imageUrl: '',
+    images: [] as { id: string; url: string }[],
     inStock: true,
     featured: false,
   });
@@ -68,13 +68,21 @@ export default function AdminProductsPage() {
         category: product.category.name,
         price: product.price.toString(),
         description: product.description || '',
-        imageUrl: product.images[0]?.url || '',
+        images: product.images.map((img, i) => ({ id: `img-${i}`, url: img.url })),
         inStock: product.stock > 0,
         featured: product.featured || false,
       });
     } else {
       setEditingProduct(null);
-      setFormData({ name: '', category: '', price: '', description: '', imageUrl: '', inStock: true, featured: false });
+      setFormData({ 
+        name: '', 
+        category: '', 
+        price: '', 
+        description: '', 
+        images: [], 
+        inStock: true, 
+        featured: false 
+      });
     }
     setIsDialogOpen(true);
   };
@@ -84,11 +92,20 @@ export default function AdminProductsPage() {
     const method = editingProduct ? 'PUT' : 'POST';
     const url = editingProduct ? `/api/admin/products/${editingProduct.id}` : '/api/admin/products';
 
+    // Prepare payload (backend expects single imageUrl for now, or you can update backend to accept array)
+    // For compatibility with current backend, sending the first image URL as 'imageUrl'
+    const payload = {
+        ...formData,
+        imageUrl: formData.images.length > 0 ? formData.images[0].url : '',
+        // If you update backend to support multiple images:
+        // imageURLs: formData.images.map(img => img.url) 
+    };
+
     try {
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
       
       if (res.ok) {
@@ -163,13 +180,24 @@ export default function AdminProductsPage() {
         </CardContent>
       </Card>
 
-      {/* Add/Edit Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
                 <DialogTitle>{editingProduct ? 'Edit Product' : 'Add New Product'}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-4">
+                
+                {/* DRAG & DROP UPLOAD */}
+                <div className="space-y-2">
+                    <Label>Product Images (Max 4)</Label>
+                    <ImageUpload 
+                        value={formData.images.map(img => img.url)}
+                        onChange={(urls) => setFormData({ ...formData, images: urls.map((u, i) => ({ id: `new-${i}`, url: u })) })}
+                        maxFiles={4}
+                        folder="dish"
+                    />
+                </div>
+
                 <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                         <Label>Name</Label>
@@ -180,15 +208,9 @@ export default function AdminProductsPage() {
                         <Input value={formData.category} onChange={(e) => setFormData({...formData, category: e.target.value})} placeholder="e.g. Chicken" />
                     </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                     <div className="space-y-2">
-                        <Label>Price (₹)</Label>
-                        <Input type="number" value={formData.price} onChange={(e) => setFormData({...formData, price: e.target.value})} />
-                    </div>
-                     <div className="space-y-2">
-                        <Label>Image URL</Label>
-                        <Input value={formData.imageUrl} onChange={(e) => setFormData({...formData, imageUrl: e.target.value})} placeholder="https://..." />
-                    </div>
+                <div className="space-y-2">
+                    <Label>Price (₹)</Label>
+                    <Input type="number" value={formData.price} onChange={(e) => setFormData({...formData, price: e.target.value})} />
                 </div>
                 <div className="space-y-2">
                     <Label>Description</Label>

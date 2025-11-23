@@ -1,9 +1,8 @@
-// sanoy08/studio/studio-aa52e24a282afd08f6d0f650cbc4061b0fabac53/next.config.ts
+// next.config.ts
 
-import type {NextConfig} from 'next';
+import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  /* config options here */
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -11,6 +10,11 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: true,
   },
   images: {
+    // ★★★ এই লাইনটি যোগ করুন ★★★
+    // এটি Vercel-কে ইমেজ প্রসেস করতে বাধা দেবে, ফলে লিমিট শেষ হবে না।
+    // ছবি সরাসরি Cloudinary থেকে লোড হবে (ব্যান্ডউইথ Cloudinary-র খরচ হবে)।
+    unoptimized: true, 
+    
     remotePatterns: [
       {
         protocol: 'https',
@@ -30,7 +34,6 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/**',
       },
-      // ADDED: Cloudinary domain configuration
       {
         protocol: 'https',
         hostname: 'res.cloudinary.com',

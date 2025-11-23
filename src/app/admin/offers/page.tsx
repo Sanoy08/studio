@@ -16,6 +16,7 @@ import { toast } from 'sonner';
 import { formatPrice } from '@/lib/utils';
 import Image from 'next/image';
 import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants';
+import { ImageUpload } from '@/components/admin/ImageUpload';
 
 type Offer = {
   id: string;
@@ -148,13 +149,23 @@ export default function AdminOffersPage() {
         </CardContent>
       </Card>
 
-      {/* Add Offer Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent>
             <DialogHeader>
                 <DialogTitle>Add New Offer</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-4">
+                
+                {/* DRAG & DROP UPLOAD */}
+                <div className="space-y-2">
+                    <Label>Offer Image</Label>
+                    <ImageUpload 
+                        value={formData.imageUrl ? [formData.imageUrl] : []}
+                        onChange={(urls) => setFormData({...formData, imageUrl: urls[0] || ''})}
+                        maxFiles={1}
+                    />
+                </div>
+
                 <div className="space-y-2">
                     <Label>Title</Label>
                     <Input value={formData.title} onChange={(e) => setFormData({...formData, title: e.target.value})} placeholder="e.g. Weekend Special" />
@@ -163,15 +174,9 @@ export default function AdminOffersPage() {
                     <Label>Description</Label>
                     <Textarea value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} placeholder="Offer details..." />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                     <div className="space-y-2">
-                        <Label>Price (₹)</Label>
-                        <Input type="number" value={formData.price} onChange={(e) => setFormData({...formData, price: e.target.value})} />
-                    </div>
-                     <div className="space-y-2">
-                        <Label>Image URL</Label>
-                        <Input value={formData.imageUrl} onChange={(e) => setFormData({...formData, imageUrl: e.target.value})} placeholder="https://..." />
-                    </div>
+                <div className="space-y-2">
+                    <Label>Price (₹)</Label>
+                    <Input type="number" value={formData.price} onChange={(e) => setFormData({...formData, price: e.target.value})} />
                 </div>
                 <div className="flex items-center gap-2">
                     <Switch checked={formData.active} onCheckedChange={(c) => setFormData({...formData, active: c})} />

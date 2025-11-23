@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Loader2, Plus, Trash2, Image as ImageIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import Image from 'next/image';
+import { ImageUpload } from '@/components/admin/ImageUpload';
 
 type Slide = {
   id: string;
@@ -75,7 +76,7 @@ export default function AdminHeroSlidesPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Delete this slide? It will be removed from Cloudinary too.')) return;
+    if (!confirm('Delete this slide?')) return;
     const token = localStorage.getItem('token');
     try {
         const res = await fetch(`/api/admin/hero-slides/${id}`, {
@@ -144,26 +145,30 @@ export default function AdminHeroSlidesPage() {
         </CardContent>
       </Card>
 
-      {/* Add Slide Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent>
             <DialogHeader>
                 <DialogTitle>Add New Hero Slide</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-4">
+                
+                {/* DRAG & DROP UPLOAD */}
                 <div className="space-y-2">
-                    <Label>Image URL</Label>
-                    <Input value={formData.imageUrl} onChange={(e) => setFormData({...formData, imageUrl: e.target.value})} placeholder="https://res.cloudinary.com/..." />
-                    <p className="text-xs text-muted-foreground">Enter the direct URL of the image.</p>
+                    <Label>Slide Image</Label>
+                    <ImageUpload 
+                        value={formData.imageUrl ? [formData.imageUrl] : []}
+                        onChange={(urls) => setFormData({...formData, imageUrl: urls[0] || ''})}
+                        maxFiles={1}
+                    />
                 </div>
                 
                 <div className="space-y-2">
-                    <Label>Click URL (Where it links to)</Label>
-                    <Input value={formData.clickUrl} onChange={(e) => setFormData({...formData, clickUrl: e.target.value})} placeholder="/menus or https://..." />
+                    <Label>Click URL (Redirect Link)</Label>
+                    <Input value={formData.clickUrl} onChange={(e) => setFormData({...formData, clickUrl: e.target.value})} placeholder="/menu or https://..." />
                 </div>
 
                 <div className="space-y-2">
-                    <Label>Order Priority (Lower comes first)</Label>
+                    <Label>Order Priority</Label>
                     <Input type="number" value={formData.order} onChange={(e) => setFormData({...formData, order: e.target.value})} placeholder="0" />
                 </div>
             </div>
