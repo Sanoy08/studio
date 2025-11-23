@@ -3,6 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { clientPromise } from '@/lib/mongodb';
 import jwt from 'jsonwebtoken';
+import { revalidatePath } from 'next/cache'; // ★ ইমপোর্ট
 
 const DB_NAME = 'BumbasKitchenDB';
 const COLLECTION_NAME = 'heroSlides';
@@ -17,13 +18,10 @@ async function isAdmin(request: NextRequest) {
   } catch { return false; }
 }
 
-// ১. স্লাইড লিস্ট পাওয়া (GET)
 export async function GET(request: NextRequest) {
   try {
     const client = await clientPromise;
     const db = client.db(DB_NAME);
-    
-    // order অনুযায়ী স্লাইড সাজানো
     const slides = await db.collection(COLLECTION_NAME)
         .find({})
         .sort({ order: 1 })
@@ -42,7 +40,6 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// ২. নতুন স্লাইড যোগ করা (POST)
 export async function POST(request: NextRequest) {
   try {
     if (!await isAdmin(request)) {
@@ -51,10 +48,6 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     
-    if (!body.imageUrl || !body.clickUrl) {
-        return NextResponse.json({ success: false, error: 'Image URL and Click URL are required.' }, { status: 400 });
-    }
-
     const newSlide = {
       imageUrl: body.imageUrl,
       clickUrl: body.clickUrl,
@@ -67,6 +60,9 @@ export async function POST(request: NextRequest) {
     const result = await db.collection(COLLECTION_NAME).insertOne(newSlide);
 
     if (result.acknowledged) {
+      // ★ ক্যাশ ক্লিয়ার (শুধুমাত্র হোমপেজ)
+      revalidatePath('/');
+      
       return NextResponse.json({ success: true, message: 'Slide added successfully', slideId: result.insertedId }, { status: 201 });
     } else {
       throw new Error('Failed to add slide');

@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { clientPromise } from '@/lib/mongodb';
 import { ObjectId } from 'mongodb';
 import jwt from 'jsonwebtoken';
+import { revalidatePath } from 'next/cache'; // ★ ইমপোর্ট
 
 const DB_NAME = 'BumbasKitchenDB';
 const COLLECTION_NAME = 'menuItems';
@@ -18,7 +19,6 @@ async function isAdmin(request: NextRequest) {
   } catch { return false; }
 }
 
-// ১. প্রোডাক্ট আপডেট করা (PUT)
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     if (!await isAdmin(request)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -44,13 +44,16 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       { $set: updateData }
     );
 
+    // ★ ক্যাশ ক্লিয়ার
+    revalidatePath('/menus');
+    revalidatePath('/');
+
     return NextResponse.json({ success: true, message: 'Product updated' });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
 
-// ২. প্রোডাক্ট ডিলিট করা (DELETE)
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     if (!await isAdmin(request)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -60,6 +63,10 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     const db = client.db(DB_NAME);
 
     await db.collection(COLLECTION_NAME).deleteOne({ _id: new ObjectId(id) });
+
+    // ★ ক্যাশ ক্লিয়ার
+    revalidatePath('/menus');
+    revalidatePath('/');
 
     return NextResponse.json({ success: true, message: 'Product deleted' });
   } catch (error: any) {

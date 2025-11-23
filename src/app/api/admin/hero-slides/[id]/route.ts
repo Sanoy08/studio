@@ -5,11 +5,11 @@ import { clientPromise } from '@/lib/mongodb';
 import { ObjectId } from 'mongodb';
 import jwt from 'jsonwebtoken';
 import { v2 as cloudinary } from 'cloudinary';
+import { revalidatePath } from 'next/cache'; // ★ ইমপোর্ট
 
-// Cloudinary কনফিগারেশন
 cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
+    cloud_name: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY,
     api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
@@ -26,7 +26,6 @@ async function isAdmin(request: NextRequest) {
   } catch { return false; }
 }
 
-// Helper: Cloudinary Public ID বের করা
 function extractPublicId(imageUrl: string) {
     try {
         const regex = /\/v\d+\/(.+)\.\w+$/;
@@ -46,27 +45,26 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     const db = client.db(DB_NAME);
     const collection = db.collection(COLLECTION_NAME);
 
-    // ১. স্লাইড খুঁজে বের করা (ইমেজ URL পাওয়ার জন্য)
     const slideToDelete = await collection.findOne({ _id: new ObjectId(id) });
     if (!slideToDelete) {
         return NextResponse.json({ success: false, error: 'Slide not found' }, { status: 404 });
     }
 
-    // ২. Cloudinary থেকে ডিলিট করা
     if (slideToDelete.imageUrl) {
         const publicId = extractPublicId(slideToDelete.imageUrl);
         if (publicId) {
             try {
                 await cloudinary.uploader.destroy(publicId);
-                console.log(`Deleted Cloudinary image: ${publicId}`);
             } catch (cloudError) {
                 console.error("Cloudinary delete error:", cloudError);
             }
         }
     }
 
-    // ৩. ডেটাবেস থেকে ডিলিট করা
     await collection.deleteOne({ _id: new ObjectId(id) });
+
+    // ★ ক্যাশ ক্লিয়ার
+    revalidatePath('/');
 
     return NextResponse.json({ success: true, message: 'Slide deleted successfully' });
 

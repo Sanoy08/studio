@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { clientPromise } from '@/lib/mongodb';
 import { ObjectId } from 'mongodb';
 import jwt from 'jsonwebtoken';
+import { revalidatePath } from 'next/cache'; // ★ ইমপোর্ট
 
 const DB_NAME = 'BumbasKitchenDB';
 const COLLECTION_NAME = 'offers';
@@ -27,6 +28,9 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     const db = client.db(DB_NAME);
 
     await db.collection(COLLECTION_NAME).deleteOne({ _id: new ObjectId(id) });
+
+    // ★ ক্যাশ ক্লিয়ার
+    revalidatePath('/');
 
     return NextResponse.json({ success: true, message: 'Offer deleted' });
   } catch (error: any) {

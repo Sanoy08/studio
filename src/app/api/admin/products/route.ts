@@ -3,32 +3,27 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { clientPromise } from '@/lib/mongodb';
 import jwt from 'jsonwebtoken';
+import { revalidatePath } from 'next/cache'; // ★ ১. এই লাইনটি যোগ করা হয়েছে
 
 const DB_NAME = 'BumbasKitchenDB';
-const COLLECTION_NAME = 'menuItems'; // আপনার মেনু কালেকশনের নাম
+const COLLECTION_NAME = 'menuItems';
 const JWT_SECRET = process.env.JWT_SECRET || 'default_secret';
 
-// হেল্পার: অ্যাডমিন চেক
 async function isAdmin(request: NextRequest) {
   const authHeader = request.headers.get('authorization');
   if (!authHeader || !authHeader.startsWith('Bearer ')) return false;
-  const token = authHeader.split(' ')[1];
   try {
-    const decoded: any = jwt.verify(token, JWT_SECRET);
+    const decoded: any = jwt.verify(authHeader.split(' ')[1], JWT_SECRET);
     return decoded.role === 'admin';
-  } catch (e) {
-    return false;
-  }
+  } catch { return false; }
 }
 
-// ১. সমস্ত প্রোডাক্ট পাওয়া (GET)
 export async function GET(request: NextRequest) {
   try {
     const client = await clientPromise;
     const db = client.db(DB_NAME);
     const products = await db.collection(COLLECTION_NAME).find({}).toArray();
 
-    // ফ্রন্টএন্ডের ফরম্যাটে ম্যাপ করা
     const formattedProducts = products.map(item => ({
       id: item._id.toString(),
       name: item.Name,
@@ -46,7 +41,6 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// ২. নতুন প্রোডাক্ট যোগ করা (POST)
 export async function POST(request: NextRequest) {
   try {
     if (!await isAdmin(request)) {
@@ -61,7 +55,7 @@ export async function POST(request: NextRequest) {
       Description: description,
       Price: parseFloat(price),
       Category: category,
-      ImageURLs: [imageUrl], // আপাতত একটা ইমেজ URL অ্যারে হিসেবে নিচ্ছি
+      ImageURLs: [imageUrl],
       Bestseller: featured,
       InStock: inStock,
       CreatedAt: new Date()
@@ -72,6 +66,10 @@ export async function POST(request: NextRequest) {
     const result = await db.collection(COLLECTION_NAME).insertOne(newProduct);
 
     if (result.acknowledged) {
+      // ★ ২. ক্যাশ ক্লিয়ার করা হচ্ছে
+      revalidatePath('/menus'); // মেনু পেজ রিফ্রেশ হবে
+      revalidatePath('/');      // হোমপেজ রিফ্রেশ হবে (বেস্টসেলার সেকশনের জন্য)
+      
       return NextResponse.json({ success: true, message: 'Product added successfully', productId: result.insertedId }, { status: 201 });
     } else {
       throw new Error('Failed to insert product');
