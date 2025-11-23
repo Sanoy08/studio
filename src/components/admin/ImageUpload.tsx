@@ -29,7 +29,7 @@ export function ImageUpload({ value, onChange, maxFiles = 1, folder = 'general' 
     setIsUploading(true);
     const uploadedUrls: string[] = [...value];
 
-    // 1. এনভায়রনমেন্ট ভেরিয়েবল থেকে কনফিগ নেওয়া (NEXT_PUBLIC_ সহ)
+    // 1. এনভায়রনমেন্ট ভেরিয়েবল থেকে কনফিগ নেওয়া (NEXT_PUBLIC_ সহ))
     let cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME; 
     let uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
 
