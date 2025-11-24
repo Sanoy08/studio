@@ -13,7 +13,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Lock, ChevronDown, ChevronUp } from 'lucide-react';
+import { Lock, ChevronDown, ChevronUp, MapPin } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -30,6 +30,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { toast } from 'sonner';
 import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants';
 
+// --- স্কিমা ---
 const checkoutSchema = z.object({
   name: z.string().min(2, 'Please enter a valid name.'),
   address: z.string().min(10, 'Please enter your primary address (at least 10 characters).'),
@@ -43,6 +44,38 @@ const checkoutSchema = z.object({
   }),
   shareLocation: z.boolean().optional(),
 });
+
+// --- হেল্পার কম্পোনেন্ট (ফাংশনের বাইরে) ---
+
+const FloatingLabelInput = ({ field, label, type = 'text' }: any) => (
+  <div className="relative">
+    <Input 
+      type={type} 
+      placeholder=" " 
+      {...field} 
+      value={field.value ?? ''} 
+      className="block px-4 pb-2.5 pt-6 w-full text-sm text-foreground bg-background border-muted-foreground/30 rounded-xl border appearance-none focus:outline-none focus:ring-0 focus:border-primary peer h-12 transition-all shadow-sm hover:border-primary/50" 
+    />
+    <FormLabel className="absolute text-sm text-muted-foreground duration-300 transform -translate-y-3 scale-75 top-4 z-10 origin-[0] start-4 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-3 rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto pointer-events-none bg-background px-1">
+      {label}
+    </FormLabel>
+  </div>
+);
+
+const FloatingLabelTextarea = ({ field, label }: any) => (
+  <div className="relative">
+    <Textarea 
+      placeholder=" " 
+      {...field} 
+      value={field.value ?? ''}
+      className="block px-4 pb-2.5 pt-6 w-full text-sm text-foreground bg-background border-muted-foreground/30 rounded-xl border appearance-none focus:outline-none focus:ring-0 focus:border-primary peer min-h-[100px] transition-all shadow-sm hover:border-primary/50 resize-y" 
+    />
+    <FormLabel className="absolute text-sm text-muted-foreground duration-300 transform -translate-y-3 scale-75 top-4 z-10 origin-[0] start-4 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-3 rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto pointer-events-none bg-background px-1">
+      {label}
+    </FormLabel>
+  </div>
+);
+// -------------------------------------------------------------------
 
 export default function CheckoutPage() {
   const { state, totalPrice, itemCount, clearCart } = useCart();
@@ -80,13 +113,12 @@ export default function CheckoutPage() {
   
   const [isSameAsAddress, setIsSameAsAddress] = useState(false);
 
-  // ★★★ FIX: reset করার সময় সম্পূর্ণ অবজেক্ট দেওয়া হচ্ছে যাতে কোনো ফিল্ড undefined না হয় ★★★
   useEffect(() => {
     if (user) {
         reset({
             name: user.name || '',
             address: '',
-            altPhone: '', // ভবিষ্যতে ফোন নম্বর থাকলে এখানে user.phone দেবেন
+            altPhone: '',
             deliveryAddress: '',
             mealTime: 'lunch',
             instructions: '',
@@ -152,36 +184,6 @@ export default function CheckoutPage() {
         </div>
     );
   }
-
-  // ★★★ FIX: value prop এ সেফ চেক (field.value ?? '') যোগ করা হয়েছে ★★★
-  const FloatingLabelInput = ({ field, label, type = 'text' }: any) => (
-    <div className="relative">
-      <Input 
-        type={type} 
-        placeholder=" " 
-        {...field} 
-        value={field.value ?? ''} 
-        className="pt-6 peer" 
-      />
-      <FormLabel className="absolute text-sm text-muted-foreground duration-300 transform -translate-y-3 scale-75 top-4 z-10 origin-[0] start-4 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-3 rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto">
-        {label}
-      </FormLabel>
-    </div>
-  );
-
-  const FloatingLabelTextarea = ({ field, label }: any) => (
-    <div className="relative">
-      <Textarea 
-        placeholder=" " 
-        {...field} 
-        value={field.value ?? ''}
-        className="pt-6 peer min-h-[100px]" 
-      />
-      <FormLabel className="absolute text-sm text-muted-foreground duration-300 transform -translate-y-3 scale-75 top-4 z-10 origin-[0] start-4 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-3 rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto">
-        {label}
-      </FormLabel>
-    </div>
-  );
   
   const OrderSummaryContent = () => (
     <>
@@ -255,28 +257,28 @@ export default function CheckoutPage() {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               
               <FormField control={form.control} name="name" render={({ field }) => (
-                  <FormItem><FormControl><FloatingLabelInput field={field} label="Name" /></FormControl><FormMessage /></FormItem>
+                  <FormItem><FormControl><FloatingLabelInput field={field} label="Full Name" /></FormControl><FormMessage /></FormItem>
               )} />
               
               <FormField control={form.control} name="address" render={({ field }) => (
-                  <FormItem><FormControl><FloatingLabelInput field={field} label="Address" /></FormControl><FormMessage /></FormItem>
+                  <FormItem><FormControl><FloatingLabelInput field={field} label="Delivery Address" /></FormControl><FormMessage /></FormItem>
               )} />
               
               <FormField control={form.control} name="altPhone" render={({ field }) => (
-                  <FormItem><FormControl><FloatingLabelInput field={field} label="Alternate Phone Number" type="tel" /></FormControl><FormMessage /></FormItem>
+                  <FormItem><FormControl><FloatingLabelInput field={field} label="Phone Number" type="tel" /></FormControl><FormMessage /></FormItem>
               )} />
 
               <div className="flex gap-4">
-                  <Button type="button" onClick={() => setOrderType('delivery')} className={cn("flex-1", orderType !== 'delivery' && 'bg-muted text-muted-foreground hover:bg-muted/80')}>Delivery</Button>
-                  <Button type="button" onClick={() => setOrderType('pickup')} className={cn("flex-1", orderType !== 'pickup' && 'bg-muted text-muted-foreground hover:bg-muted/80')}>Pickup</Button>
+                  <Button type="button" onClick={() => setOrderType('delivery')} className={cn("flex-1 h-12 rounded-xl font-medium", orderType === 'delivery' ? "bg-primary text-primary-foreground shadow-md" : "bg-muted text-muted-foreground hover:bg-muted/80")}>Delivery</Button>
+                  <Button type="button" onClick={() => setOrderType('pickup')} className={cn("flex-1 h-12 rounded-xl font-medium", orderType === 'pickup' ? "bg-primary text-primary-foreground shadow-md" : "bg-muted text-muted-foreground hover:bg-muted/80")}>Pickup</Button>
               </div>
 
               {orderType === 'delivery' && (
-                <div className="space-y-6 p-4 border rounded-lg animate-in fade-in-50">
+                <div className="space-y-6 p-4 border rounded-xl bg-muted/10 animate-in fade-in-50">
                     <FormField control={form.control} name="deliveryAddress" render={({ field }) => (
-                        <FormItem><FormControl><FloatingLabelInput field={field} label="Delivery Address" /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormControl><FloatingLabelInput field={field} label="Delivery Address (If different)" /></FormControl><FormMessage /></FormItem>
                     )} />
-                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                    <FormItem className="flex flex-row items-center space-x-3 space-y-0">
                         <FormControl>
                             <Checkbox
                             checked={isSameAsAddress}
@@ -284,8 +286,8 @@ export default function CheckoutPage() {
                             />
                         </FormControl>
                         <div className="space-y-1 leading-none">
-                            <FormLabel>
-                            Same as your address
+                            <FormLabel className="font-normal">
+                            Same as primary address
                             </FormLabel>
                         </div>
                     </FormItem>
@@ -293,29 +295,42 @@ export default function CheckoutPage() {
               )}
               
                {orderType === 'pickup' && (
-                <div className="p-4 border rounded-lg bg-muted/50 animate-in fade-in-50">
-                    <p><strong>Pickup Address:</strong> Janai, Garbagan, Hooghly</p>
-                    <p><strong>Google Maps:</strong> <a href="https://maps.app.goo.gl/WV2JF8GJRJW9JwtW8" target="_blank" rel="noopener noreferrer" className="text-primary underline">View on Google Maps</a></p>
+                <div className="p-5 border rounded-xl bg-muted/50 animate-in fade-in-50 text-center space-y-2">
+                    <p className="font-medium text-lg"><strong>Pickup Address:</strong> Janai, Garbagan, Hooghly</p>
+                    
+                    {/* ★★★ Google Map Link Added Here ★★★ */}
+                    <a 
+                        href="https://maps.app.goo.gl/WV2JF8GJRJW9JwtW8" 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="inline-flex items-center gap-1 text-primary hover:text-primary/80 underline font-medium text-sm transition-colors"
+                    >
+                        <MapPin className="h-4 w-4" />
+                        View on Google Maps
+                    </a>
+
+                    <p className="text-sm text-muted-foreground pt-2">Please collect your order from the counter.</p>
                 </div>
               )}
 
-              <h3 className="text-2xl font-bold font-headline text-center pt-4">Delivery Details</h3>
+              <h3 className="text-2xl font-bold font-headline text-center pt-4">Preferences</h3>
 
               <FormField control={form.control} name="preferredDate" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Delivery Date</FormLabel>
-                  <FormControl><Input type="date" {...field} min={new Date().toISOString().split("T")[0]} /></FormControl>
+                  <FormLabel className="text-muted-foreground text-xs ml-1">Delivery Date</FormLabel>
+                  <FormControl>
+                      <Input type="date" {...field} min={new Date().toISOString().split("T")[0]} className="h-12 rounded-xl border-muted-foreground/30" />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )} />
               
                <FormField control={form.control} name="mealTime" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Meal Time</FormLabel>
                    <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a meal time" />
+                      <SelectTrigger className="h-12 rounded-xl border-muted-foreground/30">
+                        <SelectValue placeholder="Select Meal Time" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -328,14 +343,14 @@ export default function CheckoutPage() {
               )} />
 
               <FormField control={form.control} name="instructions" render={({ field }) => (
-                  <FormItem><FormControl><FloatingLabelTextarea field={field} label="Special Instructions" /></FormControl><FormMessage /></FormItem>
+                  <FormItem><FormControl><FloatingLabelTextarea field={field} label="Special Cooking Instructions (Optional)" /></FormControl><FormMessage /></FormItem>
               )} />
               
               {orderType === 'delivery' && (
                 <FormField control={form.control} name="shareLocation" render={({ field }) => (
-                  <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                  <FormItem className="flex flex-row items-center space-x-3 space-y-0 bg-muted/10 p-3 rounded-lg border">
                     <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
-                    <div className="space-y-1 leading-none"><FormLabel>Share my live location</FormLabel></div>
+                    <div className="space-y-1 leading-none"><FormLabel className="font-normal cursor-pointer">Share my live location for better delivery</FormLabel></div>
                   </FormItem>
                 )} />
               )}
@@ -344,24 +359,24 @@ export default function CheckoutPage() {
                   <FormItem className="flex flex-row items-start space-x-3 space-y-0">
                     <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
                     <div className="space-y-1 leading-none">
-                        <FormLabel>I agree to the <a href="/terms" target="_blank" className="underline text-primary">Terms and Conditions</a></FormLabel>
+                        <FormLabel className="font-normal">I agree to the <a href="/terms" target="_blank" className="underline text-primary font-medium">Terms and Conditions</a></FormLabel>
                         <FormMessage />
                     </div>
                   </FormItem>
               )} />
 
-              <Button type="submit" size="lg" className="w-full">
-                <Lock className="mr-2 h-4 w-4" /> Place Order
+              <Button type="submit" size="lg" className="w-full h-14 text-lg rounded-xl shadow-lg shadow-primary/20 transition-all hover:scale-[1.02]">
+                <Lock className="mr-2 h-5 w-5" /> Place Order
               </Button>
             </form>
           </Form>
         </div>
         <div className="lg:col-span-1 hidden lg:block">
-          <Card className="sticky top-24 bg-card">
-            <CardHeader>
+          <Card className="sticky top-24 bg-card shadow-md border-0">
+            <CardHeader className="border-b bg-muted/10">
               <CardTitle>Order Summary</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-6">
                 <OrderSummaryContent />
             </CardContent>
           </Card>
