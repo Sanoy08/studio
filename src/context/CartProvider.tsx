@@ -2,11 +2,10 @@
 
 'use client';
 
-import React, { createContext, useReducer, ReactNode, useEffect } from 'react';
+import React, { createContext, useReducer, ReactNode, useEffect, useState } from 'react';
 import type { CartItem, Product } from '@/lib/types';
 import { toast } from 'sonner';
 
-// লোকাল স্টোরেজ কী (Key)
 const CART_STORAGE_KEY = 'bumbas-kitchen-cart';
 
 type CartState = {
@@ -18,7 +17,7 @@ type CartAction =
   | { type: 'REMOVE_ITEM'; payload: { id: string } }
   | { type: 'UPDATE_QUANTITY'; payload: { id: string; quantity: number } }
   | { type: 'CLEAR_CART' }
-  | { type: 'SET_CART'; payload: CartState }; // নতুন অ্যাকশন টাইপ
+  | { type: 'SET_CART'; payload: CartState };
 
 const cartReducer = (state: CartState, action: CartAction): CartState => {
   switch (action.type) {
@@ -40,7 +39,7 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
         slug: product.slug,
         name: product.name,
         price: product.price,
-        image: product.images[0], // মনে রাখবেন, এখানে ইমেজ নিশ্চিত করতে হবে
+        image: product.images && product.images.length > 0 ? product.images[0] : { id: 'default', url: '', alt: product.name },
         quantity: quantity,
       };
       return { ...state, items: [...state.items, newItem] };
@@ -69,7 +68,7 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
     }
     case 'CLEAR_CART':
       return { ...state, items: [] };
-    case 'SET_CART': // লোকাল স্টোরেজ থেকে ডেটা সেট করার জন্য
+    case 'SET_CART':
       return action.payload;
     default:
       return state;
@@ -89,12 +88,14 @@ export const CartContext = createContext<
       clearCart: () => void;
       itemCount: number;
       totalPrice: number;
+      isInitialized: boolean; // ★ নতুন প্রপার্টি
     }
   | undefined
 >(undefined);
 
 export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [state, dispatch] = useReducer(cartReducer, initialState);
+  const [isInitialized, setIsInitialized] = useState(false); // ★ লোডিং স্টেট
 
   // ১. মাউন্ট হওয়ার সময় লোকাল স্টোরেজ থেকে ডেটা লোড করা
   useEffect(() => {
@@ -110,14 +111,15 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         localStorage.removeItem(CART_STORAGE_KEY);
       }
     }
+    setIsInitialized(true); // ★ লোড শেষ হলে true হবে
   }, []);
 
   // ২. যখনই কার্ট স্টেট পরিবর্তন হবে, তা লোকাল স্টোরেজে সেভ করা
   useEffect(() => {
-    // আমরা শুধুমাত্র তখনই সেভ করব যখন ইনিশিয়াল লোড হয়ে গেছে (state পরিবর্তন হলে)
-    // তবে খালি অ্যারে হলেও সেভ করা উচিত যাতে কার্ট ক্লিয়ার করলে স্টোরেজও ক্লিয়ার হয়
-    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(state));
-  }, [state]);
+    if (isInitialized) {
+        localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(state));
+    }
+  }, [state, isInitialized]);
 
   const addItem = (product: Product, quantity: number = 1) => {
     dispatch({ type: 'ADD_ITEM', payload: { product, quantity } });
@@ -156,6 +158,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         clearCart,
         itemCount,
         totalPrice,
+        isInitialized, // ★ এক্সপোর্ট করা হলো
       }}
     >
       {children}

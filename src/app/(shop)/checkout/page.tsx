@@ -45,7 +45,7 @@ const checkoutSchema = z.object({
   shareLocation: z.boolean().optional(),
 });
 
-// --- হেল্পার কম্পোনেন্ট (ফাংশনের বাইরে) ---
+// --- হেল্পার কম্পোনেন্ট (ফাংশনের বাইরে - ফোকাস সমস্যা সমাধানের জন্য) ---
 
 const FloatingLabelInput = ({ field, label, type = 'text' }: any) => (
   <div className="relative">
@@ -53,7 +53,7 @@ const FloatingLabelInput = ({ field, label, type = 'text' }: any) => (
       type={type} 
       placeholder=" " 
       {...field} 
-      value={field.value ?? ''} 
+      value={field.value ?? ''} // Safe value check
       className="block px-4 pb-2.5 pt-6 w-full text-sm text-foreground bg-background border-muted-foreground/30 rounded-xl border appearance-none focus:outline-none focus:ring-0 focus:border-primary peer h-12 transition-all shadow-sm hover:border-primary/50" 
     />
     <FormLabel className="absolute text-sm text-muted-foreground duration-300 transform -translate-y-3 scale-75 top-4 z-10 origin-[0] start-4 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-3 rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto pointer-events-none bg-background px-1">
@@ -67,7 +67,7 @@ const FloatingLabelTextarea = ({ field, label }: any) => (
     <Textarea 
       placeholder=" " 
       {...field} 
-      value={field.value ?? ''}
+      value={field.value ?? ''} // Safe value check
       className="block px-4 pb-2.5 pt-6 w-full text-sm text-foreground bg-background border-muted-foreground/30 rounded-xl border appearance-none focus:outline-none focus:ring-0 focus:border-primary peer min-h-[100px] transition-all shadow-sm hover:border-primary/50 resize-y" 
     />
     <FormLabel className="absolute text-sm text-muted-foreground duration-300 transform -translate-y-3 scale-75 top-4 z-10 origin-[0] start-4 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-3 rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto pointer-events-none bg-background px-1">
@@ -101,6 +101,7 @@ export default function CheckoutPage() {
       address: '',
       altPhone: '',
       deliveryAddress: '',
+      preferredDate: '', // ★ FIX: ডিফল্ট ভ্যালু যোগ করা হয়েছে
       mealTime: 'lunch',
       instructions: '',
       terms: false,
@@ -113,20 +114,52 @@ export default function CheckoutPage() {
   
   const [isSameAsAddress, setIsSameAsAddress] = useState(false);
 
+  // ★★★ FIX: অটোমেটিক ডিফল্ট অ্যাড্রেস লোড এবং ফর্ম রিসেট ★★★
   useEffect(() => {
-    if (user) {
+    const initializeCheckoutData = async () => {
+        if (!user) return;
+
+        let savedAddress = '';
+
+        try {
+            const token = localStorage.getItem('token');
+            if (token) {
+                // অ্যাড্রেস API থেকে ডেটা আনা হচ্ছে
+                const res = await fetch('/api/user/addresses', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+                if (data.success && Array.isArray(data.addresses)) {
+                    // ডিফল্ট অ্যাড্রেস খোঁজা হচ্ছে
+                    const defaultAddr = data.addresses.find((a: any) => a.isDefault);
+                    if (defaultAddr) {
+                        savedAddress = defaultAddr.address;
+                    } else if (data.addresses.length > 0) {
+                        // যদি ডিফল্ট না থাকে, তবে প্রথমটি নেওয়া হবে
+                        savedAddress = data.addresses[0].address;
+                    }
+                }
+            }
+        } catch (error) {
+            console.error("Error fetching addresses:", error);
+        }
+
+        // ফর্ম রিসেট করে ডেটা বসানো হচ্ছে (সব ফিল্ড সহ)
         reset({
             name: user.name || '',
-            address: '',
-            altPhone: '',
+            address: savedAddress, // অটোমেটিক অ্যাড্রেস
+            altPhone: '', 
             deliveryAddress: '',
+            preferredDate: '', // ★ FIX: এটি নিশ্চিত করা হয়েছে
             mealTime: 'lunch',
             instructions: '',
             terms: false,
             shareLocation: false,
-        })
-    }
-  }, [user, reset])
+        });
+    };
+
+    initializeCheckoutData();
+  }, [user, reset]);
 
   useEffect(() => {
     if (isSameAsAddress) {
@@ -298,7 +331,6 @@ export default function CheckoutPage() {
                 <div className="p-5 border rounded-xl bg-muted/50 animate-in fade-in-50 text-center space-y-2">
                     <p className="font-medium text-lg"><strong>Pickup Address:</strong> Janai, Garbagan, Hooghly</p>
                     
-                    {/* ★★★ Google Map Link Added Here ★★★ */}
                     <a 
                         href="https://maps.app.goo.gl/WV2JF8GJRJW9JwtW8" 
                         target="_blank" 
@@ -319,7 +351,14 @@ export default function CheckoutPage() {
                 <FormItem>
                   <FormLabel className="text-muted-foreground text-xs ml-1">Delivery Date</FormLabel>
                   <FormControl>
-                      <Input type="date" {...field} min={new Date().toISOString().split("T")[0]} className="h-12 rounded-xl border-muted-foreground/30" />
+                      {/* ★★★ FIX: এখানে value সেট করা হয়েছে যাতে undefined না হয় ★★★ */}
+                      <Input 
+                        type="date" 
+                        {...field} 
+                        value={field.value ?? ''} 
+                        min={new Date().toISOString().split("T")[0]} 
+                        className="h-12 rounded-xl border-muted-foreground/30" 
+                      />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
