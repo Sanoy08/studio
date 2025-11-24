@@ -1,5 +1,3 @@
-// src/app/admin/notifications/page.tsx
-
 'use client';
 
 import { useState } from 'react';
@@ -56,36 +54,39 @@ export default function AdminNotificationsPage() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-       <div>
-            <h1 className="text-3xl font-bold font-headline">Push Notifications</h1>
-            <p className="text-muted-foreground">Send alerts to all subscribed devices.</p>
+    <div className="max-w-2xl mx-auto space-y-8">
+       <div className="text-center space-y-2">
+            <h1 className="text-3xl font-bold font-headline flex items-center justify-center gap-2">
+                <Bell className="h-8 w-8 text-primary" /> Push Notifications
+            </h1>
+            <p className="text-muted-foreground">Send real-time alerts to all subscribed customers.</p>
         </div>
 
-      <Card>
-        <CardHeader>
-            <CardTitle>Compose Notification</CardTitle>
-            <CardDescription>This will be sent to all users who allowed notifications.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
+      <Card className="border-0 shadow-xl overflow-hidden">
+        <div className="bg-primary/5 border-b p-6">
+            <h2 className="text-lg font-semibold">Compose Message</h2>
+            <p className="text-sm text-muted-foreground">This will be sent immediately.</p>
+        </div>
+        <CardContent className="space-y-6 p-6">
             <div className="space-y-2">
                 <Label>Title</Label>
                 <Input 
                     value={formData.title} 
                     onChange={(e) => setFormData({...formData, title: e.target.value})} 
                     placeholder="e.g., 50% OFF on Biryani!"
+                    className="text-lg font-medium"
                 />
             </div>
             <div className="space-y-2">
-                <Label>Message</Label>
+                <Label>Message Body</Label>
                 <Textarea 
                     value={formData.message} 
                     onChange={(e) => setFormData({...formData, message: e.target.value})} 
-                    placeholder="Enter your message here..."
+                    placeholder="Enter your engaging message here..."
+                    className="min-h-[100px]"
                 />
             </div>
             
-            {/* DRAG & DROP UPLOAD */}
             <div className="space-y-2">
                 <Label>Notification Image (Optional)</Label>
                 <ImageUpload 
@@ -104,8 +105,8 @@ export default function AdminNotificationsPage() {
                 />
             </div>
             
-            <Button className="w-full gap-2" onClick={handleSubmit} disabled={isLoading}>
-                {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+            <Button className="w-full gap-2 h-12 text-lg shadow-lg shadow-primary/25" onClick={handleSubmit} disabled={isLoading}>
+                {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
                 Send Broadcast
             </Button>
         </CardContent>

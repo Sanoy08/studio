@@ -9,10 +9,10 @@ import { formatPrice } from '@/lib/utils';
 import { Plus, Minus, Star, ShoppingCart } from 'lucide-react';
 import { useCart } from '@/hooks/useCart';
 import type { Product, Image as ProductImage } from '@/lib/types';
-import { ProductCard } from '@/components/shop/ProductCard';
 import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants';
-import { toast } from 'sonner';
+import { ProductCard } from '@/components/shop/ProductCard';
 
+// ফলব্যাক ইমেজের অবজেক্ট তৈরি
 const fallbackImage: ProductImage = { 
   id: 'placeholder', 
   url: PLACEHOLDER_IMAGE_URL, 
@@ -23,35 +23,44 @@ export function ProductDetailsClient({ product, relatedProducts }: { product: Pr
   const [quantity, setQuantity] = useState(1);
   const { addItem } = useCart();
   
-  // সেফ ইমেজ সিলেকশন
-  const initialImage = (product.images && product.images.length > 0) ? product.images[0] : fallbackImage;
+  // ১. শুধুমাত্র ভ্যালিড (ফাঁকা নয় এমন) ইমেজগুলো ফিল্টার করে নেওয়া হচ্ছে
+  const validImages = product.images?.filter(img => img.url && img.url.trim() !== '') || [];
+
+  // ২. যদি কোনো ভ্যালিড ইমেজ না থাকে, তবে ফলব্যাক ইমেজ ব্যবহার করা হবে
+  const initialImage = validImages.length > 0 ? validImages[0] : fallbackImage;
+  
+  // ৩. স্টেট ইনিশিয়ালাইজেশন
   const [mainImage, setMainImage] = useState(initialImage);
 
   const handleAddToCart = () => {
     addItem(product, quantity);
-    // addItem ফাংশনের ভেতরেই টোস্ট আছে, তাই এখানে আলাদা টোস্ট দরকার নেই যদি সেখানে থাকে
   };
   
-  const isNonVeg = ['Chicken', 'Mutton', 'Egg', 'Fish'].includes(product.category.name);
+  // ক্যাটাগরি চেক (Optional check, depends on your data structure)
+  const isNonVeg = ['Chicken', 'Mutton', 'Egg', 'Fish'].includes(product.category?.name || '');
 
   return (
     <div className="bg-background min-h-screen">
       <div className="container py-8 md:py-12">
         <div className="grid md:grid-cols-2 gap-8 lg:gap-12">
+          
           {/* Left Column - Image Gallery */}
           <div className="space-y-4">
             <div className="relative aspect-square rounded-xl overflow-hidden border bg-card">
+              {/* ৪. মেইন ইমেজ রেন্ডারিং - এখানে নিশ্চিত করা হয়েছে src কখনো ফাঁকা হবে না */}
               <Image
-                src={mainImage.url}
+                src={mainImage.url || PLACEHOLDER_IMAGE_URL}
                 alt={mainImage.alt || product.name}
                 fill
                 className="object-cover"
                 priority
               />
             </div>
-            {product.images.length > 1 && (
+            
+            {/* ৫. থাম্বনেইল গ্যালারি - শুধুমাত্র যদি একাধিক ভ্যালিড ইমেজ থাকে */}
+            {validImages.length > 1 && (
               <div className="flex gap-2 overflow-x-auto pb-2">
-                {product.images.map((image) => (
+                {validImages.map((image) => (
                   <button
                     key={image.id}
                     className={`relative w-20 h-20 rounded-md overflow-hidden border-2 flex-shrink-0 transition-all ${
@@ -61,7 +70,7 @@ export function ProductDetailsClient({ product, relatedProducts }: { product: Pr
                   >
                     <Image
                       src={image.url}
-                      alt={image.alt}
+                      alt={image.alt || product.name}
                       fill
                       className="object-cover"
                     />
@@ -86,7 +95,7 @@ export function ProductDetailsClient({ product, relatedProducts }: { product: Pr
                 </div>
                 
                 <h1 className="text-3xl md:text-4xl font-bold font-headline text-foreground">{product.name}</h1>
-                <p className="text-muted-foreground">{product.category.name}</p>
+                <p className="text-muted-foreground">{product.category?.name}</p>
             </div>
             
             <div className="mt-6">

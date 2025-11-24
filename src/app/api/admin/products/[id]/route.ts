@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { clientPromise } from '@/lib/mongodb';
 import { ObjectId } from 'mongodb';
 import jwt from 'jsonwebtoken';
-import { revalidatePath } from 'next/cache'; // ★ ইমপোর্ট
+import { revalidatePath } from 'next/cache';
 
 const DB_NAME = 'BumbasKitchenDB';
 const COLLECTION_NAME = 'menuItems';
@@ -31,7 +31,8 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       Description: body.description,
       Price: parseFloat(body.price),
       Category: body.category,
-      ImageURLs: [body.imageUrl],
+      // ★★★ FIX: ইমেজ আপডেট লজিক ★★★
+      ImageURLs: Array.isArray(body.imageUrls) ? body.imageUrls : (body.imageUrls ? [body.imageUrls] : []),
       Bestseller: body.featured,
       InStock: body.inStock
     };
@@ -44,7 +45,6 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       { $set: updateData }
     );
 
-    // ★ ক্যাশ ক্লিয়ার
     revalidatePath('/menus');
     revalidatePath('/');
 
@@ -64,7 +64,6 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
 
     await db.collection(COLLECTION_NAME).deleteOne({ _id: new ObjectId(id) });
 
-    // ★ ক্যাশ ক্লিয়ার
     revalidatePath('/menus');
     revalidatePath('/');
 

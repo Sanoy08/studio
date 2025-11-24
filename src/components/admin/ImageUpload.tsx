@@ -21,31 +21,29 @@ export function ImageUpload({ value, onChange, maxFiles = 1, folder = 'general' 
   const handleUpload = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
 
-    if (value.length + files.length > maxFiles) {
+    // Filter out any empty strings from current value
+    const currentValidUrls = value.filter(v => v && v.trim() !== '');
+
+    if (currentValidUrls.length + files.length > maxFiles) {
       toast.error(`Maximum ${maxFiles} images allowed.`);
       return;
     }
 
     setIsUploading(true);
-    const uploadedUrls: string[] = [...value];
+    const uploadedUrls: string[] = [...currentValidUrls];
 
-    // 1. এনভায়রনমেন্ট ভেরিয়েবল থেকে কনফিগ নেওয়া (NEXT_PUBLIC_ সহ))
+    // এনভায়রনমেন্ট ভেরিয়েবল থেকে কনফিগ নেওয়া
     let cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME; 
     let uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
 
-    // যদি 'dish' ফোল্ডার হয়, তবে Dishes এর ক্রেডেনশিয়াল ব্যবহার হবে
     if (folder === 'dish') {
         cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME_DISHES;
         uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET_DISHES;
     }
 
-    // কনফিগ চেক এবং ডিবাগিং
+    // কনফিগ চেক
     if (!cloudName || !uploadPreset) {
-        console.error("Missing Config:", { 
-            type: folder, 
-            cloudName, 
-            uploadPreset 
-        });
+        console.error("Missing Config:", { type: folder, cloudName, uploadPreset });
         toast.error(`Cloudinary config missing for ${folder}. Check .env.local`);
         setIsUploading(false);
         return;
@@ -58,7 +56,6 @@ export function ImageUpload({ value, onChange, maxFiles = 1, folder = 'general' 
             formData.append('file', file);
             formData.append('upload_preset', uploadPreset);
 
-            // আপলোড রিকোয়েস্ট পাঠানো
             const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
                 method: 'POST',
                 body: formData,
@@ -66,7 +63,6 @@ export function ImageUpload({ value, onChange, maxFiles = 1, folder = 'general' 
 
             if (!res.ok) {
                 const errorData = await res.json();
-                console.error("Cloudinary Error Response:", errorData);
                 throw new Error(errorData.error?.message || `Upload failed with status ${res.status}`);
             }
 
@@ -96,6 +92,9 @@ export function ImageUpload({ value, onChange, maxFiles = 1, folder = 'general' 
   const removeImage = (urlToRemove: string) => {
     onChange(value.filter((url) => url !== urlToRemove));
   };
+
+  // ★★★ ফিক্স: শুধুমাত্র ভ্যালিড (ফাঁকা নয়) URL গুলো ফিল্টার করে নেওয়া হচ্ছে ★★★
+  const validImages = value.filter(url => url && url.trim() !== '');
 
   return (
     <div className="space-y-4">
@@ -130,9 +129,9 @@ export function ImageUpload({ value, onChange, maxFiles = 1, folder = 'general' 
         )}
       </div>
 
-      {value.length > 0 && (
+      {validImages.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          {value.map((url, index) => (
+          {validImages.map((url, index) => (
             <div key={index} className="relative aspect-square rounded-lg overflow-hidden border group">
               <Image fill src={url} alt="Uploaded" className="object-cover" unoptimized={true} />
               <button 

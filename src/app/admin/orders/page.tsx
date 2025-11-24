@@ -3,33 +3,15 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from '@/components/ui/card';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Loader2, RefreshCcw } from 'lucide-react';
+import { Loader2, RefreshCcw, ShoppingBag, Search, Filter } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/use-auth';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { formatPrice } from '@/lib/utils';
 
 type Order = {
@@ -49,113 +31,142 @@ const STATUS_OPTIONS = ['Received', 'Cooking', 'Ready', 'Out for Delivery', 'Del
 
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
+  const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('All');
   const [isLoading, setIsLoading] = useState(true);
-  const { user } = useAuth();
 
   const fetchOrders = async () => {
     const token = localStorage.getItem('token');
     if (!token) return;
-
     setIsLoading(true);
     try {
       const res = await fetch('/api/admin/orders', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await res.json();
-      
       if (data.success) {
         setOrders(data.orders);
-      } else {
-        toast.error(data.error || "Failed to load orders.");
+        setFilteredOrders(data.orders);
       }
     } catch (error) {
-      console.error(error);
       toast.error("Error loading orders.");
     } finally {
       setIsLoading(false);
     }
   };
 
+  useEffect(() => { fetchOrders(); }, []);
+
   useEffect(() => {
-    fetchOrders();
-  }, []);
+    let result = orders;
+    if (statusFilter !== 'All') result = result.filter(o => o.Status === statusFilter);
+    if (searchQuery) {
+        const lowerQ = searchQuery.toLowerCase();
+        result = result.filter(o => 
+            o.OrderNumber.toLowerCase().includes(lowerQ) || 
+            o.Name.toLowerCase().includes(lowerQ) ||
+            o.Phone.includes(lowerQ)
+        );
+    }
+    setFilteredOrders(result);
+  }, [searchQuery, statusFilter, orders]);
 
   const handleStatusChange = async (orderId: string, newStatus: string) => {
     const token = localStorage.getItem('token');
     try {
         const res = await fetch('/api/admin/orders', {
             method: 'PATCH',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}` 
-            },
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
             body: JSON.stringify({ orderId, status: newStatus })
         });
-
         if (res.ok) {
-            toast.success(`Order status updated to ${newStatus}`);
-            // UI তে স্ট্যাটাস আপডেট করা (রিফ্রেশ না করে)
+            toast.success(`Status updated to ${newStatus}`);
             setOrders(prev => prev.map(o => o._id === orderId ? { ...o, Status: newStatus } : o));
-        } else {
-            toast.error("Failed to update status");
-        }
-    } catch (error) {
-        console.error(error);
-        toast.error("Error updating status");
-    }
+        } else { toast.error("Update failed"); }
+    } catch (error) { toast.error("Error updating status"); }
   }
 
-  if (isLoading) {
-    return <div className="flex justify-center p-10"><Loader2 className="h-8 w-8 animate-spin" /></div>;
-  }
+  const getStatusColor = (status: string) => {
+      switch(status) {
+          case 'Delivered': return 'bg-green-100 text-green-700 border-green-200';
+          case 'Cancelled': return 'bg-red-100 text-red-700 border-red-200';
+          case 'Cooking': return 'bg-orange-100 text-orange-700 border-orange-200';
+          case 'Out for Delivery': return 'bg-blue-100 text-blue-700 border-blue-200';
+          default: return 'bg-gray-100 text-gray-700 border-gray-200';
+      }
+  };
+
+  if (isLoading) return <div className="flex justify-center p-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
 
   return (
-    <div className="space-y-6">
-       <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold font-headline">Orders Management</h1>
-            <p className="text-muted-foreground">
-              Manage and track all customer orders.
-            </p>
+    <div className="space-y-6 max-w-[1600px] mx-auto">
+       
+       <div className="flex flex-col gap-6 bg-card p-6 rounded-xl border shadow-sm">
+          <div className="flex justify-between items-center">
+            <div>
+                <h1 className="text-2xl font-bold flex items-center gap-2">
+                    <ShoppingBag className="h-6 w-6 text-primary" /> Orders
+                </h1>
+                <p className="text-sm text-muted-foreground mt-1">Manage customer orders.</p>
+            </div>
+            <Button size="sm" onClick={fetchOrders} variant="outline" className="gap-2">
+                <RefreshCcw className="h-4 w-4" /> Refresh
+            </Button>
           </div>
-          <Button size="sm" onClick={fetchOrders} className="gap-2">
-            <RefreshCcw className="h-4 w-4" />
-            Refresh
-          </Button>
+
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input 
+                    placeholder="Search orders..." 
+                    className="pl-9 bg-background"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                />
+            </div>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-full sm:w-[200px] bg-background">
+                    <SelectValue placeholder="Filter by Status" />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="All">All Statuses</SelectItem>
+                    {STATUS_OPTIONS.map(status => (
+                        <SelectItem key={status} value={status}>{status}</SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+          </div>
         </div>
-      <Card>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Order No</TableHead>
-                <TableHead>Customer</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Amount</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {orders.map(order => (
-                  <TableRow key={order._id}>
-                      <TableCell className="font-medium">{order.OrderNumber}</TableCell>
-                      <TableCell>
-                          <div className="font-medium">{order.Name}</div>
-                          <div className="text-xs text-muted-foreground">{order.Phone}</div>
-                      </TableCell>
-                      <TableCell>{new Date(order.Timestamp).toLocaleDateString()}</TableCell>
-                       <TableCell>
-                        <Badge variant="outline">{order.OrderType}</Badge>
-                      </TableCell>
-                      <TableCell>{formatPrice(order.FinalPrice)}</TableCell>
-                      <TableCell>
-                        <Select 
-                            defaultValue={order.Status} 
-                            onValueChange={(val) => handleStatusChange(order._id, val)}
-                        >
-                            <SelectTrigger className="w-[140px] h-8">
-                                <SelectValue />
+
+      {/* Mobile View: Cards */}
+      <div className="grid grid-cols-1 md:hidden gap-4">
+        {filteredOrders.map(order => (
+            <Card key={order._id} className="border shadow-sm">
+                <div className="p-4 space-y-3">
+                    <div className="flex justify-between items-start">
+                        <div>
+                            <p className="font-mono text-sm font-bold text-foreground">{order.OrderNumber}</p>
+                            <p className="text-xs text-muted-foreground">{new Date(order.Timestamp).toLocaleString()}</p>
+                        </div>
+                        <Badge variant="outline" className={`${getStatusColor(order.Status)} border font-normal`}>
+                            {order.Status}
+                        </Badge>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-t border-b border-dashed">
+                         <div>
+                             <p className="text-sm font-semibold">{order.Name}</p>
+                             <p className="text-xs text-muted-foreground">{order.Phone}</p>
+                         </div>
+                         <div className="text-right">
+                             <p className="text-sm font-bold text-primary">{formatPrice(order.FinalPrice)}</p>
+                             <p className="text-xs text-muted-foreground">{order.OrderType}</p>
+                         </div>
+                    </div>
+                    <div>
+                        <Select defaultValue={order.Status} onValueChange={(val) => handleStatusChange(order._id, val)}>
+                            <SelectTrigger className="w-full h-9 bg-muted/50">
+                                <SelectValue placeholder="Update Status" />
                             </SelectTrigger>
                             <SelectContent>
                                 {STATUS_OPTIONS.map(status => (
@@ -163,11 +174,57 @@ export default function AdminOrdersPage() {
                                 ))}
                             </SelectContent>
                         </Select>
-                      </TableCell>
-                  </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                    </div>
+                </div>
+            </Card>
+        ))}
+      </div>
+
+      {/* Desktop View: Table */}
+      <Card className="hidden md:block overflow-hidden border-0 shadow-md">
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <Table>
+                <TableHeader className="bg-muted/50">
+                <TableRow>
+                    <TableHead className="pl-6">Order #</TableHead>
+                    <TableHead>Customer</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead className="pr-6">Status</TableHead>
+                </TableRow>
+                </TableHeader>
+                <TableBody>
+                {filteredOrders.map(order => (
+                    <TableRow key={order._id} className="hover:bg-muted/20">
+                        <TableCell className="pl-6 font-mono font-medium">{order.OrderNumber}</TableCell>
+                        <TableCell>
+                            <div className="font-medium">{order.Name}</div>
+                            <div className="text-xs text-muted-foreground">{order.Phone}</div>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                            {new Date(order.Timestamp).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}
+                        </TableCell>
+                        <TableCell><Badge variant="outline">{order.OrderType}</Badge></TableCell>
+                        <TableCell className="font-bold">{formatPrice(order.FinalPrice)}</TableCell>
+                        <TableCell className="pr-6">
+                            <Select defaultValue={order.Status} onValueChange={(val) => handleStatusChange(order._id, val)}>
+                                <SelectTrigger className={`w-[140px] h-8 border-0 shadow-sm ${getStatusColor(order.Status)}`}>
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {STATUS_OPTIONS.map(status => (
+                                        <SelectItem key={status} value={status}>{status}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </TableCell>
+                    </TableRow>
+                ))}
+                </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
     </div>

@@ -1,5 +1,3 @@
-// src/app/admin/hero-slides/page.tsx
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -9,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Plus, Trash2, Image as ImageIcon } from 'lucide-react';
+import { Loader2, Plus, Trash2, ImageIcon, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 import Image from 'next/image';
 import { ImageUpload } from '@/components/admin/ImageUpload';
@@ -47,11 +45,6 @@ export default function AdminHeroSlidesPage() {
 
   useEffect(() => { fetchSlides(); }, []);
 
-  const handleOpenDialog = () => {
-    setFormData({ imageUrl: '', clickUrl: '#', order: '0' });
-    setIsDialogOpen(true);
-  };
-
   const handleSubmit = async () => {
     const token = localStorage.getItem('token');
     try {
@@ -61,14 +54,13 @@ export default function AdminHeroSlidesPage() {
         body: JSON.stringify(formData),
       });
       
-      const data = await res.json();
-      
       if (res.ok) {
-        toast.success('Slide added successfully!');
+        toast.success('Slide added!');
         setIsDialogOpen(false);
+        setFormData({ imageUrl: '', clickUrl: '#', order: '0' });
         fetchSlides();
       } else {
-        toast.error(data.error || 'Failed to add slide');
+        toast.error('Failed to add slide');
       }
     } catch (e) {
       toast.error('Error saving slide');
@@ -86,56 +78,64 @@ export default function AdminHeroSlidesPage() {
         if (res.ok) {
             toast.success('Slide deleted');
             fetchSlides();
-        } else {
-            toast.error('Delete failed');
         }
     } catch (e) { toast.error('Delete failed'); }
   };
 
-  if (isLoading) return <div className="flex justify-center p-10"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+  if (isLoading) return <div className="flex justify-center p-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="space-y-8 max-w-[1200px] mx-auto">
+      <div className="flex justify-between items-center bg-card p-6 rounded-xl border shadow-sm">
         <div>
-            <h1 className="text-3xl font-bold font-headline">Hero Slides</h1>
-            <p className="text-muted-foreground">Manage homepage banner slides.</p>
+            <h1 className="text-2xl font-bold flex items-center gap-2">
+                <ImageIcon className="h-6 w-6 text-primary" /> Hero Slides
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1">Manage homepage banner images.</p>
         </div>
-        <Button onClick={handleOpenDialog} className="gap-2"><Plus className="h-4 w-4"/> Add Slide</Button>
+        <Button onClick={() => setIsDialogOpen(true)} className="gap-2 shadow-lg shadow-primary/20">
+            <Plus className="h-4 w-4" /> Add Slide
+        </Button>
       </div>
 
-      <Card>
+      <Card className="border-0 shadow-md overflow-hidden">
         <CardContent className="p-0">
           <Table>
-            <TableHeader>
+            <TableHeader className="bg-muted/50">
               <TableRow>
-                <TableHead>Image</TableHead>
-                <TableHead>Click URL</TableHead>
+                <TableHead className="pl-6">Preview</TableHead>
+                <TableHead className="hidden sm:table-cell">Link</TableHead>
                 <TableHead>Order</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead className="text-right pr-6">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {slides.length === 0 ? (
                 <TableRow>
-                    <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">No slides found.</TableCell>
+                    <TableCell colSpan={4} className="h-32 text-center text-muted-foreground">No slides found.</TableCell>
                 </TableRow>
               ) : (
                   slides.map((slide) => (
-                    <TableRow key={slide.id}>
-                      <TableCell>
-                        <div className="relative h-16 w-32 rounded overflow-hidden border bg-muted">
+                    <TableRow key={slide.id} className="hover:bg-muted/20 transition-colors">
+                      <TableCell className="pl-6 py-4">
+                        <div className="relative h-20 w-36 rounded-lg overflow-hidden border shadow-sm bg-muted">
                              {slide.imageUrl ? (
-                                <Image src={slide.imageUrl} alt="Slide" fill className="object-cover" />
+                                <Image src={slide.imageUrl} alt="Slide" fill className="object-cover" unoptimized={true} />
                              ) : (
                                 <div className="flex items-center justify-center h-full w-full"><ImageIcon className="h-6 w-6 text-muted-foreground"/></div>
                              )}
                         </div>
                       </TableCell>
-                      <TableCell className="font-mono text-sm text-blue-600 truncate max-w-[200px]">{slide.clickUrl}</TableCell>
-                      <TableCell>{slide.order}</TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete(slide.id)}><Trash2 className="h-4 w-4 text-red-500"/></Button>
+                      <TableCell className="hidden sm:table-cell">
+                          <div className="flex items-center gap-2 text-sm text-blue-600 max-w-[200px] truncate">
+                             <ExternalLink className="h-3 w-3" /> {slide.clickUrl}
+                          </div>
+                      </TableCell>
+                      <TableCell className="font-medium">#{slide.order}</TableCell>
+                      <TableCell className="text-right pr-6">
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => handleDelete(slide.id)}>
+                            <Trash2 className="h-4 w-4"/>
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))
@@ -151,8 +151,6 @@ export default function AdminHeroSlidesPage() {
                 <DialogTitle>Add New Hero Slide</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-4">
-                
-                {/* DRAG & DROP UPLOAD */}
                 <div className="space-y-2">
                     <Label>Slide Image</Label>
                     <ImageUpload 
@@ -161,14 +159,12 @@ export default function AdminHeroSlidesPage() {
                         maxFiles={1}
                     />
                 </div>
-                
                 <div className="space-y-2">
-                    <Label>Click URL (Redirect Link)</Label>
-                    <Input value={formData.clickUrl} onChange={(e) => setFormData({...formData, clickUrl: e.target.value})} placeholder="/menu or https://..." />
+                    <Label>Click URL</Label>
+                    <Input value={formData.clickUrl} onChange={(e) => setFormData({...formData, clickUrl: e.target.value})} placeholder="/menus or https://..." />
                 </div>
-
                 <div className="space-y-2">
-                    <Label>Order Priority</Label>
+                    <Label>Display Order</Label>
                     <Input type="number" value={formData.order} onChange={(e) => setFormData({...formData, order: e.target.value})} placeholder="0" />
                 </div>
             </div>

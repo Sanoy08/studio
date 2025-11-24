@@ -11,7 +11,6 @@ const JWT_SECRET = process.env.JWT_SECRET || 'default_secret';
 
 export async function PUT(request: NextRequest) {
   try {
-    // ১. টোকেন ভেরিফিকেশন
     const authHeader = request.headers.get('authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
@@ -26,22 +25,29 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Invalid Token' }, { status: 401 });
     }
 
-    // ২. ডেটা ভ্যালিডেশন
-    const { firstName, lastName } = await request.json();
+    const body = await request.json();
+    const { firstName, lastName, dob, anniversary } = body; // নতুন ফিল্ড
+
     if (!firstName || !lastName) {
       return NextResponse.json({ success: false, error: 'First and Last name are required.' }, { status: 400 });
     }
 
     const fullName = `${firstName.trim()} ${lastName.trim()}`;
 
-    // ৩. ডেটাবেস আপডেট
     const client = await clientPromise;
     const db = client.db(DB_NAME);
     const usersCollection = db.collection(COLLECTION_NAME);
 
+    // আপডেট কুয়েরি তৈরি
+    const updateDoc: any = {
+        name: fullName,
+        dob: dob || null,             // জন্মদিন সেভ হবে
+        anniversary: anniversary || null // অ্যানিভার্সারি সেভ হবে
+    };
+
     const result = await usersCollection.findOneAndUpdate(
       { _id: new ObjectId(userId) },
-      { $set: { name: fullName } },
+      { $set: updateDoc },
       { returnDocument: 'after' }
     );
 
@@ -49,7 +55,6 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
     }
 
-    // ৪. আপডেটেড ইউজার ডেটা রিটার্ন
     const updatedUser = result;
     
     return NextResponse.json({
@@ -62,7 +67,9 @@ export async function PUT(request: NextRequest) {
         role: updatedUser.role,
         phone: updatedUser.phone,
         address: updatedUser.address,
-        picture: updatedUser.picture
+        picture: updatedUser.picture,
+        dob: updatedUser.dob,             // রিটার্ন করা হচ্ছে
+        anniversary: updatedUser.anniversary // রিটার্ন করা হচ্ছে
       }
     });
 

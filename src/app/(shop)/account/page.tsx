@@ -14,23 +14,23 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Cake, Heart } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
-import { NotificationPermission } from '@/components/shared/NotificationPermission'; // IMPORT THIS
+import { NotificationPermission } from '@/components/shared/NotificationPermission';
 
+// স্কিমা আপডেট
 const profileFormSchema = z.object({
-  firstName: z.string().min(2, {
-    message: 'Name must be at least 2 characters.',
-  }),
-  lastName: z.string().min(2, {
-    message: 'Name must be at least 2 characters.',
-  }),
+  firstName: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
+  lastName: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
   email: z.string().email(),
+  dob: z.string().optional(),
+  anniversary: z.string().optional(),
 });
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
@@ -46,9 +46,8 @@ const passwordFormSchema = z.object({
 
 type PasswordFormValues = z.infer<typeof passwordFormSchema>;
 
-
 export default function AccountProfilePage() {
-  const { user, login } = useAuth(); // login ফাংশনটি দরকার আপডেট করার জন্য
+  const { user, login } = useAuth();
 
   const profileForm = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -56,6 +55,8 @@ export default function AccountProfilePage() {
       firstName: '',
       lastName: '',
       email: '',
+      dob: '',
+      anniversary: '',
     },
   });
 
@@ -68,16 +69,24 @@ export default function AccountProfilePage() {
     }
   });
 
+  // ইউজারের ডেটা দিয়ে ফর্ম ফিল করা
   useEffect(() => {
     if (user) {
       const nameParts = user.name?.split(' ') || ['', ''];
+      // @ts-ignore - dob and anniversary might not be in user type yet but will come from API
+      const userDob = user.dob || '';
+      // @ts-ignore
+      const userAnniversary = user.anniversary || '';
+
       profileForm.reset({
         firstName: nameParts[0],
         lastName: nameParts.slice(1).join(' '),
         email: user.email || '',
+        dob: userDob,
+        anniversary: userAnniversary,
       })
     }
-  }, [user?.email, user?.name, profileForm]);
+  }, [user, profileForm]);
 
 
   async function onProfileSubmit(data: ProfileFormValues) {
@@ -93,7 +102,9 @@ export default function AccountProfilePage() {
         },
         body: JSON.stringify({
             firstName: data.firstName,
-            lastName: data.lastName
+            lastName: data.lastName,
+            dob: data.dob,             // পাঠানো হচ্ছে
+            anniversary: data.anniversary // পাঠানো হচ্ছে
         }),
       });
 
@@ -103,9 +114,7 @@ export default function AccountProfilePage() {
         throw new Error(responseData.error || 'Failed to update profile');
       }
       
-      // লোকাল স্টেট আপডেট করা (যাতে রিফ্রেশ ছাড়াই নাম পরিবর্তন হয়)
       login(responseData.user, token || '');
-      
       toast.success(responseData.message);
     } catch (error: any) {
       toast.error(error.message || 'Failed to update profile.');
@@ -153,56 +162,59 @@ export default function AccountProfilePage() {
     <div className="space-y-8">
       <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
                     <CardTitle>Profile</CardTitle>
                     <CardDescription>This is how others will see you on the site.</CardDescription>
                 </div>
-                {/* ADD THIS BUTTON HERE */}
-                <NotificationPermission /> 
+                <NotificationPermission />
             </div>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-4 mb-8">
-                <Avatar className="h-20 w-20">
+                <Avatar className="h-20 w-20 border-2 border-muted">
                     <AvatarImage src={user?.picture || ''} alt={user?.name || ''} />
-                    <AvatarFallback>{user?.name ? getInitials(user.name) : ''}</AvatarFallback>
+                    <AvatarFallback className="text-2xl font-bold bg-primary/10 text-primary">
+                        {user?.name ? getInitials(user.name) : ''}
+                    </AvatarFallback>
                 </Avatar>
                 <div>
                     <h3 className="text-xl font-bold">{user?.name}</h3>
                     <p className="text-sm text-muted-foreground">{user?.email}</p>
                 </div>
             </div>
+
             <Form {...profileForm}>
-                <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-4">
+                <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={profileForm.control}
-                    name="firstName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>First Name</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Your First Name" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={profileForm.control}
-                    name="lastName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Last Name</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Your Last Name" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                    <FormField
+                        control={profileForm.control}
+                        name="firstName"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>First Name</FormLabel>
+                            <FormControl>
+                            <Input placeholder="Your First Name" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={profileForm.control}
+                        name="lastName"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Last Name</FormLabel>
+                            <FormControl>
+                            <Input placeholder="Your Last Name" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
                   </div>
+
                   <FormField
                     control={profileForm.control}
                     name="email"
@@ -210,16 +222,59 @@ export default function AccountProfilePage() {
                       <FormItem>
                         <FormLabel>Email</FormLabel>
                         <FormControl>
-                          <Input placeholder="Your Email" type="email" {...field} disabled />
+                          <Input placeholder="Your Email" type="email" {...field} disabled className="bg-muted/50" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                  <Button type="submit" disabled={isProfileSubmitting}>
-                    {isProfileSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Update Profile
-                  </Button>
+
+                  {/* Special Dates Section */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t">
+                      <FormField
+                        control={profileForm.control}
+                        name="dob"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="flex items-center gap-2">
+                                <Cake className="h-4 w-4 text-pink-500" /> Birthday
+                            </FormLabel>
+                            <FormControl>
+                              <Input type="date" {...field} />
+                            </FormControl>
+                            <FormDescription className="text-xs">
+                                Get special offers on your birthday!
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={profileForm.control}
+                        name="anniversary"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="flex items-center gap-2">
+                                <Heart className="h-4 w-4 text-red-500" /> Anniversary
+                            </FormLabel>
+                            <FormControl>
+                              <Input type="date" {...field} />
+                            </FormControl>
+                            <FormDescription className="text-xs">
+                                Celebrate your special day with us.
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                  </div>
+
+                  <div className="flex justify-end">
+                    <Button type="submit" disabled={isProfileSubmitting} className="w-full sm:w-auto">
+                        {isProfileSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Save Changes
+                    </Button>
+                  </div>
                 </form>
             </Form>
           </CardContent>
@@ -274,10 +329,12 @@ export default function AccountProfilePage() {
                                 </FormItem>
                             )}
                         />
-                        <Button type="submit" disabled={isPasswordSubmitting}>
-                          {isPasswordSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                          Change Password
-                        </Button>
+                        <div className="flex justify-end">
+                            <Button type="submit" variant="outline" disabled={isPasswordSubmitting} className="w-full sm:w-auto">
+                            {isPasswordSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Change Password
+                            </Button>
+                        </div>
                     </form>
                  </Form>
             </CardContent>

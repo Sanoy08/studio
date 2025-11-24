@@ -27,8 +27,7 @@ export async function GET(request: NextRequest) {
     const client = await clientPromise;
     const db = client.db(DB_NAME);
 
-    // ১. মোট রেভিনিউ এবং মোট অর্ডার সংখ্যা
-    // MongoDB Aggregation ব্যবহার করে সব অর্ডারের 'FinalPrice' যোগ করা হচ্ছে
+    // ১. সাধারণ পরিসংখ্যান
     const orderStats = await db.collection(ORDERS_COLLECTION).aggregate([
       {
         $group: {
@@ -41,32 +40,52 @@ export async function GET(request: NextRequest) {
 
     const revenue = orderStats[0]?.totalRevenue || 0;
     const totalOrders = orderStats[0]?.totalOrders || 0;
-
-    // ২. মোট কাস্টমার সংখ্যা
     const totalCustomers = await db.collection(USERS_COLLECTION).countDocuments({ role: 'customer' });
-
-    // ৩. পেন্ডিং অর্ডার (Active Now এর বদলে আমরা পেন্ডিং অর্ডার দেখাবো যা বেশি জরুরি)
+    
+    // Pending Orders (Received or Processing)
     const pendingOrders = await db.collection(ORDERS_COLLECTION).countDocuments({ 
-      Status: { $in: ['Received', 'Cooking'] } 
+      Status: { $in: ['Received', 'Cooking', 'Processing'] } 
     });
 
-    // ৪. চার্টের জন্য গত ৬ মাসের সেলস ডেটা
-    // এটি একটু জটিল কুয়েরি, আপাতত আমরা সিম্পল রাখার জন্য সব অর্ডার এনে প্রসেস করছি
-    // (বড় অ্যাপে এটা ডাটাবেস লেভেলে করা উচিত)
+    // ২. আজকের রেভিনিউ
+    const startOfToday = new Date();
+    startOfToday.setHours(0,0,0,0);
+    
+    const todayStats = await db.collection(ORDERS_COLLECTION).aggregate([
+        { $match: { Timestamp: { $gte: startOfToday } } },
+        { $group: { _id: null, todayRevenue: { $sum: "$FinalPrice" } } }
+    ]).toArray();
+    const todayRevenue = todayStats[0]?.todayRevenue || 0;
+
+    // ৩. চার্টের ডেটা (Sales Trend)
     const allOrders = await db.collection(ORDERS_COLLECTION)
         .find({})
-        .project({ Timestamp: 1, FinalPrice: 1 })
+        .project({ Timestamp: 1, FinalPrice: 1, Items: 1 })
         .toArray();
 
-    // মাস অনুযায়ী ডেটা প্রসেসিং
     const monthlySales: Record<string, number> = {};
-    const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     
+    // ৪. টপ সেলিং আইটেম বের করা
+    const itemSales: Record<string, number> = {};
+
     allOrders.forEach((order: any) => {
+        // Monthly Sales Logic
         const date = new Date(order.Timestamp);
         const monthName = months[date.getMonth()];
         if (!monthlySales[monthName]) monthlySales[monthName] = 0;
         monthlySales[monthName] += order.FinalPrice;
+
+        // Top Selling Logic
+        if (Array.isArray(order.Items)) {
+            order.Items.forEach((item: any) => {
+                const name = item.name || item.Name;
+                const qty = parseInt(item.quantity || item.Quantity || 0);
+                if (name) {
+                    itemSales[name] = (itemSales[name] || 0) + qty;
+                }
+            });
+        }
     });
 
     // চার্টের জন্য ফরম্যাট করা (বর্তমান মাস এবং আগের ৫ মাস)
@@ -81,15 +100,23 @@ export async function GET(request: NextRequest) {
         });
     }
 
+    // টপ ৫ আইটেম
+    const topSellingItems = Object.entries(itemSales)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 5)
+        .map(([name, value]) => ({ name, value }));
+
     return NextResponse.json({
       success: true,
       stats: {
         revenue,
+        todayRevenue, // নতুন যোগ করা হয়েছে
         totalOrders,
         totalCustomers,
         pendingOrders
       },
-      chartData
+      chartData,
+      topSellingItems // নতুন যোগ করা হয়েছে
     });
 
   } catch (error: any) {
