@@ -13,7 +13,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Lock, ChevronDown, ChevronUp, MapPin } from 'lucide-react';
+import { Lock, ChevronDown, ChevronUp, MapPin, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -30,7 +30,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { toast } from 'sonner';
 import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants';
 
-// --- স্কিমা ---
+// ... (checkoutSchema এবং Helper Components আগের মতোই থাকবে)
 const checkoutSchema = z.object({
   name: z.string().min(2, 'Please enter a valid name.'),
   address: z.string().min(10, 'Please enter your primary address (at least 10 characters).'),
@@ -45,15 +45,13 @@ const checkoutSchema = z.object({
   shareLocation: z.boolean().optional(),
 });
 
-// --- হেল্পার কম্পোনেন্ট (ফাংশনের বাইরে - ফোকাস সমস্যা সমাধানের জন্য) ---
-
 const FloatingLabelInput = ({ field, label, type = 'text' }: any) => (
   <div className="relative">
     <Input 
       type={type} 
       placeholder=" " 
       {...field} 
-      value={field.value ?? ''} // Safe value check
+      value={field.value ?? ''} 
       className="block px-4 pb-2.5 pt-6 w-full text-sm text-foreground bg-background border-muted-foreground/30 rounded-xl border appearance-none focus:outline-none focus:ring-0 focus:border-primary peer h-12 transition-all shadow-sm hover:border-primary/50" 
     />
     <FormLabel className="absolute text-sm text-muted-foreground duration-300 transform -translate-y-3 scale-75 top-4 z-10 origin-[0] start-4 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-3 rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto pointer-events-none bg-background px-1">
@@ -67,7 +65,7 @@ const FloatingLabelTextarea = ({ field, label }: any) => (
     <Textarea 
       placeholder=" " 
       {...field} 
-      value={field.value ?? ''} // Safe value check
+      value={field.value ?? ''}
       className="block px-4 pb-2.5 pt-6 w-full text-sm text-foreground bg-background border-muted-foreground/30 rounded-xl border appearance-none focus:outline-none focus:ring-0 focus:border-primary peer min-h-[100px] transition-all shadow-sm hover:border-primary/50 resize-y" 
     />
     <FormLabel className="absolute text-sm text-muted-foreground duration-300 transform -translate-y-3 scale-75 top-4 z-10 origin-[0] start-4 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-3 rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto pointer-events-none bg-background px-1">
@@ -75,24 +73,28 @@ const FloatingLabelTextarea = ({ field, label }: any) => (
     </FormLabel>
   </div>
 );
-// -------------------------------------------------------------------
 
 export default function CheckoutPage() {
-  const { state, totalPrice, itemCount, clearCart } = useCart();
+  // ★ isInitialized আনা হয়েছে
+  const { state, totalPrice, itemCount, clearCart, isInitialized } = useCart();
   const { user, isLoading } = useAuth();
   const router = useRouter();
   const [orderType, setOrderType] = useState<'delivery' | 'pickup'>('delivery');
   const [isSummaryExpanded, setIsSummaryExpanded] = useState(false);
 
   useEffect(() => {
-    if (!isLoading && !user) {
+    // ১. যদি কার্ট এখনো লোড না হয় বা অথেন্টিকেশন চেক চলে, তবে অপেক্ষা করুন
+    if (!isInitialized || isLoading) return;
+
+    // ২. চেক শেষ, এবার লজিক রান করুন
+    if (!user) {
       toast.error("Please login to checkout.");
       router.push('/login');
-    }
-    if (itemCount === 0) {
+    } else if (itemCount === 0) {
+      // কার্ট সত্যি সত্যিই খালি
       router.push('/menus');
     }
-  }, [itemCount, user, isLoading, router]);
+  }, [itemCount, user, isLoading, isInitialized, router]);
 
   const form = useForm<z.infer<typeof checkoutSchema>>({
     resolver: zodResolver(checkoutSchema),
@@ -101,7 +103,7 @@ export default function CheckoutPage() {
       address: '',
       altPhone: '',
       deliveryAddress: '',
-      preferredDate: '', // ★ FIX: ডিফল্ট ভ্যালু যোগ করা হয়েছে
+      preferredDate: '',
       mealTime: 'lunch',
       instructions: '',
       terms: false,
@@ -114,28 +116,22 @@ export default function CheckoutPage() {
   
   const [isSameAsAddress, setIsSameAsAddress] = useState(false);
 
-  // ★★★ FIX: অটোমেটিক ডিফল্ট অ্যাড্রেস লোড এবং ফর্ম রিসেট ★★★
   useEffect(() => {
     const initializeCheckoutData = async () => {
         if (!user) return;
-
         let savedAddress = '';
-
         try {
             const token = localStorage.getItem('token');
             if (token) {
-                // অ্যাড্রেস API থেকে ডেটা আনা হচ্ছে
                 const res = await fetch('/api/user/addresses', {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 const data = await res.json();
                 if (data.success && Array.isArray(data.addresses)) {
-                    // ডিফল্ট অ্যাড্রেস খোঁজা হচ্ছে
                     const defaultAddr = data.addresses.find((a: any) => a.isDefault);
                     if (defaultAddr) {
                         savedAddress = defaultAddr.address;
                     } else if (data.addresses.length > 0) {
-                        // যদি ডিফল্ট না থাকে, তবে প্রথমটি নেওয়া হবে
                         savedAddress = data.addresses[0].address;
                     }
                 }
@@ -143,21 +139,18 @@ export default function CheckoutPage() {
         } catch (error) {
             console.error("Error fetching addresses:", error);
         }
-
-        // ফর্ম রিসেট করে ডেটা বসানো হচ্ছে (সব ফিল্ড সহ)
         reset({
             name: user.name || '',
-            address: savedAddress, // অটোমেটিক অ্যাড্রেস
+            address: savedAddress,
             altPhone: '', 
             deliveryAddress: '',
-            preferredDate: '', // ★ FIX: এটি নিশ্চিত করা হয়েছে
+            preferredDate: '',
             mealTime: 'lunch',
             instructions: '',
             terms: false,
             shareLocation: false,
         });
     };
-
     initializeCheckoutData();
   }, [user, reset]);
 
@@ -174,7 +167,6 @@ export default function CheckoutPage() {
 
   async function onSubmit(values: z.infer<typeof checkoutSchema>) {
     const token = localStorage.getItem('token');
-    
     try {
         const orderPayload = {
             ...values,
@@ -195,10 +187,7 @@ export default function CheckoutPage() {
         });
 
         const data = await res.json();
-
-        if (!res.ok) {
-            throw new Error(data.error || 'Order placement failed');
-        }
+        if (!res.ok) throw new Error(data.error || 'Order placement failed');
 
         toast.success('Order placed successfully!');
         clearCart();
@@ -210,14 +199,20 @@ export default function CheckoutPage() {
     }
   }
 
-  if (itemCount === 0 || isLoading || !user) {
+  // ★ লোডিং স্টেট আপডেট (isInitialized চেক যোগ করা হয়েছে)
+  if (!isInitialized || isLoading) {
     return (
-        <div className="container py-12 text-center">
-            <p>Loading checkout...</p>
+        <div className="container py-20 text-center flex flex-col items-center justify-center min-h-[60vh]">
+            <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" />
+            <p className="text-muted-foreground">Loading checkout...</p>
         </div>
     );
   }
   
+  // যদি লোড হওয়ার পরেও ইউজার না থাকে বা কার্ট খালি থাকে, তবে কিছুই দেখাবে না (কারণ useEffect রিডাইরেক্ট করবে)
+  if (!user || itemCount === 0) return null;
+  
+  // ... (OrderSummaryContent এবং বাকি রিটার্ন অংশ অপরিবর্তিত থাকবে) ...
   const OrderSummaryContent = () => (
     <>
       <h3 className="font-bold text-lg mb-4">Your Order</h3>
@@ -263,6 +258,7 @@ export default function CheckoutPage() {
 
   return (
     <div className="container py-8 md:py-12">
+      {/* ... (বাকি JSX কোড হুবহু আগের মতোই) ... */}
       <div className="lg:hidden mb-4">
         <Card>
             <CardHeader className="flex flex-row items-center justify-between p-4 cursor-pointer" onClick={() => setIsSummaryExpanded(!isSummaryExpanded)}>
@@ -351,14 +347,7 @@ export default function CheckoutPage() {
                 <FormItem>
                   <FormLabel className="text-muted-foreground text-xs ml-1">Delivery Date</FormLabel>
                   <FormControl>
-                      {/* ★★★ FIX: এখানে value সেট করা হয়েছে যাতে undefined না হয় ★★★ */}
-                      <Input 
-                        type="date" 
-                        {...field} 
-                        value={field.value ?? ''} 
-                        min={new Date().toISOString().split("T")[0]} 
-                        className="h-12 rounded-xl border-muted-foreground/30" 
-                      />
+                      <Input type="date" {...field} min={new Date().toISOString().split("T")[0]} className="h-12 rounded-xl border-muted-foreground/30" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
