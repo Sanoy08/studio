@@ -8,7 +8,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import type { Product } from '@/lib/types';
 import { formatPrice } from '@/lib/utils';
-import { Plus, Minus, ShoppingCart } from 'lucide-react';
+import { Plus, Minus, ShoppingCart, Ban } from 'lucide-react';
 import { useCart } from '@/hooks/useCart';
 import { Badge } from '../ui/badge';
 import { differenceInDays } from 'date-fns';
@@ -22,10 +22,15 @@ export function ProductCard({ product }: ProductCardProps) {
   const { state, addItem, updateQuantity } = useCart();
   const cartItem = state.items.find(item => item.id === product.id);
 
+  // স্টক চেক (আমাদের API তে InStock: false হলে stock: 0 হয়)
+  const isOutOfStock = product.stock <= 0;
+
   const handleAdd = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    addItem(product);
+    if (!isOutOfStock) {
+        addItem(product);
+    }
   };
 
   const handleIncrease = (e: React.MouseEvent) => {
@@ -51,13 +56,20 @@ export function ProductCard({ product }: ProductCardProps) {
     : PLACEHOLDER_IMAGE_URL;
 
   return (
-    <Card className="flex flex-col overflow-hidden h-full transition-shadow hover:shadow-lg bg-card group border-muted/60">
+    <Card className={`flex flex-col overflow-hidden h-full transition-shadow hover:shadow-lg bg-card group border-muted/60 ${isOutOfStock ? 'opacity-75 grayscale-[0.5]' : ''}`}>
       
-      {/* Image Section (Clean, no buttons overlay) */}
       <Link href={`/menus/${product.slug}`} className="block aspect-square relative overflow-hidden">
-        {isNew && (
-            <Badge className="absolute top-2 right-2 bg-accent text-accent-foreground z-10 shadow-sm">NEW</Badge>
+        {/* ব্যাজ লজিক: আউট অফ স্টক হলে লাল ব্যাজ, নাহলে নতুন হলে NEW ব্যাজ */}
+        {isOutOfStock ? (
+            <Badge className="absolute top-2 right-2 bg-destructive text-destructive-foreground z-10 shadow-sm pointer-events-none">
+                Out of Stock
+            </Badge>
+        ) : isNew && (
+            <Badge className="absolute top-2 right-2 bg-accent text-accent-foreground z-10 shadow-sm">
+                NEW
+            </Badge>
         )}
+        
         <Image
           src={imageSrc}
           alt={product.name}
@@ -66,11 +78,14 @@ export function ProductCard({ product }: ProductCardProps) {
           className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500"
           sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
         />
+        
+        {/* আউট অফ স্টক হলে ইমেজের ওপর একটি লেয়ার দেওয়া যেতে পারে (অপশনাল) */}
+        {isOutOfStock && (
+            <div className="absolute inset-0 bg-background/30 z-0" />
+        )}
       </Link>
       
-      {/* Content Section */}
       <CardContent className="p-3 flex flex-col flex-grow gap-2">
-        {/* Product Name */}
         <h3 
             className="font-semibold text-sm leading-tight line-clamp-2 h-10 text-foreground/90" 
             title={product.name}
@@ -78,13 +93,22 @@ export function ProductCard({ product }: ProductCardProps) {
             {product.name}
         </h3>
         
-        {/* Price and Action Row */}
         <div className="flex items-center justify-between mt-auto pt-1">
-            <p className="font-bold text-base text-primary">{formatPrice(product.price)}</p>
+            <p className={`font-bold text-base ${isOutOfStock ? 'text-muted-foreground' : 'text-primary'}`}>
+                {formatPrice(product.price)}
+            </p>
             
-            {/* Dynamic Add/Counter Button */}
-            <div onClick={(e) => e.preventDefault()}> {/* Prevent Link click when clicking buttons */}
-                {cartItem ? (
+            <div onClick={(e) => e.preventDefault()}>
+                {isOutOfStock ? (
+                    <Button 
+                        size="sm" 
+                        disabled 
+                        className="h-8 px-3 rounded-full bg-muted text-muted-foreground border border-border cursor-not-allowed opacity-70"
+                    >
+                        <Ban className="h-3.5 w-3.5 mr-1" /> 
+                        <span className="text-xs font-medium">Sold Out</span>
+                    </Button>
+                ) : cartItem ? (
                     <div className="flex items-center h-8 border border-primary/30 rounded-full bg-background shadow-sm">
                         <Button 
                             variant="ghost" 

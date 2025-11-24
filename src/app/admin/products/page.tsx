@@ -4,15 +4,20 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Plus, Pencil, Trash2, Search, Package, Filter } from 'lucide-react';
+import { Loader2, Plus, Pencil, Trash2, Search, Package, MoreVertical } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { toast } from 'sonner';
 import { formatPrice } from '@/lib/utils';
 import Image from 'next/image';
@@ -131,7 +136,8 @@ export default function AdminProductsPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // কার্ড ক্লিক ইভেন্ট যাতে ফায়ার না হয়
     if (!confirm('Are you sure?')) return;
     const token = localStorage.getItem('token');
     try {
@@ -151,130 +157,118 @@ export default function AdminProductsPage() {
   return (
     <div className="space-y-6 max-w-[1600px] mx-auto">
       
-      {/* Header Section */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 bg-card p-6 rounded-xl border shadow-sm">
+      {/* হেডার সেকশন */}
+      <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-card p-6 rounded-xl border shadow-sm sticky top-0 z-20">
         <div>
             <h1 className="text-2xl font-bold flex items-center gap-2">
-                <Package className="h-6 w-6 text-primary" /> Products
+                <Package className="h-6 w-6 text-primary" /> Menu Management
             </h1>
-            <p className="text-sm text-muted-foreground mt-1">Manage your food menu catalog.</p>
+            <p className="text-sm text-muted-foreground mt-1">Manage your food items.</p>
         </div>
-        <div className="flex flex-col sm:flex-row w-full lg:w-auto gap-3">
+        <div className="flex w-full sm:w-auto gap-3">
             <div className="relative flex-1 sm:w-64">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input 
-                    placeholder="Search products..." 
+                    placeholder="Search dishes..." 
                     className="pl-9 bg-background" 
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                 />
             </div>
-            <Button onClick={() => handleOpenDialog()} className="gap-2 shadow-lg shadow-primary/20 w-full sm:w-auto">
-                <Plus className="h-4 w-4" /> Add Product
+            <Button onClick={() => handleOpenDialog()} className="gap-2 shadow-lg shadow-primary/20">
+                <Plus className="h-4 w-4" /> Add Dish
             </Button>
         </div>
       </div>
 
-      {/* Products List */}
-      <div className="space-y-4">
-        {filteredProducts.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground bg-card rounded-xl border border-dashed">
-                <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No products found matching your search.</p>
-            </div>
-        ) : (
-            <>
-              {/* Mobile View: Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:hidden gap-4">
-                  {filteredProducts.map(product => (
-                      <Card key={product.id} className="overflow-hidden border shadow-sm">
-                          <div className="flex p-3 gap-4">
-                              <div className="relative h-24 w-24 rounded-lg overflow-hidden border bg-muted shrink-0">
-                                  <Image src={product.images[0]?.url || PLACEHOLDER_IMAGE_URL} alt={product.name} fill className="object-cover" unoptimized={true} />
-                              </div>
-                              <div className="flex flex-col justify-between flex-1 min-w-0">
-                                  <div>
-                                      <div className="flex justify-between items-start">
-                                          <h3 className="font-semibold text-base truncate pr-2">{product.name}</h3>
-                                          <Badge variant={product.stock > 0 ? "outline" : "destructive"} className="text-[10px] px-1.5 h-5">
-                                              {product.stock > 0 ? "In Stock" : "Out"}
-                                          </Badge>
-                                      </div>
-                                      <p className="text-sm text-muted-foreground">{product.category.name}</p>
-                                  </div>
-                                  <div className="flex justify-between items-end mt-2">
-                                      <span className="font-bold text-primary">{formatPrice(product.price)}</span>
-                                      <div className="flex gap-2">
-                                          <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600 bg-blue-50 hover:bg-blue-100" onClick={() => handleOpenDialog(product)}>
-                                              <Pencil className="h-4 w-4"/>
-                                          </Button>
-                                          <Button variant="ghost" size="icon" className="h-8 w-8 text-red-600 bg-red-50 hover:bg-red-100" onClick={() => handleDelete(product.id)}>
-                                              <Trash2 className="h-4 w-4"/>
-                                          </Button>
-                                      </div>
-                                  </div>
-                              </div>
-                          </div>
-                      </Card>
-                  ))}
+      {/* প্রোডাক্ট গ্রিড (কার্ড ভিউ - মেনু পেজের মতো) */}
+      {filteredProducts.length === 0 ? (
+          <div className="text-center py-12 text-muted-foreground bg-card rounded-xl border border-dashed">
+              <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>No products found.</p>
+          </div>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+          {filteredProducts.map((product) => (
+            <Card 
+                key={product.id} 
+                className="group overflow-hidden border shadow-sm hover:shadow-lg transition-all cursor-pointer relative"
+                onClick={() => handleOpenDialog(product)} // পুরো কার্ডে ক্লিক করলে এডিট খুলবে
+            >
+              {/* প্রোডাক্ট ইমেজ */}
+              <div className="aspect-square relative overflow-hidden bg-muted">
+                 {/* স্ট্যাটাস ব্যাজ (ইমেজের ওপর) */}
+                 <div className="absolute top-2 left-2 z-10 flex flex-col gap-1">
+                    {product.stock <= 0 && (
+                        <Badge variant="destructive" className="text-[10px] font-bold shadow-sm">
+                            OUT OF STOCK
+                        </Badge>
+                    )}
+                    {product.featured && (
+                        <Badge variant="secondary" className="text-[10px] font-bold bg-yellow-400 text-yellow-900 shadow-sm">
+                            BESTSELLER
+                        </Badge>
+                    )}
+                 </div>
+
+                 {/* অ্যাকশন মেনু (ইমেজের ওপর ডানদিকে) */}
+                 <div className="absolute top-2 right-2 z-10" onClick={(e) => e.stopPropagation()}>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="secondary" size="icon" className="h-8 w-8 rounded-full opacity-80 hover:opacity-100 shadow-sm">
+                                <MoreVertical className="h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleOpenDialog(product)}>
+                                <Pencil className="h-4 w-4 mr-2" /> Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={(e) => handleDelete(product.id, e)}>
+                                <Trash2 className="h-4 w-4 mr-2" /> Delete
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                 </div>
+
+                 <Image 
+                    src={product.images[0]?.url || PLACEHOLDER_IMAGE_URL} 
+                    alt={product.name} 
+                    fill 
+                    className="object-cover transition-transform duration-500 group-hover:scale-110" 
+                    unoptimized={true}
+                 />
               </div>
 
-              {/* Desktop View: Table */}
-              <div className="hidden lg:block bg-card rounded-xl border shadow-sm overflow-hidden">
-                  <Table>
-                    <TableHeader className="bg-muted/50">
-                      <TableRow>
-                        <TableHead className="w-[100px] pl-6">Image</TableHead>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Category</TableHead>
-                        <TableHead>Price</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right pr-6">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredProducts.map((product) => (
-                        <TableRow key={product.id} className="group hover:bg-muted/20">
-                          <TableCell className="pl-6 py-3">
-                              <div className="relative h-12 w-12 rounded-lg overflow-hidden border bg-muted">
-                                  <Image src={product.images[0]?.url || PLACEHOLDER_IMAGE_URL} alt={product.name} fill className="object-cover" unoptimized={true} />
-                              </div>
-                          </TableCell>
-                          <TableCell className="font-medium">
-                              {product.name}
-                              {product.featured && <Badge variant="secondary" className="ml-2 text-[10px] bg-amber-100 text-amber-800">Bestseller</Badge>}
-                          </TableCell>
-                          <TableCell>{product.category.name}</TableCell>
-                          <TableCell className="font-bold text-foreground/80">{formatPrice(product.price)}</TableCell>
-                          <TableCell>
-                              <Badge variant={product.stock > 0 ? "outline" : "destructive"} className={product.stock > 0 ? "text-green-600 border-green-200 bg-green-50" : ""}>
-                                  {product.stock > 0 ? "In Stock" : "Out of Stock"}
-                              </Badge>
-                          </TableCell>
-                          <TableCell className="text-right pr-6">
-                              <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenDialog(product)}><Pencil className="h-4 w-4 text-blue-500"/></Button>
-                                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDelete(product.id)}><Trash2 className="h-4 w-4 text-red-500"/></Button>
-                              </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-              </div>
-            </>
-        )}
-      </div>
+              {/* প্রোডাক্ট ইনফো */}
+              <CardContent className="p-3 space-y-1.5">
+                 <div className="flex justify-between items-start gap-2">
+                    <h3 className="font-semibold text-sm line-clamp-2 leading-tight text-foreground group-hover:text-primary transition-colors">
+                        {product.name}
+                    </h3>
+                 </div>
+                 <p className="text-xs text-muted-foreground font-medium">{product.category.name}</p>
+                 <div className="flex items-center justify-between pt-1">
+                    <p className="font-bold text-primary">{formatPrice(product.price)}</p>
+                    <Badge variant="outline" className="text-[10px] h-5 px-1.5 font-normal border-muted-foreground/30">
+                        Click to Edit
+                    </Badge>
+                 </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
 
-      {/* Dialog (Same as before) */}
+      {/* এডিট/অ্যাড ডায়ালগ */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-                <DialogTitle>{editingProduct ? 'Edit Product' : 'Add New Product'}</DialogTitle>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0 gap-0">
+            <DialogHeader className="p-6 border-b bg-muted/20">
+                <DialogTitle className="text-xl">{editingProduct ? 'Edit Product' : 'Add New Dish'}</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                    <Label>Product Images (Max 4)</Label>
+            <div className="p-6 space-y-6">
+                
+                <div className="space-y-3">
+                    <Label className="text-base font-medium">Dish Images</Label>
                     <ImageUpload 
                         value={formData.images.map(img => img.url)}
                         onChange={(urls) => setFormData({ ...formData, images: urls.map((u, i) => ({ id: `new-${i}`, url: u })) })}
@@ -282,38 +276,57 @@ export default function AdminProductsPage() {
                         folder="dish"
                     />
                 </div>
-                {/* ... বাকি ফর্ম ফিল্ডগুলো একই থাকবে ... */}
-                <div className="grid grid-cols-2 gap-4">
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                        <Label>Name</Label>
-                        <Input value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
+                        <Label>Dish Name</Label>
+                        <Input value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} placeholder="e.g. Chicken Biryani" />
                     </div>
                     <div className="space-y-2">
                         <Label>Category</Label>
-                        <Input value={formData.category} onChange={(e) => setFormData({...formData, category: e.target.value})} placeholder="e.g. Chicken" />
+                        <Input value={formData.category} onChange={(e) => setFormData({...formData, category: e.target.value})} placeholder="e.g. Main Course" />
                     </div>
                 </div>
+
                 <div className="space-y-2">
                     <Label>Price (₹)</Label>
-                    <Input type="number" value={formData.price} onChange={(e) => setFormData({...formData, price: e.target.value})} />
+                    <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">₹</span>
+                        <Input type="number" className="pl-7" value={formData.price} onChange={(e) => setFormData({...formData, price: e.target.value})} placeholder="0.00" />
+                    </div>
                 </div>
+
                 <div className="space-y-2">
                     <Label>Description</Label>
-                    <Textarea value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} />
+                    <Textarea 
+                        value={formData.description} 
+                        onChange={(e) => setFormData({...formData, description: e.target.value})} 
+                        placeholder="Describe the dish..." 
+                        className="min-h-[100px]"
+                    />
                 </div>
-                <div className="flex items-center justify-between bg-muted/30 p-3 rounded-lg">
-                    <div className="flex items-center gap-2">
+
+                <div className="flex flex-col sm:flex-row gap-6 p-4 bg-muted/30 rounded-lg border">
+                    <div className="flex items-center justify-between flex-1">
+                        <div className="space-y-0.5">
+                            <Label>Available in Stock</Label>
+                            <p className="text-xs text-muted-foreground">Turn off if sold out</p>
+                        </div>
                         <Switch checked={formData.inStock} onCheckedChange={(c) => setFormData({...formData, inStock: c})} />
-                        <Label>In Stock</Label>
                     </div>
-                     <div className="flex items-center gap-2">
+                    <div className="h-px sm:h-auto sm:w-px bg-border"></div>
+                    <div className="flex items-center justify-between flex-1">
+                        <div className="space-y-0.5">
+                            <Label>Mark as Bestseller</Label>
+                            <p className="text-xs text-muted-foreground">Show on homepage</p>
+                        </div>
                         <Switch checked={formData.featured} onCheckedChange={(c) => setFormData({...formData, featured: c})} />
-                        <Label>Bestseller</Label>
                     </div>
                 </div>
             </div>
-            <DialogFooter>
-                <Button onClick={handleSubmit}>{editingProduct ? 'Update' : 'Create'}</Button>
+            <DialogFooter className="p-6 border-t bg-muted/20">
+                <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+                <Button onClick={handleSubmit} className="gap-2">{editingProduct ? 'Update Dish' : 'Save Dish'}</Button>
             </DialogFooter>
         </DialogContent>
       </Dialog>

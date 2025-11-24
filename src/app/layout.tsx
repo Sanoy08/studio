@@ -1,11 +1,10 @@
-
 import type { Metadata, Viewport } from 'next';
 import { Poppins, Amarante } from 'next/font/google';
 import './globals.css';
 import { CartProvider } from '@/context/CartProvider';
 import { Toaster } from '@/components/ui/sonner';
 import { cn } from '@/lib/utils';
-
+import { RealtimeMenuUpdater } from '@/components/providers/RealtimeMenuUpdater'; // ★ ১. ইমপোর্ট যোগ করা হয়েছে
 
 const poppins = Poppins({
   subsets: ['latin'],
@@ -36,6 +35,9 @@ export default function RootLayout({
       <body className={cn('font-sans antialiased', poppins.variable, amarante.variable)}>
         {/* <FirebaseClientProvider> // REMOVED */}
           <CartProvider>
+            {/* ★ ২. রিয়েল-টাইম আপডেটার কম্পোনেন্ট যোগ করা হয়েছে */}
+            <RealtimeMenuUpdater />
+            
             {children}
             <Toaster />
           </CartProvider>
@@ -45,14 +47,12 @@ export default function RootLayout({
   );
 }
 
-
-
-// ★★★ এই অংশটি যোগ করুন ★★★
+// ★★★ এই অংশটি (Viewport) যেমন ছিল তেমনই আছে ★★★
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
-  userScalable: false, // অ্যাপের মতো ফিলিংস দেওয়ার জন্য জুম বন্ধ করা হলো (অপশনাল)
+  userScalable: false, // অ্যাপের মতো ফিলিংস দেওয়ার জন্য জুম বন্ধ করা হলো (অপশনাল)
   themeColor: [
     { media: '(prefers-color-scheme: light)', color: 'white' },
     { media: '(prefers-color-scheme: dark)', color: 'black' },

@@ -3,7 +3,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { clientPromise } from '@/lib/mongodb';
 import jwt from 'jsonwebtoken';
-import { revalidatePath } from 'next/cache'; // ★ ১. এই লাইনটি যোগ করা হয়েছে
+import { revalidatePath } from 'next/cache';
+import { pusherServer } from '@/lib/pusher';
 
 const DB_NAME = 'BumbasKitchenDB';
 const COLLECTION_NAME = 'menuItems';
@@ -48,14 +49,15 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, description, price, category, imageUrl, featured, inStock } = body;
+    const { name, description, price, category, imageUrls, featured, inStock } = body;
 
     const newProduct = {
       Name: name,
       Description: description,
       Price: parseFloat(price),
       Category: category,
-      ImageURLs: [imageUrl],
+      // ইমেজ অ্যারে সেভ করা হচ্ছে
+      ImageURLs: Array.isArray(imageUrls) ? imageUrls : (imageUrls ? [imageUrls] : []),
       Bestseller: featured,
       InStock: inStock,
       CreatedAt: new Date()
@@ -66,10 +68,16 @@ export async function POST(request: NextRequest) {
     const result = await db.collection(COLLECTION_NAME).insertOne(newProduct);
 
     if (result.acknowledged) {
-      // ★ ২. ক্যাশ ক্লিয়ার করা হচ্ছে
-      revalidatePath('/menus'); // মেনু পেজ রিফ্রেশ হবে
-      revalidatePath('/');      // হোমপেজ রিফ্রেশ হবে (বেস্টসেলার সেকশনের জন্য)
-      
+      // ১. সার্ভার ক্যাশ ক্লিয়ার
+      revalidatePath('/menus');
+      revalidatePath('/');
+
+      // ২. রিয়েল-টাইম আপডেট ট্রিগার
+      await pusherServer.trigger('menu-updates', 'product-changed', {
+        message: `New dish "${name}" added!`,
+        type: 'add'
+      });
+
       return NextResponse.json({ success: true, message: 'Product added successfully', productId: result.insertedId }, { status: 201 });
     } else {
       throw new Error('Failed to insert product');

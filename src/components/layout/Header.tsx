@@ -153,11 +153,11 @@ export function Header() {
 
                         <div className="p-6 border-t bg-muted/20 space-y-6">
                             <div className="grid grid-cols-2 gap-3">
-                                <a href="https://instagram.com" target="_blank" className="flex items-center justify-center gap-2 p-3 bg-background rounded-xl border hover:border-pink-500/50 hover:bg-pink-50 transition-colors group">
+                                <a href="https://www.instagram.com/bumbaskitchen/" target="_blank" className="flex items-center justify-center gap-2 p-3 bg-background rounded-xl border hover:border-pink-500/50 hover:bg-pink-50 transition-colors group">
                                     <Instagram className="h-4 w-4 text-pink-600 group-hover:scale-110 transition-transform" />
                                     <span className="text-xs font-medium">Instagram</span>
                                 </a>
-                                <a href="https://facebook.com" target="_blank" className="flex items-center justify-center gap-2 p-3 bg-background rounded-xl border hover:border-blue-500/50 hover:bg-blue-50 transition-colors group">
+                                <a href="https://www.facebook.com/people/Bumbas-Kitchen/100063704354766/" target="_blank" className="flex items-center justify-center gap-2 p-3 bg-background rounded-xl border hover:border-blue-500/50 hover:bg-blue-50 transition-colors group">
                                     <Facebook className="h-4 w-4 text-blue-600 group-hover:scale-110 transition-transform" />
                                     <span className="text-xs font-medium">Facebook</span>
                                 </a>

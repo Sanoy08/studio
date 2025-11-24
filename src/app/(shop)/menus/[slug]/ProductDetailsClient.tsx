@@ -6,13 +6,13 @@ import { useState } from 'react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { formatPrice } from '@/lib/utils';
-import { Plus, Minus, Star, ShoppingCart } from 'lucide-react';
+import { Plus, Minus, Star, ShoppingCart, Ban } from 'lucide-react';
 import { useCart } from '@/hooks/useCart';
 import type { Product, Image as ProductImage } from '@/lib/types';
 import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants';
 import { ProductCard } from '@/components/shop/ProductCard';
+import { Badge } from '@/components/ui/badge';
 
-// ফলব্যাক ইমেজের অবজেক্ট তৈরি
 const fallbackImage: ProductImage = { 
   id: 'placeholder', 
   url: PLACEHOLDER_IMAGE_URL, 
@@ -23,20 +23,19 @@ export function ProductDetailsClient({ product, relatedProducts }: { product: Pr
   const [quantity, setQuantity] = useState(1);
   const { addItem } = useCart();
   
-  // ১. শুধুমাত্র ভ্যালিড (ফাঁকা নয় এমন) ইমেজগুলো ফিল্টার করে নেওয়া হচ্ছে
   const validImages = product.images?.filter(img => img.url && img.url.trim() !== '') || [];
-
-  // ২. যদি কোনো ভ্যালিড ইমেজ না থাকে, তবে ফলব্যাক ইমেজ ব্যবহার করা হবে
   const initialImage = validImages.length > 0 ? validImages[0] : fallbackImage;
-  
-  // ৩. স্টেট ইনিশিয়ালাইজেশন
   const [mainImage, setMainImage] = useState(initialImage);
 
+  // স্টক চেক
+  const isOutOfStock = product.stock <= 0;
+
   const handleAddToCart = () => {
-    addItem(product, quantity);
+    if (!isOutOfStock) {
+        addItem(product, quantity);
+    }
   };
   
-  // ক্যাটাগরি চেক (Optional check, depends on your data structure)
   const isNonVeg = ['Chicken', 'Mutton', 'Egg', 'Fish'].includes(product.category?.name || '');
 
   return (
@@ -44,10 +43,17 @@ export function ProductDetailsClient({ product, relatedProducts }: { product: Pr
       <div className="container py-8 md:py-12">
         <div className="grid md:grid-cols-2 gap-8 lg:gap-12">
           
-          {/* Left Column - Image Gallery */}
+          {/* Left Column - Image */}
           <div className="space-y-4">
-            <div className="relative aspect-square rounded-xl overflow-hidden border bg-card">
-              {/* ৪. মেইন ইমেজ রেন্ডারিং - এখানে নিশ্চিত করা হয়েছে src কখনো ফাঁকা হবে না */}
+            <div className={`relative aspect-square rounded-xl overflow-hidden border bg-card ${isOutOfStock ? 'grayscale' : ''}`}>
+               {/* আউট অফ স্টক হলে ইমেজের ওপর একটি লেবেল */}
+               {isOutOfStock && (
+                  <div className="absolute inset-0 bg-background/50 z-10 flex items-center justify-center">
+                      <div className="bg-destructive text-destructive-foreground px-6 py-3 rounded-full font-bold text-xl shadow-lg rotate-[-12deg]">
+                          SOLD OUT
+                      </div>
+                  </div>
+               )}
               <Image
                 src={mainImage.url || PLACEHOLDER_IMAGE_URL}
                 alt={mainImage.alt || product.name}
@@ -57,7 +63,6 @@ export function ProductDetailsClient({ product, relatedProducts }: { product: Pr
               />
             </div>
             
-            {/* ৫. থাম্বনেইল গ্যালারি - শুধুমাত্র যদি একাধিক ভ্যালিড ইমেজ থাকে */}
             {validImages.length > 1 && (
               <div className="flex gap-2 overflow-x-auto pb-2">
                 {validImages.map((image) => (
@@ -65,7 +70,7 @@ export function ProductDetailsClient({ product, relatedProducts }: { product: Pr
                     key={image.id}
                     className={`relative w-20 h-20 rounded-md overflow-hidden border-2 flex-shrink-0 transition-all ${
                       mainImage.id === image.id ? 'border-primary' : 'border-transparent hover:border-primary/50'
-                    }`}
+                    } ${isOutOfStock ? 'grayscale opacity-50' : ''}`}
                     onClick={() => setMainImage(image)}
                   >
                     <Image
@@ -80,59 +85,77 @@ export function ProductDetailsClient({ product, relatedProducts }: { product: Pr
             )}
           </div>
           
-          {/* Right Column - Product Details */}
+          {/* Right Column - Details */}
           <div className="flex flex-col h-full">
-            <div className="space-y-2">
+            <div className="space-y-3">
                 <div className="flex items-center gap-3">
                     <div className={`border px-2 py-0.5 text-xs font-bold rounded flex items-center gap-1 ${isNonVeg ? 'border-red-500 text-red-500' : 'border-green-500 text-green-500'}`}>
                         <div className={`w-2 h-2 rounded-full ${isNonVeg ? 'bg-red-500' : 'bg-green-500'}`}></div>
                         {isNonVeg ? 'Non-Veg' : 'Veg'}
                     </div>
-                    <div className="flex items-center gap-1 bg-amber-100 text-amber-800 px-2 py-0.5 rounded text-xs font-bold">
-                        <Star className="w-3 h-3 fill-amber-800" />
-                        <span>{product.rating}</span>
-                    </div>
+                    {product.featured && (
+                        <Badge variant="secondary" className="text-[10px] bg-yellow-100 text-yellow-800 border-yellow-200">
+                            Bestseller
+                        </Badge>
+                    )}
                 </div>
                 
                 <h1 className="text-3xl md:text-4xl font-bold font-headline text-foreground">{product.name}</h1>
-                <p className="text-muted-foreground">{product.category?.name}</p>
+                <p className="text-muted-foreground text-lg">{product.category?.name}</p>
+
+                <div className="flex items-center gap-2 mt-2">
+                    <div className="flex items-center bg-green-600 text-white px-2 py-0.5 rounded text-sm font-bold">
+                        <span className="mr-1">{product.rating}</span> <Star className="w-3 h-3 fill-white" />
+                    </div>
+                    <span className="text-sm text-muted-foreground">({product.reviewCount || 10} reviews)</span>
+                </div>
             </div>
             
-            <div className="mt-6">
-                <p className="text-3xl font-bold text-primary">{formatPrice(product.price)}</p>
+            <div className="mt-6 pb-6 border-b border-dashed">
+                <p className="text-4xl font-bold text-primary">{formatPrice(product.price)}</p>
                 <p className="text-sm text-muted-foreground">inclusive of all taxes</p>
             </div>
 
             <div className="mt-8 space-y-6">
-                <div className="flex items-center gap-6">
-                    <div className="flex items-center border rounded-lg bg-card">
-                        <Button variant="ghost" size="icon" className="h-12 w-12" onClick={() => setQuantity(q => Math.max(1, q - 1))}>
-                            <Minus className="h-4 w-4" />
-                        </Button>
-                        <span className="w-8 text-center font-bold text-lg">{quantity}</span>
-                        <Button variant="ghost" size="icon" className="h-12 w-12" onClick={() => setQuantity(q => q + 1)}>
-                            <Plus className="h-4 w-4" />
+                {isOutOfStock ? (
+                    <div className="p-4 bg-red-50 border border-red-100 rounded-lg text-red-600 flex items-center gap-3">
+                        <Ban className="h-6 w-6" />
+                        <div>
+                            <p className="font-bold text-lg">Currently Unavailable</p>
+                            <p className="text-sm text-red-500">This item is out of stock at the moment.</p>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+                        <div className="flex items-center justify-between border rounded-lg bg-card w-full sm:w-40 h-12 px-2">
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setQuantity(q => Math.max(1, q - 1))}>
+                                <Minus className="h-4 w-4" />
+                            </Button>
+                            <span className="text-lg font-bold w-8 text-center">{quantity}</span>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setQuantity(q => q + 1)}>
+                                <Plus className="h-4 w-4" />
+                            </Button>
+                        </div>
+                        <Button size="lg" className="flex-1 h-12 text-lg gap-2 shadow-lg shadow-primary/20" onClick={handleAddToCart}>
+                            <ShoppingCart className="h-5 w-5" /> Add to Cart
                         </Button>
                     </div>
-                    <Button size="lg" className="flex-1 h-12 text-lg gap-2" onClick={handleAddToCart}>
-                        <ShoppingCart className="h-5 w-5" /> Add to Cart
-                    </Button>
-                </div>
+                )}
             </div>
 
             <div className="mt-10">
-                <h2 className="text-xl font-bold mb-3 font-headline">Description</h2>
-                <p className="text-muted-foreground leading-relaxed whitespace-pre-line">
+                <h2 className="text-xl font-bold mb-3 font-headline border-l-4 border-primary pl-3">Description</h2>
+                <div className="text-muted-foreground leading-relaxed whitespace-pre-line text-base">
                     {product.description || "No description available for this delicious dish."}
-                </p>
+                </div>
             </div>
           </div>
         </div>
 
         {/* Related Products */}
         {relatedProducts.length > 0 && (
-            <div className="mt-20">
-                <h2 className="text-2xl font-bold font-headline mb-8">You May Also Like</h2>
+            <div className="mt-24">
+                <h2 className="text-3xl font-bold font-headline mb-8 text-center">You May Also Like</h2>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
                     {relatedProducts.map((p) => (
                         <ProductCard key={p.id} product={p} />

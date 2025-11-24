@@ -1,8 +1,10 @@
+// src/app/admin/coupons/page.tsx
+
 'use client';
 
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -10,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Plus, Trash2, Pencil, TicketPercent, Search, RefreshCcw } from 'lucide-react';
+import { Loader2, Plus, Trash2, Pencil, TicketPercent, Search, RefreshCcw, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatPrice } from '@/lib/utils';
 
@@ -136,10 +138,15 @@ export default function AdminCouponsPage() {
     } catch (e) { toast.error('Delete failed'); }
   };
 
+  const isExpired = (expiryDate: string) => {
+      return new Date(expiryDate) < new Date();
+  }
+
   if (isLoading) return <div className="flex justify-center p-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
 
   return (
-    <div className="space-y-8 max-w-[1600px] mx-auto">
+    <div className="space-y-6 max-w-[1600px] mx-auto">
+      
       <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-card p-6 rounded-xl border shadow-sm">
         <div>
             <h1 className="text-2xl font-bold flex items-center gap-2">
@@ -163,7 +170,59 @@ export default function AdminCouponsPage() {
         </div>
       </div>
 
-      <Card className="overflow-hidden border-0 shadow-md">
+      {/* Mobile View: Cards */}
+      <div className="grid grid-cols-1 md:hidden gap-4">
+        {filteredCoupons.map((coupon) => {
+            const expired = isExpired(coupon.expiryDate);
+            return (
+                <Card key={coupon.id} className="border shadow-sm relative overflow-hidden">
+                    <div className={`absolute top-0 left-0 w-1 h-full ${coupon.isActive && !expired ? 'bg-green-500' : 'bg-muted'}`} />
+                    <div className="p-4 pl-5 space-y-3">
+                        <div className="flex justify-between items-start">
+                            <div className="flex flex-col">
+                                <span className="font-mono font-bold text-lg text-primary tracking-wide">{coupon.code}</span>
+                                <span className="text-xs text-muted-foreground">{coupon.description || 'No description'}</span>
+                            </div>
+                            <Badge variant={coupon.isActive && !expired ? "default" : "secondary"} className={coupon.isActive && !expired ? "bg-green-100 text-green-700 border-green-200" : "bg-gray-100 text-gray-600"}>
+                                {expired ? 'Expired' : (coupon.isActive ? 'Active' : 'Inactive')}
+                            </Badge>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 py-2 border-t border-b border-dashed">
+                             <div>
+                                 <p className="text-xs text-muted-foreground">Discount</p>
+                                 <p className="font-bold text-foreground">
+                                     {coupon.discountType === 'percentage' ? `${coupon.value}% OFF` : `₹${coupon.value} OFF`}
+                                 </p>
+                             </div>
+                             <div className="text-right">
+                                 <p className="text-xs text-muted-foreground">Min Order</p>
+                                 <p className="font-medium">{formatPrice(coupon.minOrder)}</p>
+                             </div>
+                        </div>
+
+                        <div className="flex justify-between items-center pt-1">
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground bg-muted/50 px-2 py-1 rounded">
+                                <Calendar className="h-3 w-3" />
+                                Expires: {new Date(coupon.expiryDate).toLocaleDateString()}
+                            </div>
+                            <div className="flex gap-2">
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600 bg-blue-50 hover:bg-blue-100" onClick={() => handleOpenDialog(coupon)}>
+                                    <Pencil className="h-4 w-4"/>
+                                </Button>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-red-600 bg-red-50 hover:bg-red-100" onClick={() => handleDelete(coupon.id)}>
+                                    <Trash2 className="h-4 w-4"/>
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                </Card>
+            )
+        })}
+      </div>
+
+      {/* Desktop View: Table */}
+      <Card className="hidden md:block overflow-hidden border-0 shadow-md">
         <CardContent className="p-0">
           <div className="overflow-x-auto">
               <Table>
@@ -183,36 +242,36 @@ export default function AdminCouponsPage() {
                         <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">No coupons found.</TableCell>
                     </TableRow>
                   ) : (
-                      filteredCoupons.map((coupon) => (
-                        <TableRow key={coupon.id} className="hover:bg-muted/20 transition-colors">
-                          <TableCell className="pl-6">
-                              <div className="font-mono font-bold text-primary bg-primary/10 px-2 py-1 rounded inline-block border border-primary/20">
-                                {coupon.code}
-                              </div>
-                              <div className="md:hidden text-xs text-muted-foreground mt-1">
-                                Expires: {new Date(coupon.expiryDate).toLocaleDateString()}
-                              </div>
-                          </TableCell>
-                          <TableCell className="font-medium">
-                              {coupon.discountType === 'percentage' ? `${coupon.value}% OFF` : `₹${coupon.value} OFF`}
-                          </TableCell>
-                          <TableCell className="hidden sm:table-cell">{formatPrice(coupon.minOrder)}</TableCell>
-                          <TableCell className="hidden md:table-cell text-muted-foreground">
-                            {new Date(coupon.expiryDate).toLocaleDateString()}
-                          </TableCell>
-                          <TableCell>
-                             <Badge variant={coupon.isActive ? "default" : "secondary"} className={coupon.isActive ? "bg-green-100 text-green-700 hover:bg-green-100" : ""}>
-                                {coupon.isActive ? 'Active' : 'Inactive'}
-                             </Badge>
-                          </TableCell>
-                          <TableCell className="text-right pr-6">
-                            <div className="flex justify-end gap-2">
-                                <Button variant="ghost" size="icon" className="h-8 w-8 hover:text-blue-600" onClick={() => handleOpenDialog(coupon)}><Pencil className="h-4 w-4"/></Button>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 hover:text-red-600" onClick={() => handleDelete(coupon.id)}><Trash2 className="h-4 w-4"/></Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))
+                      filteredCoupons.map((coupon) => {
+                        const expired = isExpired(coupon.expiryDate);
+                        return (
+                            <TableRow key={coupon.id} className="hover:bg-muted/20 transition-colors">
+                            <TableCell className="pl-6">
+                                <div className="font-mono font-bold text-primary bg-primary/10 px-2 py-1 rounded inline-block border border-primary/20">
+                                    {coupon.code}
+                                </div>
+                            </TableCell>
+                            <TableCell className="font-medium">
+                                {coupon.discountType === 'percentage' ? `${coupon.value}% OFF` : `₹${coupon.value} OFF`}
+                            </TableCell>
+                            <TableCell className="hidden sm:table-cell">{formatPrice(coupon.minOrder)}</TableCell>
+                            <TableCell className="hidden md:table-cell text-muted-foreground">
+                                {new Date(coupon.expiryDate).toLocaleDateString()}
+                            </TableCell>
+                            <TableCell>
+                                <Badge variant={coupon.isActive && !expired ? "default" : "secondary"} className={coupon.isActive && !expired ? "bg-green-100 text-green-700 hover:bg-green-100 border-green-200" : ""}>
+                                    {expired ? 'Expired' : (coupon.isActive ? 'Active' : 'Inactive')}
+                                </Badge>
+                            </TableCell>
+                            <TableCell className="text-right pr-6">
+                                <div className="flex justify-end gap-2">
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 hover:text-blue-600" onClick={() => handleOpenDialog(coupon)}><Pencil className="h-4 w-4"/></Button>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 hover:text-red-600" onClick={() => handleDelete(coupon.id)}><Trash2 className="h-4 w-4"/></Button>
+                                </div>
+                            </TableCell>
+                            </TableRow>
+                        )
+                      })
                   )}
                 </TableBody>
               </Table>

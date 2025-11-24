@@ -5,6 +5,7 @@ import { clientPromise } from '@/lib/mongodb';
 import { ObjectId } from 'mongodb';
 import jwt from 'jsonwebtoken';
 import { revalidatePath } from 'next/cache';
+import { pusherServer } from '@/lib/pusher';
 
 const DB_NAME = 'BumbasKitchenDB';
 const COLLECTION_NAME = 'menuItems';
@@ -23,7 +24,8 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   try {
     if (!await isAdmin(request)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { id } = params;
+    // params await করা (Next.js 15 requirement)
+    const { id } = await params;
     const body = await request.json();
     
     const updateData = {
@@ -31,7 +33,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       Description: body.description,
       Price: parseFloat(body.price),
       Category: body.category,
-      // ★★★ FIX: ইমেজ আপডেট লজিক ★★★
+      // ইমেজ আপডেট
       ImageURLs: Array.isArray(body.imageUrls) ? body.imageUrls : (body.imageUrls ? [body.imageUrls] : []),
       Bestseller: body.featured,
       InStock: body.inStock
@@ -48,6 +50,12 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     revalidatePath('/menus');
     revalidatePath('/');
 
+    // রিয়েল-টাইম আপডেট
+    await pusherServer.trigger('menu-updates', 'product-changed', {
+        message: 'Menu updated',
+        type: 'update'
+    });
+
     return NextResponse.json({ success: true, message: 'Product updated' });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
@@ -58,7 +66,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
   try {
     if (!await isAdmin(request)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { id } = params;
+    const { id } = await params;
     const client = await clientPromise;
     const db = client.db(DB_NAME);
 
@@ -66,6 +74,12 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
 
     revalidatePath('/menus');
     revalidatePath('/');
+
+    // রিয়েল-টাইম ডিলিট নোটিফিকেশন
+    await pusherServer.trigger('menu-updates', 'product-changed', {
+        message: 'Product removed from menu',
+        type: 'delete'
+    });
 
     return NextResponse.json({ success: true, message: 'Product deleted' });
   } catch (error: any) {
