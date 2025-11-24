@@ -11,7 +11,6 @@ export function RealtimeMenuUpdater() {
   const router = useRouter();
 
   useEffect(() => {
-    // পাবলিক কি দিয়ে কানেকশন (নিরাপদ)
     const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY!, {
       cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
     });
@@ -21,15 +20,24 @@ export function RealtimeMenuUpdater() {
     channel.bind('product-changed', (data: any) => {
       console.log('Realtime update received:', data);
       
-      // ১. সার্ভার কম্পোনেন্ট রিফ্রেশ করা (নতুন ডেটা আনবে)
-      router.refresh(); 
-
-      // ২. ইউজারকে জানানো (অপশনাল)
-      toast.info(data.message || 'Menu updated!', {
+      // ১. ইউজারকে নোটিফিকেশন দেখানো
+      toast.info(data.message || 'Updating menu...', {
         duration: 3000,
         position: 'bottom-right',
         icon: '🔄'
       });
+
+      // ২. Vercel-এর ক্যাশ আপডেট হওয়ার জন্য একটু সময় দেওয়া (Double Refresh Strategy)
+      
+      // প্রথম চেষ্টা: সাথে সাথে
+      router.refresh();
+
+      // দ্বিতীয় চেষ্টা: ১.৫ সেকেন্ড পর (Vercel-এর ক্যাশ আপডেট হওয়ার পর)
+      setTimeout(() => {
+        console.log('Triggering delayed refresh for Vercel consistency...');
+        router.refresh();
+      }, 1500);
+
     });
 
     return () => {
