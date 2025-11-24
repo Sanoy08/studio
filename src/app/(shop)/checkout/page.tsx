@@ -26,8 +26,9 @@ import {
 } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Textarea } from '@/components/ui/textarea';
-import { useAuth } from '@/hooks/use-auth'; // Custom Auth Hook
-import { toast } from 'sonner'; // Import toast for notifications
+import { useAuth } from '@/hooks/use-auth';
+import { toast } from 'sonner';
+import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants';
 
 const checkoutSchema = z.object({
   name: z.string().min(2, 'Please enter a valid name.'),
@@ -50,7 +51,6 @@ export default function CheckoutPage() {
   const [orderType, setOrderType] = useState<'delivery' | 'pickup'>('delivery');
   const [isSummaryExpanded, setIsSummaryExpanded] = useState(false);
 
-  // Redirect if not logged in or cart is empty
   useEffect(() => {
     if (!isLoading && !user) {
       toast.error("Please login to checkout.");
@@ -78,26 +78,28 @@ export default function CheckoutPage() {
   const { watch, setValue, reset } = form;
   const primaryAddress = watch('address');
   
-  // Use a state for the checkbox to avoid re-renders on address change
   const [isSameAsAddress, setIsSameAsAddress] = useState(false);
 
-  // Pre-fill form with user data if available
+  // ★★★ FIX: reset করার সময় সম্পূর্ণ অবজেক্ট দেওয়া হচ্ছে যাতে কোনো ফিল্ড undefined না হয় ★★★
   useEffect(() => {
     if (user) {
         reset({
             name: user.name || '',
-            // If user object has phone/address in future, map them here.
-            // Currently assuming user object structure from useAuth hook.
+            address: '',
+            altPhone: '', // ভবিষ্যতে ফোন নম্বর থাকলে এখানে user.phone দেবেন
+            deliveryAddress: '',
+            mealTime: 'lunch',
+            instructions: '',
+            terms: false,
+            shareLocation: false,
         })
     }
   }, [user, reset])
 
-  // Handle "Same as primary address" logic
   useEffect(() => {
     if (isSameAsAddress) {
         setValue('deliveryAddress', primaryAddress);
     } else {
-        // Only clear if we are unchecking it, to allow manual edits
         if (watch('deliveryAddress') === primaryAddress) {
             setValue('deliveryAddress', '');
         }
@@ -109,14 +111,12 @@ export default function CheckoutPage() {
     const token = localStorage.getItem('token');
     
     try {
-        // Construct the order payload matching the API expectation
         const orderPayload = {
             ...values,
             items: state.items,
             subtotal: totalPrice,
-            total: totalPrice, // If you add discount logic later, update this
+            total: totalPrice, 
             orderType: orderType,
-            // Ensure delivery address is sent only if order type is delivery
             deliveryAddress: orderType === 'delivery' ? (values.deliveryAddress || values.address) : undefined,
         };
 
@@ -137,7 +137,7 @@ export default function CheckoutPage() {
 
         toast.success('Order placed successfully!');
         clearCart();
-        router.push('/account/orders'); // Redirect to order history
+        router.push('/account/orders');
 
     } catch (error: any) {
         console.error("Checkout Error:", error);
@@ -153,10 +153,16 @@ export default function CheckoutPage() {
     );
   }
 
-  // Helper components for form fields
+  // ★★★ FIX: value prop এ সেফ চেক (field.value ?? '') যোগ করা হয়েছে ★★★
   const FloatingLabelInput = ({ field, label, type = 'text' }: any) => (
     <div className="relative">
-      <Input type={type} placeholder=" " {...field} className="pt-6 peer" />
+      <Input 
+        type={type} 
+        placeholder=" " 
+        {...field} 
+        value={field.value ?? ''} 
+        className="pt-6 peer" 
+      />
       <FormLabel className="absolute text-sm text-muted-foreground duration-300 transform -translate-y-3 scale-75 top-4 z-10 origin-[0] start-4 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-3 rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto">
         {label}
       </FormLabel>
@@ -165,7 +171,12 @@ export default function CheckoutPage() {
 
   const FloatingLabelTextarea = ({ field, label }: any) => (
     <div className="relative">
-      <Textarea placeholder=" " {...field} className="pt-6 peer min-h-[100px]" />
+      <Textarea 
+        placeholder=" " 
+        {...field} 
+        value={field.value ?? ''}
+        className="pt-6 peer min-h-[100px]" 
+      />
       <FormLabel className="absolute text-sm text-muted-foreground duration-300 transform -translate-y-3 scale-75 top-4 z-10 origin-[0] start-4 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-3 rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto">
         {label}
       </FormLabel>
@@ -175,35 +186,36 @@ export default function CheckoutPage() {
   const OrderSummaryContent = () => (
     <>
       <h3 className="font-bold text-lg mb-4">Your Order</h3>
-       <div className="space-y-4">
-        {state.items.map(item => (
-          <div key={item.id} className="flex items-center gap-4">
-            <div className="relative h-16 w-16 rounded-md overflow-hidden border">
-              <Image src={item.image.url} alt={item.name} fill className="object-cover" />
-               <div className="absolute -top-2 -right-2 bg-primary text-primary-foreground text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
-                  {item.quantity}
+       <div className="space-y-5">
+        {state.items.map(item => {
+            const imageSrc = (item.image && item.image.url && item.image.url.trim() !== '') 
+                ? item.image.url 
+                : PLACEHOLDER_IMAGE_URL;
+
+            return (
+                <div key={item.id} className="flex items-center gap-4 relative">
+                    <div className="relative h-16 w-16">
+                        <div className="relative h-full w-full rounded-md overflow-hidden border bg-muted">
+                            <Image src={imageSrc} alt={item.name} fill className="object-cover" />
+                        </div>
+                        <div className="absolute -top-2 -right-2 bg-primary text-primary-foreground text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center z-10 shadow-sm border border-background">
+                            {item.quantity}
+                        </div>
+                    </div>
+
+                    <div className="flex-grow">
+                        <p className="font-medium text-sm line-clamp-2">{item.name}</p>
+                    </div>
+                    <p className="font-semibold text-sm whitespace-nowrap">{formatPrice(item.price * item.quantity)}</p>
                 </div>
-            </div>
-            <div className="flex-grow">
-              <p className="font-medium text-sm">{item.name}</p>
-            </div>
-            <p className="font-semibold text-sm">{formatPrice(item.price * item.quantity)}</p>
-          </div>
-        ))}
+            );
+        })}
       </div>
       <Separator className="my-4" />
       <div className="space-y-2">
         <div className="flex justify-between">
           <p className="text-muted-foreground">Subtotal</p>
           <p>{formatPrice(totalPrice)}</p>
-        </div>
-        <div className="flex justify-between">
-          <p className="text-muted-foreground">Shipping</p>
-          <p>Free</p>
-        </div>
-        <div className="flex justify-between">
-          <p className="text-muted-foreground">Taxes</p>
-          <p>Calculated included</p>
         </div>
       </div>
       <Separator className="my-4" />

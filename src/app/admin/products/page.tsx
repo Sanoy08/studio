@@ -332,5 +332,4 @@ export default function AdminProductsPage() {
       </Dialog>
     </div>
   );
-  
 }

@@ -11,14 +11,13 @@ import { ShoppingCart, Plus, Minus, Trash2 } from "lucide-react";
 import Image from 'next/image';
 import Link from "next/link";
 import { formatPrice } from "@/lib/utils";
-import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants'; // প্লেসহোল্ডার ইম্পোর্ট করা হয়েছে
+import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants';
 
 export function CartSheet() {
   const { state, itemCount, totalPrice, updateQuantity, removeItem } = useCart();
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
 
-  // পেজ পরিবর্তন হলে কার্ট সিট বন্ধ হবে
   useEffect(() => {
     setIsOpen(false);
   }, [pathname]);
@@ -49,14 +48,12 @@ export function CartSheet() {
             <div className="flex-grow overflow-y-auto pr-2 -mr-2">
               <div className="flex flex-col gap-6 py-6">
                 {state.items.map(item => {
-                  // ★★★ FIX: সেফ ইমেজ URL লজিক ★★★
                   const imageSrc = (item.image && item.image.url && item.image.url.trim() !== '') 
                     ? item.image.url 
                     : PLACEHOLDER_IMAGE_URL;
 
                   return (
                     <div key={item.id} className="flex gap-4 group">
-                      {/* Product Image */}
                       <Link href={`/menus/${item.slug}`} className="flex-shrink-0 relative h-24 w-24 overflow-hidden rounded-xl border bg-muted">
                          <Image 
                             src={imageSrc} 
@@ -66,7 +63,6 @@ export function CartSheet() {
                          />
                       </Link>
                       
-                      {/* Product Details */}
                       <div className="flex-grow flex flex-col justify-between">
                         <div>
                             <Link href={`/menus/${item.slug}`}>
@@ -76,7 +72,6 @@ export function CartSheet() {
                         </div>
                         
                         <div className="flex items-center justify-between mt-2">
-                            {/* Quantity Controls */}
                             <div className="flex items-center border rounded-lg h-8 bg-background">
                                 <Button 
                                     variant="ghost" 
@@ -97,7 +92,6 @@ export function CartSheet() {
                                 </Button>
                             </div>
 
-                            {/* Remove Button */}
                             <Button 
                                 variant="ghost" 
                                 size="icon" 
@@ -122,10 +116,7 @@ export function CartSheet() {
                             <span>Subtotal</span>
                             <span>{formatPrice(totalPrice)}</span>
                         </div>
-                        <div className="flex justify-between text-sm text-muted-foreground">
-                            <span>Shipping</span>
-                            <span>Calculated at checkout</span>
-                        </div>
+                        {/* Shipping and Taxes REMOVED */}
                         <div className="flex justify-between font-bold text-xl pt-2 border-t mt-2">
                             <span>Total</span>
                             <span className="text-primary">{formatPrice(totalPrice)}</span>
@@ -144,7 +135,6 @@ export function CartSheet() {
             </SheetFooter>
           </>
         ) : (
-          // Empty State
           <div className="flex flex-col items-center justify-center h-full text-center space-y-4 pb-12">
             <div className="h-24 w-24 bg-muted/30 rounded-full flex items-center justify-center mb-2">
                 <ShoppingCart className="h-10 w-10 text-muted-foreground/50" />
