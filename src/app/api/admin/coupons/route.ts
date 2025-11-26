@@ -17,7 +17,6 @@ async function isAdmin(request: NextRequest) {
   } catch { return false; }
 }
 
-// কুপন লিস্ট পাওয়া (GET)
 export async function GET(request: NextRequest) {
   try {
     const client = await clientPromise;
@@ -27,11 +26,15 @@ export async function GET(request: NextRequest) {
     const formattedCoupons = coupons.map(c => ({
       id: c._id.toString(),
       code: c.code,
-      discountType: c.discountType, // 'percentage' or 'flat'
+      description: c.description,
+      discountType: c.discountType,
       value: c.value,
       minOrder: c.minOrder,
+      usageLimit: c.usageLimit,
+      startDate: c.startDate,
       expiryDate: c.expiryDate,
-      isActive: c.isActive
+      isActive: c.isActive,
+      timesUsed: c.timesUsed || 0
     }));
 
     return NextResponse.json({ success: true, coupons: formattedCoupons }, { status: 200 });
@@ -40,7 +43,6 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// নতুন কুপন তৈরি (POST)
 export async function POST(request: NextRequest) {
   try {
     if (!await isAdmin(request)) {
@@ -48,23 +50,29 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    
-    // ভ্যালিডেশন: একই কোড যেন দুবার না থাকে
     const client = await clientPromise;
     const db = client.db(DB_NAME);
-    const existingCoupon = await db.collection(COLLECTION_NAME).findOne({ code: body.code.toUpperCase() });
     
+    const existingCoupon = await db.collection(COLLECTION_NAME).findOne({ code: body.code.toUpperCase() });
     if (existingCoupon) {
         return NextResponse.json({ success: false, error: 'Coupon code already exists' }, { status: 400 });
     }
 
+    // আনলিমিটেড লজিক
+    const usageLimit = body.usageLimit ? parseInt(body.usageLimit) : 0; // 0 means unlimited
+    const expiryDate = body.expiryDate ? body.expiryDate : null; // null means unlimited time
+
     const newCoupon = {
       code: body.code.toUpperCase(),
-      discountType: body.discountType, // 'percentage' | 'flat'
+      description: body.description,
+      discountType: body.discountType,
       value: parseFloat(body.value),
       minOrder: parseFloat(body.minOrder || 0),
-      expiryDate: new Date(body.expiryDate),
+      usageLimit: usageLimit,
+      startDate: body.startDate,
+      expiryDate: expiryDate,
       isActive: body.isActive ?? true,
+      timesUsed: 0, // শুরু ০ দিয়ে
       createdAt: new Date()
     };
 

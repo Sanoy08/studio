@@ -44,7 +44,6 @@ export async function POST(request: NextRequest) {
       MealTime: orderData.mealTime,
       PreferredDate: new Date(orderData.preferredDate),
       Instructions: orderData.instructions,
-      // পেমেন্ট ডিটেইলস
       Subtotal: parseFloat(orderData.subtotal),
       Discount: parseFloat(orderData.discount || 0),
       CouponCode: orderData.couponCode || null,
@@ -56,10 +55,10 @@ export async function POST(request: NextRequest) {
     const result = await db.collection(ORDERS_COLLECTION).insertOne(newOrder);
 
     if (result.acknowledged) {
-      // যদি কুপন ব্যবহার হয়ে থাকে, তবে তার ব্যবহারের সংখ্যা বাড়ানো
+      // ★★★ কুপন কাউন্ট আপডেট (খুবই গুরুত্বপূর্ণ) ★★★
       if (orderData.couponCode) {
          await db.collection(COUPONS_COLLECTION).updateOne(
-            { code: orderData.couponCode },
+            { code: orderData.couponCode.toUpperCase() }, // Case insensitive match
             { $inc: { timesUsed: 1 } }
          );
       }

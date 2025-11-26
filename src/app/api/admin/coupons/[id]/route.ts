@@ -18,11 +18,50 @@ async function isAdmin(request: NextRequest) {
   } catch { return false; }
 }
 
+// ★★★ কুপন আপডেট করার জন্য PUT মেথড ★★★
+export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+  try {
+    if (!await isAdmin(request)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    // params await করা (Next.js 15)
+    const { id } = await params;
+    const body = await request.json();
+
+    const client = await clientPromise;
+    const db = client.db(DB_NAME);
+
+    // আনলিমিটেড লজিক: যদি ফাঁকা বা ০ হয়, তবে null বা 0 সেট হবে
+    const usageLimit = body.usageLimit ? parseInt(body.usageLimit) : 0; // 0 means unlimited
+    const expiryDate = body.expiryDate ? body.expiryDate : null; // null means no expiry
+
+    const updateData = {
+      code: body.code.toUpperCase(),
+      description: body.description,
+      discountType: body.discountType,
+      value: parseFloat(body.value),
+      minOrder: parseFloat(body.minOrder || 0),
+      usageLimit: usageLimit, 
+      startDate: body.startDate,
+      expiryDate: expiryDate,
+      isActive: body.isActive
+    };
+
+    await db.collection(COLLECTION_NAME).updateOne(
+      { _id: new ObjectId(id) },
+      { $set: updateData }
+    );
+
+    return NextResponse.json({ success: true, message: 'Coupon updated successfully' });
+  } catch (error: any) {
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  }
+}
+
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     if (!await isAdmin(request)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { id } = params;
+    const { id } = await params;
     const client = await clientPromise;
     const db = client.db(DB_NAME);
 
