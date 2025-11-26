@@ -11,6 +11,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'default_secret';
 
 export async function PUT(request: NextRequest) {
   try {
+    // ১. অথেন্টিকেশন চেক
     const authHeader = request.headers.get('authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
@@ -26,7 +27,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { firstName, lastName, dob, anniversary } = body; // নতুন ফিল্ড
+    const { firstName, lastName, dob, anniversary } = body;
 
     if (!firstName || !lastName) {
       return NextResponse.json({ success: false, error: 'First and Last name are required.' }, { status: 400 });
@@ -38,21 +39,43 @@ export async function PUT(request: NextRequest) {
     const db = client.db(DB_NAME);
     const usersCollection = db.collection(COLLECTION_NAME);
 
-    // আপডেট কুয়েরি তৈরি
+    // ২. বর্তমান ইউজার ডেটা আনা (চেক করার জন্য)
+    const currentUser = await usersCollection.findOne({ _id: new ObjectId(userId) });
+
+    if (!currentUser) {
+        return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
+    }
+
+    // ৩. আপডেট অবজেক্ট তৈরি
     const updateDoc: any = {
         name: fullName,
-        dob: dob || null,             // জন্মদিন সেভ হবে
-        anniversary: anniversary || null // অ্যানিভার্সারি সেভ হবে
     };
 
+    // Birthday Check
+    if (!currentUser.dob && dob) {
+        updateDoc.dob = dob;
+    } else if (currentUser.dob && dob && currentUser.dob !== dob) {
+        console.warn(`User ${userId} tried to change DOB from ${currentUser.dob} to ${dob}`);
+    }
+
+    // Anniversary Check
+    if (!currentUser.anniversary && anniversary) {
+        updateDoc.anniversary = anniversary;
+    } else if (currentUser.anniversary && anniversary && currentUser.anniversary !== anniversary) {
+        console.warn(`User ${userId} tried to change Anniversary from ${currentUser.anniversary} to ${anniversary}`);
+    }
+
+    // ৪. ডাটাবেস আপডেট
     const result = await usersCollection.findOneAndUpdate(
       { _id: new ObjectId(userId) },
       { $set: updateDoc },
       { returnDocument: 'after' }
     );
 
+    // ★★★ FIX: result null কি না চেক করা হচ্ছে ★★★
+    // এই চেকটি না থাকলে TypeScript এরর দেয় কারণ result null হতে পারে
     if (!result) {
-      return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
+        return NextResponse.json({ success: false, error: 'Failed to update profile.' }, { status: 500 });
     }
 
     const updatedUser = result;
@@ -68,8 +91,8 @@ export async function PUT(request: NextRequest) {
         phone: updatedUser.phone,
         address: updatedUser.address,
         picture: updatedUser.picture,
-        dob: updatedUser.dob,             // রিটার্ন করা হচ্ছে
-        anniversary: updatedUser.anniversary // রিটার্ন করা হচ্ছে
+        dob: updatedUser.dob,
+        anniversary: updatedUser.anniversary
       }
     });
 

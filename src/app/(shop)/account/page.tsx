@@ -20,11 +20,10 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from 'sonner';
-import { Loader2, Cake, Heart } from 'lucide-react';
+import { Loader2, Cake, Heart, Lock } from 'lucide-react'; // Lock আইকন আনা হয়েছে
 import { useAuth } from '@/hooks/use-auth';
 import { NotificationPermission } from '@/components/shared/NotificationPermission';
 
-// স্কিমা আপডেট
 const profileFormSchema = z.object({
   firstName: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
   lastName: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
@@ -69,11 +68,10 @@ export default function AccountProfilePage() {
     }
   });
 
-  // ইউজারের ডেটা দিয়ে ফর্ম ফিল করা
   useEffect(() => {
     if (user) {
       const nameParts = user.name?.split(' ') || ['', ''];
-      // @ts-ignore - dob and anniversary might not be in user type yet but will come from API
+      // @ts-ignore
       const userDob = user.dob || '';
       // @ts-ignore
       const userAnniversary = user.anniversary || '';
@@ -103,8 +101,8 @@ export default function AccountProfilePage() {
         body: JSON.stringify({
             firstName: data.firstName,
             lastName: data.lastName,
-            dob: data.dob,             // পাঠানো হচ্ছে
-            anniversary: data.anniversary // পাঠানো হচ্ছে
+            dob: data.dob,
+            anniversary: data.anniversary
         }),
       });
 
@@ -157,6 +155,12 @@ export default function AccountProfilePage() {
   
   const { isSubmitting: isProfileSubmitting } = profileForm.formState;
   const { isSubmitting: isPasswordSubmitting } = passwordForm.formState;
+
+  // টাইপ সেফটির জন্য চেক
+  // @ts-ignore
+  const hasDob = !!user?.dob;
+  // @ts-ignore
+  const hasAnniversary = !!user?.anniversary;
 
   return (
     <div className="space-y-8">
@@ -238,13 +242,17 @@ export default function AccountProfilePage() {
                           <FormItem>
                             <FormLabel className="flex items-center gap-2">
                                 <Cake className="h-4 w-4 text-pink-500" /> Birthday
+                                {hasDob && <Lock className="h-3 w-3 text-muted-foreground ml-auto" />}
                             </FormLabel>
                             <FormControl>
-                              <Input type="date" {...field} />
+                              {/* ★★★ FIX: যদি ডেট থাকে তবে disabled হবে ★★★ */}
+                              <Input type="date" {...field} disabled={hasDob} className={hasDob ? "bg-muted/50 cursor-not-allowed" : ""} />
                             </FormControl>
-                            <FormDescription className="text-xs">
-                                Get special offers on your birthday!
-                            </FormDescription>
+                            {!hasDob && (
+                                <FormDescription className="text-xs">
+                                    Get special offers! (Cannot be changed later)
+                                </FormDescription>
+                            )}
                             <FormMessage />
                           </FormItem>
                         )}
@@ -256,13 +264,17 @@ export default function AccountProfilePage() {
                           <FormItem>
                             <FormLabel className="flex items-center gap-2">
                                 <Heart className="h-4 w-4 text-red-500" /> Anniversary
+                                {hasAnniversary && <Lock className="h-3 w-3 text-muted-foreground ml-auto" />}
                             </FormLabel>
                             <FormControl>
-                              <Input type="date" {...field} />
+                              {/* ★★★ FIX: যদি ডেট থাকে তবে disabled হবে ★★★ */}
+                              <Input type="date" {...field} disabled={hasAnniversary} className={hasAnniversary ? "bg-muted/50 cursor-not-allowed" : ""} />
                             </FormControl>
-                            <FormDescription className="text-xs">
-                                Celebrate your special day with us.
-                            </FormDescription>
+                            {!hasAnniversary && (
+                                <FormDescription className="text-xs">
+                                    Celebrate with us! (Cannot be changed later)
+                                </FormDescription>
+                            )}
                             <FormMessage />
                           </FormItem>
                         )}
