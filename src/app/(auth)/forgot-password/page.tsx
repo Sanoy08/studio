@@ -21,7 +21,6 @@ export default function ForgotPasswordPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   
-  // পাসওয়ার্ড দেখার স্টেট
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -144,7 +143,9 @@ export default function ForgotPasswordPage() {
                                 placeholder="Enter 6-digit OTP" 
                                 className="pl-10"
                                 value={otp}
-                                onChange={handleOtpChange} // নম্বর লজিক
+                                onChange={handleOtpChange}
+                                // ★★★ FIX: নম্বর কিবোর্ড চালু করার জন্য inputMode="numeric" ★★★
+                                inputMode="numeric"
                                 maxLength={6}
                                 required
                             />

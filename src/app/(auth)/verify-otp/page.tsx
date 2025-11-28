@@ -36,10 +36,10 @@ function VerifyOtpForm() {
     defaultValues: { otp: "", password: "", phone: "" },
   });
 
-  // ★ শুধুমাত্র নম্বর টাইপ করার লজিক ★
+  // শুধুমাত্র নম্বর টাইপ করার লজিক
   const handleNumericInput = (e: React.ChangeEvent<HTMLInputElement>, onChange: (...event: any[]) => void) => {
     const value = e.target.value;
-    if (value === '' || /^\d+$/.test(value)) { // শুধুমাত্র ডিজিট চেক
+    if (value === '' || /^\d+$/.test(value)) {
       onChange(value);
     }
   };
@@ -108,7 +108,9 @@ function VerifyOtpForm() {
                       <Input 
                         placeholder="Enter 6-digit OTP" 
                         {...field} 
-                        onChange={(e) => handleNumericInput(e, field.onChange)} // নম্বর লজিক
+                        // ★★★ FIX: নম্বর কিবোর্ড চালু করার জন্য inputMode="numeric" ★★★
+                        inputMode="numeric" 
+                        onChange={(e) => handleNumericInput(e, field.onChange)}
                         maxLength={6}
                       />
                     </FormControl>
@@ -155,7 +157,9 @@ function VerifyOtpForm() {
                       <Input 
                         placeholder="9876543210" 
                         {...field} 
-                        onChange={(e) => handleNumericInput(e, field.onChange)} // নম্বর লজিক
+                        // ★★★ FIX: নম্বর কিবোর্ড চালু করার জন্য inputMode="numeric" ★★★
+                        inputMode="numeric"
+                        onChange={(e) => handleNumericInput(e, field.onChange)}
                         maxLength={10}
                       />
                     </FormControl>
