@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { clientPromise } from '@/lib/mongodb';
 import { ObjectId } from 'mongodb';
 import jwt from 'jsonwebtoken';
+import { sendNotificationToUser } from '@/lib/notification'; // নোটিফিকেশন ইউটিলিটি
 
 const DB_NAME = 'BumbasKitchenDB';
 const USERS_COLLECTION = 'users';
@@ -11,11 +12,12 @@ const TRANSACTIONS_COLLECTION = 'coinTransactions';
 const COUPONS_COLLECTION = 'coupons';
 const JWT_SECRET = process.env.JWT_SECRET || 'default_secret';
 
-// ১ কয়েন = ১ টাকা ডিসকাউন্ট (আপনার লজিক অনুযায়ী পরিবর্তন করতে পারেন)
+// ১ কয়েন = ১ টাকা (লজিক)
 const COIN_VALUE_MULTIPLIER = 1; 
 
 export async function POST(request: NextRequest) {
   try {
+    // ১. অথেন্টিকেশন চেক
     const authHeader = request.headers.get('authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
@@ -42,8 +44,10 @@ export async function POST(request: NextRequest) {
     const session = client.startSession();
 
     try {
+        // ২. ট্রানজেকশন শুরু (যাতে মাঝপথে এরর হলে রোলব্যাক হয়)
         await session.withTransaction(async () => {
-            // ১. ইউজারের ব্যালেন্স চেক করা
+            
+            // ইউজারের বর্তমান ব্যালেন্স চেক
             const user = await db.collection(USERS_COLLECTION).findOne(
                 { _id: new ObjectId(userId) },
                 { session }
@@ -53,17 +57,18 @@ export async function POST(request: NextRequest) {
                 throw new Error('Insufficient coin balance.');
             }
 
-            // ২. ব্যালেন্স থেকে কয়েন কমানো
+            // ব্যালেন্স থেকে কয়েন কমানো
             await db.collection(USERS_COLLECTION).updateOne(
                 { _id: new ObjectId(userId) },
                 { $inc: { "wallet.currentBalance": -redeemAmount } },
                 { session }
             );
 
-            // ৩. কুপন তৈরি করা
+            // ইউনিক কুপন কোড তৈরি
             const couponCode = `REDEEM-${Date.now().toString().slice(-6)}`;
             const discountValue = redeemAmount * COIN_VALUE_MULTIPLIER;
 
+            // কুপন কালেকশনে সেভ করা
             await db.collection(COUPONS_COLLECTION).insertOne({
                 code: couponCode,
                 discountType: 'flat',
@@ -72,11 +77,11 @@ export async function POST(request: NextRequest) {
                 expiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // ৩০ দিন মেয়াদ
                 isActive: true,
                 isOneTime: true, // শুধুমাত্র একবার ব্যবহারযোগ্য
-                userId: new ObjectId(userId), // শুধুমাত্র এই ইউজারের জন্য
+                userId: new ObjectId(userId), // স্পেসিফিক ইউজারের জন্য লক
                 createdAt: new Date()
             }, { session });
 
-            // ৪. ট্রানজেকশন হিস্ট্রিতে যোগ করা
+            // ট্রানজেকশন হিস্ট্রিতে রেকর্ড রাখা
             await db.collection(TRANSACTIONS_COLLECTION).insertOne({
                 userId: new ObjectId(userId),
                 type: 'redeem',
@@ -84,6 +89,16 @@ export async function POST(request: NextRequest) {
                 description: `Redeemed for ₹${discountValue} coupon (${couponCode})`,
                 createdAt: new Date()
             }, { session });
+
+            // ৩. ★★★ কাস্টমারকে নোটিফিকেশন পাঠানো ★★★
+            // (নোট: session এর ভেতরে বাইরের API কল এড়ানো ভালো, তাই এটি transaction এর বাইরেও করা যেত, তবে এখানে রাখলে কনফার্মেশন নিশ্চিত হয়)
+            sendNotificationToUser(
+                client,
+                userId,
+                "Coins Redeemed! 🎟️",
+                `You successfully redeemed ${redeemAmount} coins for a ₹${discountValue} coupon. Code: ${couponCode}`,
+                '/account/wallet'
+            ).catch(err => console.error("Notification failed:", err));
         });
 
         return NextResponse.json({ success: true, message: 'Coins redeemed successfully!' });

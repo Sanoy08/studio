@@ -4,10 +4,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { clientPromise } from '@/lib/mongodb';
 import { ObjectId } from 'mongodb';
 import jwt from 'jsonwebtoken';
+import { sendNotificationToAdmins, sendNotificationToUser } from '@/lib/notification'; // নতুন ইমপোর্ট
 
 const DB_NAME = 'BumbasKitchenDB';
 const ORDERS_COLLECTION = 'orders';
 const COUPONS_COLLECTION = 'coupons';
+const USERS_COLLECTION = 'users';
+const TRANSACTIONS_COLLECTION = 'coinTransactions';
 const JWT_SECRET = process.env.JWT_SECRET || 'default_secret';
 
 export async function POST(request: NextRequest) {
@@ -28,7 +31,6 @@ export async function POST(request: NextRequest) {
     }
 
     const orderNumber = `BK-${Date.now().toString().slice(-5)}${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
-
     const client = await clientPromise;
     const db = client.db(DB_NAME);
     
@@ -55,13 +57,50 @@ export async function POST(request: NextRequest) {
     const result = await db.collection(ORDERS_COLLECTION).insertOne(newOrder);
 
     if (result.acknowledged) {
-      // ★★★ কুপন কাউন্ট আপডেট (খুবই গুরুত্বপূর্ণ) ★★★
+      
+      // ১. কুপন আপডেট
       if (orderData.couponCode) {
          await db.collection(COUPONS_COLLECTION).updateOne(
-            { code: orderData.couponCode.toUpperCase() }, // Case insensitive match
+            { code: orderData.couponCode.toUpperCase() },
             { $inc: { timesUsed: 1 } }
          );
       }
+
+      // ২. কয়েন লজিক (Coin Add)
+      if (userIdToSave) {
+          const coinsEarned = Math.floor(newOrder.FinalPrice / 100) * 10; // প্রতি ১০০ টাকায় ১০ কয়েন
+          if (coinsEarned > 0) {
+              await db.collection(USERS_COLLECTION).updateOne(
+                  { _id: userIdToSave },
+                  { $inc: { "wallet.currentBalance": coinsEarned } }
+              );
+              
+              await db.collection(TRANSACTIONS_COLLECTION).insertOne({
+                  userId: userIdToSave,
+                  type: 'earn',
+                  amount: coinsEarned,
+                  description: `Earned from Order #${orderNumber}`,
+                  createdAt: new Date()
+              });
+
+              // ★ কাস্টমারকে নোটিফিকেশন পাঠানো (কয়েন আর্ন)
+              await sendNotificationToUser(
+                  client, 
+                  userIdToSave.toString(), 
+                  "🎉 Coins Earned!", 
+                  `You earned ${coinsEarned} coins from your recent order.`,
+                  '/account/wallet'
+              );
+          }
+      }
+
+      // ৩. ★ অ্যাডমিনকে নোটিফিকেশন পাঠানো (নতুন অর্ডার)
+      await sendNotificationToAdmins(
+          client,
+          "New Order Received! 🛍️",
+          `Order #${orderNumber} from ${orderData.name} - ₹${newOrder.FinalPrice}`,
+          '/admin/orders'
+      );
 
       return NextResponse.json({ 
         success: true, 

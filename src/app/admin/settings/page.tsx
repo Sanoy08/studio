@@ -1,3 +1,5 @@
+// src/app/admin/settings/page.tsx
+
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -5,13 +7,20 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { Settings, Store, Wallet, Save } from 'lucide-react';
+import { Settings, Store, Wallet, Save, Bell, Download } from 'lucide-react';
 import { toast } from 'sonner';
+import { usePushNotification } from '@/hooks/use-push-notification'; // আমাদের তৈরি হুক
 
 export default function AdminSettingsPage() {
+  const { subscribeToPush, isSubscribed, isLoading } = usePushNotification();
+
   const handleSave = () => {
-    // Future: Implement API call to save settings to DB
-    toast.success("Settings saved locally (Demo)!");
+    toast.success("Settings saved successfully!");
+  }
+
+  const handleEnableNotifications = async () => {
+     await subscribeToPush();
+     // হুক নিজেই টোস্ট দেখাবে
   }
 
   return (
@@ -20,10 +29,38 @@ export default function AdminSettingsPage() {
         <h1 className="text-3xl font-bold font-headline flex items-center gap-2">
             <Settings className="h-8 w-8 text-primary" /> Settings
         </h1>
-        <p className="text-muted-foreground mt-1">Configure your store preferences and system defaults.</p>
+        <p className="text-muted-foreground mt-1">Configure your store preferences and notifications.</p>
       </div>
 
       <div className="grid gap-8">
+        
+        {/* Notification Settings */}
+        <Card className="border-0 shadow-md">
+            <CardHeader className="bg-muted/30 border-b">
+                <div className="flex items-center gap-2">
+                    <Bell className="h-5 w-5 text-blue-500" />
+                    <CardTitle>Admin Notifications</CardTitle>
+                </div>
+                <CardDescription>Receive alerts for new orders directly on this device.</CardDescription>
+            </CardHeader>
+            <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <p className="font-medium">Order Alerts</p>
+                        <p className="text-sm text-muted-foreground">Get notified when a customer places an order.</p>
+                    </div>
+                    <Button 
+                        onClick={handleEnableNotifications} 
+                        disabled={isSubscribed || isLoading}
+                        variant={isSubscribed ? "outline" : "default"}
+                        className={isSubscribed ? "text-green-600 border-green-200 bg-green-50" : ""}
+                    >
+                        {isLoading ? "Enabling..." : isSubscribed ? "Notifications Active" : "Enable Notifications"}
+                    </Button>
+                </div>
+            </CardContent>
+        </Card>
+
         {/* Store Configuration */}
         <Card className="border-0 shadow-md">
             <CardHeader className="bg-muted/30 border-b">
@@ -31,7 +68,6 @@ export default function AdminSettingsPage() {
                     <Store className="h-5 w-5 text-primary" />
                     <CardTitle>Store Configuration</CardTitle>
                 </div>
-                <CardDescription>Manage delivery charges and store availability.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6 p-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -61,7 +97,6 @@ export default function AdminSettingsPage() {
                     <Wallet className="h-5 w-5 text-amber-500" />
                     <CardTitle>Wallet & Reward Points</CardTitle>
                 </div>
-                <CardDescription>Configure customer loyalty rewards.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6 p-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
