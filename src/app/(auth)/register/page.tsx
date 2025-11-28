@@ -13,32 +13,27 @@ import { useRouter } from 'next/navigation';
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
-// import { useUserMock } from '@/hooks/use-auth-mock'; // DELETE THIS LINE
-import { useAuth } from '@/hooks/use-auth'; // ADD THIS LINE
+import { Loader2, Eye, EyeOff } from 'lucide-react'; // আইকন ইমপোর্ট
+import { useAuth } from '@/hooks/use-auth';
 
-// ... formSchema ...
 const formSchema = z.object({
   firstName: z.string().min(1, { message: "First name is required." }),
   lastName: z.string().min(1, { message: "Last name is required." }),
   email: z.string().email({ message: "Please enter a valid email." }),
-  // password field might not be needed here if only sending OTP initially, 
-  // but let's keep it if you want to capture it early or verify it later
-  // password: z.string().min(8, { message: "Password must be at least 8 characters." }), 
+  // আপাতত শুধু OTP পাঠানোর জন্য পাসওয়ার্ড ফিল্ড এখানে লাগছে না, তবে যদি ফ্লো পরিবর্তন হয় তবে রাখা যেতে পারে।
+  // আপনার বর্তমান ফ্লো অনুযায়ী প্রথমে শুধু নাম আর ইমেইল দিয়ে OTP পাঠানো হয়।
 });
 
 export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
-  const { user, isLoading: isAuthLoading } = useAuth(); // UPDATED
+  const { user, isLoading: isAuthLoading } = useAuth();
 
-  // Simplified form for initial OTP step
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: { firstName: "", lastName: "", email: "" },
   });
 
-  // Redirect if already logged in
   if (!isAuthLoading && user) {
       router.push('/account');
   }
@@ -62,8 +57,6 @@ export default function RegisterPage() {
         }
       
       toast.success("OTP sent to your email!");
-      // Redirect to OTP verification page (you need to create this page)
-      // Passing email via query param or context for the next step
       router.push(`/verify-otp?email=${encodeURIComponent(values.email)}&name=${encodeURIComponent(values.firstName + ' ' + values.lastName)}`);
 
     } catch (error: any) {
@@ -74,73 +67,73 @@ export default function RegisterPage() {
     }
   }
 
-  // ... Rest of the component (UI) ...
   return (
-    <Card className="w-full max-w-sm">
-      <CardHeader>
-        <CardTitle className="text-2xl">Sign Up</CardTitle>
-        <CardDescription>Create an account to start shopping.</CardDescription>
-      </CardHeader>
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)}>
-          <CardContent className="grid gap-4">
-            <div className="grid grid-cols-2 gap-4">
+    <div className="flex items-center justify-center min-h-[80vh] px-4">
+      <Card className="w-full max-w-sm">
+        <CardHeader>
+          <CardTitle className="text-2xl">Sign Up</CardTitle>
+          <CardDescription>Create an account to start shopping.</CardDescription>
+        </CardHeader>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)}>
+            <CardContent className="grid gap-4">
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="firstName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>First Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="John" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="lastName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Last Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Doe" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
               <FormField
                 control={form.control}
-                name="firstName"
+                name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>First Name</FormLabel>
+                    <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input placeholder="John" {...field} />
+                      <Input placeholder="m@example.com" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name="lastName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Last Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Doe" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Email</FormLabel>
-                  <FormControl>
-                    <Input placeholder="m@example.com" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            {/* Password field removed for initial OTP step, or keep if flow differs */}
-          </CardContent>
-          <CardFooter className="flex flex-col">
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Send OTP
-            </Button>
-            <div className="mt-4 text-center text-sm">
-              Already have an account?{" "}
-              <Link href="/login" className="underline">
-                Sign in
-              </Link>
-            </div>
-          </CardFooter>
-        </form>
-      </Form>
-    </Card>
+            </CardContent>
+            <CardFooter className="flex flex-col">
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Send OTP
+              </Button>
+              <div className="mt-4 text-center text-sm">
+                Already have an account?{" "}
+                <Link href="/login" className="underline hover:text-primary transition-colors">
+                  Sign in
+                </Link>
+              </div>
+            </CardFooter>
+          </form>
+        </Form>
+      </Card>
+    </div>
   );
 }

@@ -14,15 +14,25 @@ import { toast } from 'sonner';
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
-  const [step, setStep] = useState<'email' | 'otp'>('email'); // কোন ধাপে আছে
+  const [step, setStep] = useState<'email' | 'otp'>('email');
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
+  
+  // পাসওয়ার্ড দেখার স্টেট
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  // ধাপ ১: ইমেইল পাঠানো
+  // নম্বর ইনপুট লজিক
+  const handleOtpChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    if (value === '' || /^\d+$/.test(value)) {
+        setOtp(value);
+    }
+  };
+
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -38,7 +48,7 @@ export default function ForgotPasswordPage() {
 
       if (res.ok) {
         toast.success(data.message);
-        setStep('otp'); // পরের ধাপে যাওয়া
+        setStep('otp');
       } else {
         toast.error(data.error || "Failed to send OTP");
       }
@@ -49,7 +59,6 @@ export default function ForgotPasswordPage() {
     }
   };
 
-  // ধাপ ২: পাসওয়ার্ড রিসেট
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -135,7 +144,8 @@ export default function ForgotPasswordPage() {
                                 placeholder="Enter 6-digit OTP" 
                                 className="pl-10"
                                 value={otp}
-                                onChange={(e) => setOtp(e.target.value)}
+                                onChange={handleOtpChange} // নম্বর লজিক
+                                maxLength={6}
                                 required
                             />
                         </div>
@@ -147,7 +157,7 @@ export default function ForgotPasswordPage() {
                             <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                             <Input 
                                 id="newPassword"
-                                type={showPassword ? "text" : "password"} 
+                                type={showNewPassword ? "text" : "password"} 
                                 placeholder="New password" 
                                 className="pl-10 pr-10"
                                 value={newPassword}
@@ -156,10 +166,10 @@ export default function ForgotPasswordPage() {
                             />
                             <button 
                                 type="button"
-                                onClick={() => setShowPassword(!showPassword)}
+                                onClick={() => setShowNewPassword(!showNewPassword)}
                                 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                             >
-                                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                             </button>
                         </div>
                     </div>
@@ -170,13 +180,20 @@ export default function ForgotPasswordPage() {
                             <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                             <Input 
                                 id="confirmPassword"
-                                type="password" 
+                                type={showConfirmPassword ? "text" : "password"}
                                 placeholder="Confirm new password" 
-                                className="pl-10"
+                                className="pl-10 pr-10"
                                 value={confirmPassword}
                                 onChange={(e) => setConfirmPassword(e.target.value)}
                                 required
                             />
+                             <button 
+                                type="button"
+                                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                            >
+                                {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                            </button>
                         </div>
                     </div>
 

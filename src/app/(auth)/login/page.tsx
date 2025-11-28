@@ -13,7 +13,7 @@ import { useRouter } from 'next/navigation';
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Eye, EyeOff } from 'lucide-react'; // আইকন ইমপোর্ট
 import { useAuth } from '@/hooks/use-auth';
 
 const formSchema = z.object({
@@ -23,6 +23,7 @@ const formSchema = z.object({
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false); // পাসওয়ার্ড দেখার স্টেট
   const router = useRouter();
   const { login } = useAuth();
 
@@ -102,7 +103,20 @@ export default function LoginPage() {
                         </Link>
                     </div>
                     <FormControl>
-                      <Input type="password" {...field} />
+                      <div className="relative">
+                          <Input 
+                            type={showPassword ? "text" : "password"} 
+                            {...field} 
+                            className="pr-10" // আইকনের জন্য ডানদিকে জায়গা রাখা
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                          >
+                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </button>
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -124,7 +138,6 @@ export default function LoginPage() {
                   </div>
               </div>
 
-              {/* Google Login Button */}
               <Button 
                 type="button" 
                 variant="outline" 

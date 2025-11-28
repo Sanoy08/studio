@@ -9,13 +9,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Loader2, Lock, ShieldCheck } from 'lucide-react';
+import { Loader2, Lock, ShieldCheck, Eye, EyeOff } from 'lucide-react'; // Eye আইকন ইমপোর্ট
 import { toast } from 'sonner';
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false); // স্টেট যোগ করা হয়েছে
   const router = useRouter();
   const { login } = useAuth();
 
@@ -36,19 +37,14 @@ export default function AdminLoginPage() {
         throw new Error(data.error || 'Login failed');
       }
 
-      // অ্যাডমিন চেক
       if (data.user.role !== 'admin') {
           toast.error("Access Denied: You are not an administrator.");
           setIsLoading(false);
           return;
       }
 
-      // লগইন ডেটা সেভ করা
       login(data.user, data.token);
       toast.success("Welcome back, Admin!");
-      
-      // ★★★ FIX: router.push এর বদলে window.location.href ব্যবহার করা হচ্ছে ★★★
-      // এটি পেজ রিফ্রেশ করবে যাতে AdminLayout নতুন লগইন ডেটা পায়
       window.location.href = '/admin'; 
 
     } catch (error: any) {
@@ -87,14 +83,21 @@ export default function AdminLoginPage() {
                         <div className="relative">
                             <Input 
                                 id="password" 
-                                type="password" 
+                                type={showPassword ? "text" : "password"} // টগল লজিক
                                 placeholder="••••••••" 
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 required
                                 className="h-12 pr-10"
                             />
-                            <Lock className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                            {/* আই বাটন */}
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                            >
+                                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                            </button>
                         </div>
                     </div>
                     <Button type="submit" className="w-full h-12 text-lg font-medium mt-4" disabled={isLoading}>

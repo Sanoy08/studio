@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -20,7 +20,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from 'sonner';
-import { Loader2, Cake, Heart, Lock } from 'lucide-react'; // Lock আইকন আনা হয়েছে
+import { Loader2, Cake, Heart, Lock, Eye, EyeOff } from 'lucide-react'; // Eye আইকন ইমপোর্ট
 import { useAuth } from '@/hooks/use-auth';
 import { NotificationPermission } from '@/components/shared/NotificationPermission';
 
@@ -46,7 +46,12 @@ const passwordFormSchema = z.object({
 type PasswordFormValues = z.infer<typeof passwordFormSchema>;
 
 export default function AccountProfilePage() {
-  const { user, login } = useAuth();
+  const { user, login } = useAuth(); // refreshProfile এখানে লাগবে না যদি লগইন আপডেট করে
+
+  // পাসওয়ার্ড ভিজিবিলিটি স্টেট
+  const [showCurrentPass, setShowCurrentPass] = useState(false);
+  const [showNewPass, setShowNewPass] = useState(false);
+  const [showConfirmPass, setShowConfirmPass] = useState(false);
 
   const profileForm = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -156,14 +161,14 @@ export default function AccountProfilePage() {
   const { isSubmitting: isProfileSubmitting } = profileForm.formState;
   const { isSubmitting: isPasswordSubmitting } = passwordForm.formState;
 
-  // টাইপ সেফটির জন্য চেক
   // @ts-ignore
-  const hasDob = !!user?.dob;
+  const hasDob = !!user?.dob && user.dob !== "";
   // @ts-ignore
-  const hasAnniversary = !!user?.anniversary;
+  const hasAnniversary = !!user?.anniversary && user.anniversary !== "";
 
   return (
     <div className="space-y-8">
+      {/* Profile Update Card */}
       <Card>
           <CardHeader>
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -233,7 +238,6 @@ export default function AccountProfilePage() {
                     )}
                   />
 
-                  {/* Special Dates Section */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t">
                       <FormField
                         control={profileForm.control}
@@ -245,7 +249,6 @@ export default function AccountProfilePage() {
                                 {hasDob && <Lock className="h-3 w-3 text-muted-foreground ml-auto" />}
                             </FormLabel>
                             <FormControl>
-                              {/* ★★★ FIX: যদি ডেট থাকে তবে disabled হবে ★★★ */}
                               <Input type="date" {...field} disabled={hasDob} className={hasDob ? "bg-muted/50 cursor-not-allowed" : ""} />
                             </FormControl>
                             {!hasDob && (
@@ -267,7 +270,6 @@ export default function AccountProfilePage() {
                                 {hasAnniversary && <Lock className="h-3 w-3 text-muted-foreground ml-auto" />}
                             </FormLabel>
                             <FormControl>
-                              {/* ★★★ FIX: যদি ডেট থাকে তবে disabled হবে ★★★ */}
                               <Input type="date" {...field} disabled={hasAnniversary} className={hasAnniversary ? "bg-muted/50 cursor-not-allowed" : ""} />
                             </FormControl>
                             {!hasAnniversary && (
@@ -292,6 +294,7 @@ export default function AccountProfilePage() {
           </CardContent>
       </Card>
       
+      {/* Change Password Card */}
       <Card>
            <CardHeader>
                 <CardTitle>Change Password</CardTitle>
@@ -302,6 +305,8 @@ export default function AccountProfilePage() {
             <CardContent>
                  <Form {...passwordForm}>
                     <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="space-y-4">
+                        
+                        {/* Current Password */}
                         <FormField
                             control={passwordForm.control}
                             name="currentPassword"
@@ -309,12 +314,27 @@ export default function AccountProfilePage() {
                                 <FormItem>
                                     <FormLabel>Current Password</FormLabel>
                                     <FormControl>
-                                        <Input type="password" {...field} />
+                                        <div className="relative">
+                                            <Input 
+                                                type={showCurrentPass ? "text" : "password"} 
+                                                {...field} 
+                                                className="pr-10"
+                                            />
+                                            <button 
+                                                type="button"
+                                                onClick={() => setShowCurrentPass(!showCurrentPass)}
+                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                                            >
+                                                {showCurrentPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                            </button>
+                                        </div>
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )}
                         />
+
+                         {/* New Password */}
                          <FormField
                             control={passwordForm.control}
                             name="newPassword"
@@ -322,12 +342,27 @@ export default function AccountProfilePage() {
                                 <FormItem>
                                     <FormLabel>New Password</FormLabel>
                                     <FormControl>
-                                        <Input type="password" {...field} />
+                                        <div className="relative">
+                                            <Input 
+                                                type={showNewPass ? "text" : "password"} 
+                                                {...field} 
+                                                className="pr-10"
+                                            />
+                                            <button 
+                                                type="button"
+                                                onClick={() => setShowNewPass(!showNewPass)}
+                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                                            >
+                                                {showNewPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                            </button>
+                                        </div>
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )}
                         />
+
+                         {/* Confirm Password */}
                          <FormField
                             control={passwordForm.control}
                             name="confirmPassword"
@@ -335,12 +370,26 @@ export default function AccountProfilePage() {
                                 <FormItem>
                                     <FormLabel>Confirm New Password</FormLabel>
                                     <FormControl>
-                                        <Input type="password" {...field} />
+                                        <div className="relative">
+                                            <Input 
+                                                type={showConfirmPass ? "text" : "password"} 
+                                                {...field} 
+                                                className="pr-10"
+                                            />
+                                            <button 
+                                                type="button"
+                                                onClick={() => setShowConfirmPass(!showConfirmPass)}
+                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                                            >
+                                                {showConfirmPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                            </button>
+                                        </div>
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )}
                         />
+                        
                         <div className="flex justify-end">
                             <Button type="submit" variant="outline" disabled={isPasswordSubmitting} className="w-full sm:w-auto">
                             {isPasswordSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

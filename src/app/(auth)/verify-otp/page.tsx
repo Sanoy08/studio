@@ -12,7 +12,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 
 const verifySchema = z.object({
@@ -23,6 +23,7 @@ const verifySchema = z.object({
 
 function VerifyOtpForm() {
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const searchParams = useSearchParams();
   const router = useRouter();
   const { login } = useAuth();
@@ -35,6 +36,14 @@ function VerifyOtpForm() {
     defaultValues: { otp: "", password: "", phone: "" },
   });
 
+  // ★ শুধুমাত্র নম্বর টাইপ করার লজিক ★
+  const handleNumericInput = (e: React.ChangeEvent<HTMLInputElement>, onChange: (...event: any[]) => void) => {
+    const value = e.target.value;
+    if (value === '' || /^\d+$/.test(value)) { // শুধুমাত্র ডিজিট চেক
+      onChange(value);
+    }
+  };
+
   async function onSubmit(values: z.infer<typeof verifySchema>) {
     if (!email) {
         toast.error("Email missing. Please register again.");
@@ -44,7 +53,6 @@ function VerifyOtpForm() {
 
     setIsLoading(true);
     try {
-      // Call the Register API (which verifies OTP and creates user)
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -63,7 +71,6 @@ function VerifyOtpForm() {
         throw new Error(data.error || 'Verification failed');
       }
 
-      // Log the user in immediately after success
       login(data.user, data.token);
 
       toast.success("Account created successfully!");
@@ -78,70 +85,98 @@ function VerifyOtpForm() {
   }
 
   return (
-    <Card className="w-full max-w-sm">
-      <CardHeader>
-        <CardTitle className="text-2xl">Verify OTP</CardTitle>
-        <CardDescription>
-            An OTP has been sent to <strong>{email}</strong>.
-            <br />Enter it below to complete registration.
-        </CardDescription>
-      </CardHeader>
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)}>
-          <CardContent className="grid gap-4">
-            <FormField
-              control={form.control}
-              name="otp"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>OTP Code</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter OTP" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Set Password</FormLabel>
-                  <FormControl>
-                    <Input type="password" placeholder="******" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="phone"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Phone Number</FormLabel>
-                  <FormControl>
-                    <Input placeholder="9876543210" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </CardContent>
-          <CardFooter className="flex flex-col">
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Verify & Create Account
-            </Button>
-          </CardFooter>
-        </form>
-      </Form>
-    </Card>
+    <div className="flex items-center justify-center min-h-[80vh] px-4">
+      <Card className="w-full max-w-sm">
+        <CardHeader>
+          <CardTitle className="text-2xl">Verify OTP</CardTitle>
+          <CardDescription>
+              An OTP has been sent to <strong>{email}</strong>.
+              <br />Enter it below to complete registration.
+          </CardDescription>
+        </CardHeader>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)}>
+            <CardContent className="grid gap-4">
+              
+              <FormField
+                control={form.control}
+                name="otp"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>OTP Code</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Enter 6-digit OTP" 
+                        {...field} 
+                        onChange={(e) => handleNumericInput(e, field.onChange)} // নম্বর লজিক
+                        maxLength={6}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Set Password</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                          <Input 
+                            type={showPassword ? "text" : "password"} 
+                            placeholder="******" 
+                            {...field}
+                            className="pr-10"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                          >
+                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </button>
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="phone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Phone Number</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="9876543210" 
+                        {...field} 
+                        onChange={(e) => handleNumericInput(e, field.onChange)} // নম্বর লজিক
+                        maxLength={10}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+            <CardFooter className="flex flex-col">
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Verify & Create Account
+              </Button>
+            </CardFooter>
+          </form>
+        </Form>
+      </Card>
+    </div>
   );
 }
 
-// Main Page Component wrapped in Suspense
 export default function VerifyOtpPage() {
     return (
         <Suspense fallback={<div className="flex justify-center pt-10"><Loader2 className="h-8 w-8 animate-spin" /></div>}>
