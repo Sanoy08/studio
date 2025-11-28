@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useContext, createContext } from 'react';
 import { useRouter } from 'next/navigation';
 
 export type User = {
@@ -13,21 +13,31 @@ export type User = {
   phone?: string;
   address?: string;
   picture?: string;
+  dob?: string;
+  anniversary?: string;
 };
 
-export function useAuth() {
+interface AuthContextType {
+  user: User | null;
+  isLoading: boolean;
+  login: (userData: User, token: string) => void;
+  logout: () => void;
+  refreshProfile: () => Promise<void>;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
-    // মাউন্ট করার সময় লোকাল স্টোরেজ থেকে ইউজার চেক করা
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
       try {
         setUser(JSON.parse(storedUser));
       } catch (e) {
-        console.error("Failed to parse user data", e);
         localStorage.removeItem('user');
         localStorage.removeItem('token');
       }
@@ -46,8 +56,42 @@ export function useAuth() {
     localStorage.removeItem('token');
     setUser(null);
     router.push('/login');
-    router.refresh(); // রাউটার রিফ্রেশ যাতে হেডার আপডেট হয়
+    router.refresh();
   }, [router]);
 
-  return { user, isLoading, login, logout };
+  // ★★★ সার্ভার থেকে লেটেস্ট ডেটা আনার ফাংশন ★★★
+  const refreshProfile = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    try {
+        const res = await fetch('/api/auth/me', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (res.ok) {
+            const data = await res.json();
+            if (data.success && data.user) {
+                localStorage.setItem('user', JSON.stringify(data.user));
+                setUser(data.user); // স্টেট আপডেট
+            }
+        }
+    } catch (error) {
+        console.error("Failed to refresh profile", error);
+    }
+  };
+
+  return React.createElement(
+    AuthContext.Provider,
+    { value: { user, isLoading, login, logout, refreshProfile } },
+    children
+  );
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
 }
