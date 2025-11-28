@@ -25,9 +25,9 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from '@/hooks/use-auth';
 import { cn } from '@/lib/utils';
-import { Logo } from '@/components/shared/Logo'; // আপনার লোগো কম্পোনেন্ট
+import { Logo } from '@/components/shared/Logo';
+import { Loader2 } from 'lucide-react';
 
-// নেভিগেশন লিংক (আপনার admin.html এর সাথে মিল রেখে)
 const adminNavLinks = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/admin/orders', label: 'Orders', icon: ShoppingBag },
@@ -37,7 +37,7 @@ const adminNavLinks = [
   { href: '/admin/special-dates', label: 'Events Calendar', icon: Calendar },
   { href: '/admin/hero-slides', label: 'Hero Section', icon: ImageIcon },
   { href: '/admin/offers', label: 'Offers Section', icon: Gift },
-  { href: '/admin/reports', label: 'Reports', icon: BarChart3 }, // Placeholder
+  // { href: '/admin/reports', label: 'Reports', icon: BarChart3 }, 
   { href: '/admin/notifications', label: 'Push Notifications', icon: Send },
   { href: '/admin/settings', label: 'Settings', icon: Settings },
 ];
@@ -48,19 +48,28 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [isChecking, setIsChecking] = useState(true);
 
-  // ১. অথেন্টিকেশন চেক
+  // ১. সিকিউরিটি চেক (লগইন পেজ বাদে)
   useEffect(() => {
     if (!isLoading) {
-        if (!user) {
-            router.push('/login');
-        } else if (user.role !== 'admin') {
-            router.push('/');
-        }
-    }
-  }, [user, isLoading, router]);
+      // যদি বর্তমান পেজ লগইন পেজ হয়, তবে চেক করার দরকার নেই
+      if (pathname === '/admin/login') {
+        setIsChecking(false);
+        return;
+      }
 
-  // ২. ডার্ক মোড লোড এবং টগল
+      if (!user) {
+        router.replace('/admin/login'); // লগইন না থাকলে অ্যাডমিন লগইনে পাঠাও
+      } else if (user.role !== 'admin') {
+        router.replace('/'); // অ্যাডমিন না হলে হোমপেজে পাঠাও
+      } else {
+        setIsChecking(false); // সব ঠিক আছে
+      }
+    }
+  }, [user, isLoading, router, pathname]);
+
+  // ২. ডার্ক মোড
   useEffect(() => {
     const savedTheme = localStorage.getItem('adminTheme');
     if (savedTheme === 'dark') {
@@ -81,14 +90,31 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     }
   };
 
-  // ৩. পেজ চেঞ্জ হলে মোবাইলে সাইডবার বন্ধ করা
+  // ৩. পেজ চেঞ্জ হলে মোবাইলে সাইডবার বন্ধ
   useEffect(() => {
     setIsSidebarOpen(false);
   }, [pathname]);
 
-  if (isLoading || !user || user.role !== 'admin') return null;
+  // যদি লোডিং হয় বা চেক চলে
+  if (isLoading || isChecking) {
+    // লগইন পেজ হলে লোডার দেখানোর দরকার নেই, ফর্ম রেন্ডার হতে দিন
+    if (pathname === '/admin/login') return <>{children}</>;
 
-  // বর্তমান পেজের টাইটেল বের করা
+    return (
+        <div className="h-screen w-full flex items-center justify-center bg-muted/20">
+            <Loader2 className="h-10 w-10 animate-spin text-primary" />
+        </div>
+    );
+  }
+
+  // যদি লগইন পেজে থাকি, তবে সাইডবার ছাড়া রেন্ডার করব
+  if (pathname === '/admin/login') {
+      return <>{children}</>;
+  }
+
+  // অ্যাডমিন না হলে কিছু দেখাবে না (রিডাইরেক্ট হওয়ার আগে)
+  if (!user || user.role !== 'admin') return null;
+
   const currentTitle = adminNavLinks.find(link => link.href === pathname)?.label || 'Admin Panel';
 
   return (
@@ -99,13 +125,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         "fixed inset-y-0 left-0 z-50 w-[260px] bg-[#2c3e50] text-[#ecf0f1] shadow-xl transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:shadow-none flex flex-col",
         isSidebarOpen ? "translate-x-0" : "-translate-x-full"
       )}>
-        {/* Sidebar Header */}
         <div className="h-16 flex items-center justify-center gap-3 border-b border-white/10 px-4">
            <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center text-[#2c3e50] font-bold">BK</div>
            <h3 className="text-xl font-semibold font-serif tracking-wide">Bumba's Kitchen</h3>
         </div>
 
-        {/* Menu Items */}
         <nav className="flex-1 overflow-y-auto py-4 space-y-1 px-3 custom-scrollbar">
           {adminNavLinks.map((link) => {
             const Icon = link.icon;
@@ -128,10 +152,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           })}
         </nav>
 
-        {/* Sidebar Footer (Logout) */}
         <div className="p-4 border-t border-white/10 bg-[#243342]">
             <button 
-                onClick={() => { logout(); router.push('/login'); }}
+                onClick={() => { logout(); router.push('/admin/login'); }}
                 className="flex items-center justify-center gap-2 w-full py-2.5 rounded-md bg-red-500/10 text-red-400 hover:bg-red-600 hover:text-white transition-all duration-300"
             >
                 <LogOut className="w-4 h-4" />
@@ -151,10 +174,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       {/* --- MAIN CONTENT --- */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        
-        {/* Top Header */}
         <header className="h-16 bg-white dark:bg-[#1e1e1e] shadow-sm flex items-center justify-between px-6 sticky top-0 z-30 transition-colors duration-300">
-            
             <div className="flex items-center gap-4">
                 <button 
                     onClick={() => setIsSidebarOpen(true)}
@@ -166,7 +186,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </div>
 
             <div className="flex items-center gap-4 sm:gap-6">
-                {/* Theme Switcher */}
                 <div 
                     onClick={toggleTheme}
                     className="w-14 h-7 bg-[#ccc] dark:bg-[#4A5568] rounded-full relative cursor-pointer flex items-center justify-between px-1.5 transition-colors duration-300"
@@ -179,7 +198,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     )} />
                 </div>
 
-                {/* User Info */}
                 <div className="flex items-center gap-3">
                     <Avatar className="h-10 w-10 border-2 border-[#4CAF50] shadow-sm cursor-pointer">
                         <AvatarImage src={user.picture} />
@@ -192,13 +210,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </div>
         </header>
 
-        {/* Page Content */}
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 custom-scrollbar">
             <div className="max-w-7xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
                 {children}
             </div>
         </main>
-
       </div>
     </div>
   );

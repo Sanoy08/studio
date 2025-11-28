@@ -13,6 +13,8 @@ export type User = {
   phone?: string;
   address?: string;
   picture?: string;
+  dob?: string;
+  anniversary?: string;
 };
 
 export function useAuth() {
@@ -21,7 +23,6 @@ export function useAuth() {
   const router = useRouter();
 
   useEffect(() => {
-    // মাউন্ট করার সময় লোকাল স্টোরেজ থেকে ইউজার চেক করা
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
       try {
@@ -35,18 +36,19 @@ export function useAuth() {
     setIsLoading(false);
   }, []);
 
-  const login = (userData: User, token: string) => {
+  // ★★★ FIX: useCallback যোগ করা হয়েছে যাতে Google Callback লুপে না পড়ে ★★★
+  const login = useCallback((userData: User, token: string) => {
     localStorage.setItem('user', JSON.stringify(userData));
     localStorage.setItem('token', token);
     setUser(userData);
-  };
+  }, []);
 
   const logout = useCallback(() => {
     localStorage.removeItem('user');
     localStorage.removeItem('token');
     setUser(null);
     router.push('/login');
-    router.refresh(); // রাউটার রিফ্রেশ যাতে হেডার আপডেট হয়
+    router.refresh();
   }, [router]);
 
   return { user, isLoading, login, logout };
