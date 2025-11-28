@@ -20,7 +20,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from 'sonner';
-import { Loader2, Cake, Heart, Lock } from 'lucide-react';
+import { Loader2, Cake, Heart, Lock } from 'lucide-react'; // Lock আইকন আনা হয়েছে
 import { useAuth } from '@/hooks/use-auth';
 import { NotificationPermission } from '@/components/shared/NotificationPermission';
 
@@ -46,7 +46,7 @@ const passwordFormSchema = z.object({
 type PasswordFormValues = z.infer<typeof passwordFormSchema>;
 
 export default function AccountProfilePage() {
-  const { user, login, refreshProfile } = useAuth(); // ★ refreshProfile যোগ করা হয়েছে
+  const { user, login } = useAuth();
 
   const profileForm = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -68,12 +68,6 @@ export default function AccountProfilePage() {
     }
   });
 
-  // ★ ১. পেজ লোড হলেই সার্ভার থেকে লেটেস্ট ডেটা আনবে (Device A ফিক্স) ★
-  useEffect(() => {
-    refreshProfile();
-  }, []);
-
-  // ★ ২. ইউজার ডেটা আপডেট হলে ফর্ম ফিল করবে ★
   useEffect(() => {
     if (user) {
       const nameParts = user.name?.split(' ') || ['', ''];
@@ -90,7 +84,7 @@ export default function AccountProfilePage() {
         anniversary: userAnniversary,
       })
     }
-  }, [user, profileForm]); // user ডিপেন্ডেন্সি থাকায় রিফ্রেশ হলে ফর্ম আপডেট হবে
+  }, [user, profileForm]);
 
 
   async function onProfileSubmit(data: ProfileFormValues) {
@@ -162,10 +156,11 @@ export default function AccountProfilePage() {
   const { isSubmitting: isProfileSubmitting } = profileForm.formState;
   const { isSubmitting: isPasswordSubmitting } = passwordForm.formState;
 
+  // টাইপ সেফটির জন্য চেক
   // @ts-ignore
-  const hasDob = !!user?.dob && user.dob !== "";
+  const hasDob = !!user?.dob;
   // @ts-ignore
-  const hasAnniversary = !!user?.anniversary && user.anniversary !== "";
+  const hasAnniversary = !!user?.anniversary;
 
   return (
     <div className="space-y-8">
@@ -238,6 +233,7 @@ export default function AccountProfilePage() {
                     )}
                   />
 
+                  {/* Special Dates Section */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t">
                       <FormField
                         control={profileForm.control}
@@ -249,13 +245,8 @@ export default function AccountProfilePage() {
                                 {hasDob && <Lock className="h-3 w-3 text-muted-foreground ml-auto" />}
                             </FormLabel>
                             <FormControl>
-                              {/* যদি ডেট থাকে তবে ডিজেবল, না থাকলে এনাবল */}
-                              <Input 
-                                type="date" 
-                                {...field} 
-                                disabled={hasDob} 
-                                className={hasDob ? "bg-muted/50 cursor-not-allowed" : ""} 
-                              />
+                              {/* ★★★ FIX: যদি ডেট থাকে তবে disabled হবে ★★★ */}
+                              <Input type="date" {...field} disabled={hasDob} className={hasDob ? "bg-muted/50 cursor-not-allowed" : ""} />
                             </FormControl>
                             {!hasDob && (
                                 <FormDescription className="text-xs">
@@ -276,12 +267,8 @@ export default function AccountProfilePage() {
                                 {hasAnniversary && <Lock className="h-3 w-3 text-muted-foreground ml-auto" />}
                             </FormLabel>
                             <FormControl>
-                              <Input 
-                                type="date" 
-                                {...field} 
-                                disabled={hasAnniversary} 
-                                className={hasAnniversary ? "bg-muted/50 cursor-not-allowed" : ""} 
-                              />
+                              {/* ★★★ FIX: যদি ডেট থাকে তবে disabled হবে ★★★ */}
+                              <Input type="date" {...field} disabled={hasAnniversary} className={hasAnniversary ? "bg-muted/50 cursor-not-allowed" : ""} />
                             </FormControl>
                             {!hasAnniversary && (
                                 <FormDescription className="text-xs">
