@@ -4,7 +4,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { clientPromise } from '@/lib/mongodb';
 import jwt from 'jsonwebtoken';
 import { revalidatePath } from 'next/cache';
-import { pusherServer } from '@/lib/pusher';
+import { pusherServer } from '@/lib/pusher'; // রিয়েল-টাইম আপডেটের জন্য
+import { sendNotificationToAllUsers } from '@/lib/notification'; // পুশ নোটিফিকেশনের জন্য
 
 const DB_NAME = 'BumbasKitchenDB';
 const COLLECTION_NAME = 'menuItems';
@@ -31,6 +32,7 @@ export async function GET(request: NextRequest) {
       description: item.Description,
       price: item.Price,
       category: { name: item.Category, id: item.Category?.toLowerCase() },
+      // ইমেজ অ্যারে হ্যান্ডেলিং
       images: item.ImageURLs?.map((url: string, i: number) => ({ id: `img-${i}`, url, alt: item.Name })) || [],
       stock: item.InStock ? 100 : 0,
       featured: item.Bestseller === "true" || item.Bestseller === true,
@@ -51,12 +53,13 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { name, description, price, category, imageUrls, featured, inStock } = body;
 
+    // নতুন প্রোডাক্ট অবজেক্ট
     const newProduct = {
       Name: name,
       Description: description,
       Price: parseFloat(price),
       Category: category,
-      // ইমেজ অ্যারে সেভ করা হচ্ছে
+      // ইমেজ অ্যারে সঠিকভাবে সেভ করা হচ্ছে
       ImageURLs: Array.isArray(imageUrls) ? imageUrls : (imageUrls ? [imageUrls] : []),
       Bestseller: featured,
       InStock: inStock,
@@ -68,16 +71,31 @@ export async function POST(request: NextRequest) {
     const result = await db.collection(COLLECTION_NAME).insertOne(newProduct);
 
     if (result.acknowledged) {
-      // ১. সার্ভার ক্যাশ ক্লিয়ার
+      
+      // ১. সার্ভার সাইড ক্যাশ রিফ্রেশ (On-Demand Revalidation)
       revalidatePath('/menus');
       revalidatePath('/');
 
-      // ২. রিয়েল-টাইম আপডেট ট্রিগার
+      // ২. ক্লায়েন্ট সাইড রিয়েল-টাইম আপডেট (Pusher)
+      // এটি বর্তমানে ব্রাউজ করছেন এমন ইউজারদের পেজ রিফ্রেশ করবে
       await pusherServer.trigger('menu-updates', 'product-changed', {
-        message: `New dish "${name}" added!`,
+        message: `New dish "${name}" added to the menu!`,
         type: 'add'
       });
 
+      // ৩. পুশ নোটিফিকেশন ব্রডকাস্ট (New Arrival)
+      // এটি সব সাবস্ক্রাইব করা ইউজারের ডিভাইসে নোটিফিকেশন পাঠাবে
+      try {
+          await sendNotificationToAllUsers(
+              client,
+              "New Arrival! 🍲",
+              `Check out our new dish: ${name}. Order now to taste the freshness!`,
+              `/menus`
+          );
+      } catch (notifError) {
+          console.error("Failed to broadcast new product notification:", notifError);
+      }
+      
       return NextResponse.json({ success: true, message: 'Product added successfully', productId: result.insertedId }, { status: 201 });
     } else {
       throw new Error('Failed to insert product');

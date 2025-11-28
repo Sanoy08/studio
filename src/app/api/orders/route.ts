@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { clientPromise } from '@/lib/mongodb';
 import { ObjectId } from 'mongodb';
 import jwt from 'jsonwebtoken';
-import { sendNotificationToAdmins, sendNotificationToUser } from '@/lib/notification'; // নতুন ইমপোর্ট
+import { sendNotificationToAdmins, sendNotificationToUser } from '@/lib/notification';
 
 const DB_NAME = 'BumbasKitchenDB';
 const ORDERS_COLLECTION = 'orders';
@@ -25,9 +25,7 @@ export async function POST(request: NextRequest) {
       try {
         const decoded: any = jwt.verify(token, JWT_SECRET);
         userIdToSave = new ObjectId(decoded._id);
-      } catch (e) {
-        console.warn("Invalid token");
-      }
+      } catch (e) { console.warn("Invalid token"); }
     }
 
     const orderNumber = `BK-${Date.now().toString().slice(-5)}${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
@@ -58,64 +56,40 @@ export async function POST(request: NextRequest) {
 
     if (result.acknowledged) {
       
-      // ১. কুপন আপডেট
+      // কুপন আপডেট
       if (orderData.couponCode) {
-         await db.collection(COUPONS_COLLECTION).updateOne(
-            { code: orderData.couponCode.toUpperCase() },
-            { $inc: { timesUsed: 1 } }
-         );
+         await db.collection(COUPONS_COLLECTION).updateOne({ code: orderData.couponCode.toUpperCase() }, { $inc: { timesUsed: 1 } });
       }
 
-      // ২. কয়েন লজিক (Coin Add)
+      // কয়েন লজিক
       if (userIdToSave) {
-          const coinsEarned = Math.floor(newOrder.FinalPrice / 100) * 10; // প্রতি ১০০ টাকায় ১০ কয়েন
+          const coinsEarned = Math.floor(newOrder.FinalPrice / 100) * 10; 
           if (coinsEarned > 0) {
-              await db.collection(USERS_COLLECTION).updateOne(
-                  { _id: userIdToSave },
-                  { $inc: { "wallet.currentBalance": coinsEarned } }
-              );
-              
-              await db.collection(TRANSACTIONS_COLLECTION).insertOne({
-                  userId: userIdToSave,
-                  type: 'earn',
-                  amount: coinsEarned,
-                  description: `Earned from Order #${orderNumber}`,
-                  createdAt: new Date()
-              });
+              await db.collection(USERS_COLLECTION).updateOne({ _id: userIdToSave }, { $inc: { "wallet.currentBalance": coinsEarned } });
+              await db.collection(TRANSACTIONS_COLLECTION).insertOne({ userId: userIdToSave, type: 'earn', amount: coinsEarned, description: `Earned from Order #${orderNumber}`, createdAt: new Date() });
 
-              // ★ কাস্টমারকে নোটিফিকেশন পাঠানো (কয়েন আর্ন)
-              await sendNotificationToUser(
-                  client, 
-                  userIdToSave.toString(), 
-                  "🎉 Coins Earned!", 
-                  `You earned ${coinsEarned} coins from your recent order.`,
-                  '/account/wallet'
-              );
+              // Coin Notification
+              await sendNotificationToUser(client, userIdToSave.toString(), "🎉 Coins Earned!", `You earned ${coinsEarned} coins from your recent order.`, '/account/wallet');
           }
+
+          // ★★★ 1. Order Confirmation Notification (User) ★★★
+          await sendNotificationToUser(
+              client,
+              userIdToSave.toString(),
+              "Order Placed! 🥘",
+              `We have received your order #${orderNumber}. The kitchen will start preparing it soon!`,
+              '/account/orders'
+          );
       }
 
-      // ৩. ★ অ্যাডমিনকে নোটিফিকেশন পাঠানো (নতুন অর্ডার)
-      await sendNotificationToAdmins(
-          client,
-          "New Order Received! 🛍️",
-          `Order #${orderNumber} from ${orderData.name} - ₹${newOrder.FinalPrice}`,
-          '/admin/orders'
-      );
+      // Admin Notification
+      await sendNotificationToAdmins(client, "New Order Received! 🛍️", `Order #${orderNumber} from ${orderData.name} - ₹${newOrder.FinalPrice}`, '/admin/orders');
 
-      return NextResponse.json({ 
-        success: true, 
-        message: "Order placed successfully!",
-        orderId: orderNumber
-      }, { status: 201 });
+      return NextResponse.json({ success: true, message: "Order placed successfully!", orderId: orderNumber }, { status: 201 });
     } else {
       throw new Error('Failed to insert order.');
     }
-
   } catch (error: any) {
-    console.error("Order Save Error:", error);
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to place order.' },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
