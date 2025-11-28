@@ -1,61 +1,50 @@
-// src/app/api/auth/google/callback/route.ts
-
 import { NextRequest, NextResponse } from 'next/server';
+import { OAuth2Client } from 'google-auth-library';
 import { clientPromise } from '@/lib/mongodb';
 import jwt from 'jsonwebtoken';
 
 const DB_NAME = 'BumbasKitchenDB';
 const COLLECTION_NAME = 'users';
 const JWT_SECRET = process.env.JWT_SECRET || 'default_secret';
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
-const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get('code');
-  const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:9002';
-  const REDIRECT_URI = `${APP_URL}/api/auth/google/callback`;
+  const APP_URL = process.env.NEXT_PUBLIC_APP_URL;
 
   if (!code) {
     return NextResponse.json({ error: 'Authorization code is missing.' }, { status: 400 });
   }
 
   try {
-    // ১. কোড দিয়ে টোকেন এক্সচেঞ্জ করা
-    const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        code,
-        client_id: GOOGLE_CLIENT_ID,
-        client_secret: GOOGLE_CLIENT_SECRET,
-        redirect_uri: REDIRECT_URI,
-        grant_type: 'authorization_code',
-      }),
-    });
+    const client = new OAuth2Client(
+      process.env.GOOGLE_CLIENT_ID,
+      process.env.GOOGLE_CLIENT_SECRET,
+      `${APP_URL}/api/auth/google/callback`
+    );
 
-    const tokenData = await tokenResponse.json();
-    if (tokenData.error) throw new Error(tokenData.error_description);
+    // ১. কোড দিয়ে টোকেন এবং ইউজার ইনফো নেওয়া
+    const { tokens } = await client.getToken(code);
+    client.setCredentials(tokens);
 
-    // ২. ইউজার ইনফো নেওয়া
-    const userResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
-      headers: { Authorization: `Bearer ${tokenData.access_token}` },
-    });
-    const googleUser = await userResponse.json();
+    const userInfoRes = await client.request({ url: 'https://www.googleapis.com/oauth2/v3/userinfo' });
+    const googleUser: any = userInfoRes.data;
 
-    // ৩. ডেটাবেস অপারেশন
-    const client = await clientPromise;
-    const db = client.db(DB_NAME);
+    // ২. ডেটাবেস কানেকশন
+    const mongoClient = await clientPromise;
+    const db = mongoClient.db(DB_NAME);
     const usersCollection = db.collection(COLLECTION_NAME);
 
+    // ৩. ইউজার চেক বা তৈরি করা
     let user = await usersCollection.findOne({ email: googleUser.email.toLowerCase() });
 
     if (!user) {
-      // নতুন ইউজার তৈরি
+      // নতুন ইউজার
       const newUser = {
         name: googleUser.name,
         email: googleUser.email.toLowerCase(),
-        isVerified: true, // গুগল ভেরিফাইড তাই ট্রু
+        isVerified: true, // গুগল ভেরিফাইড
+        authProvider: 'google',
         createdAt: new Date(),
         wallet: { currentBalance: 0, tier: "Bronze" },
         role: "customer",
@@ -64,12 +53,15 @@ export async function GET(request: NextRequest) {
       const result = await usersCollection.insertOne(newUser);
       user = { ...newUser, _id: result.insertedId };
     } else {
-      // ছবি আপডেট করা (যদি পরিবর্তন হয়)
-      await usersCollection.updateOne({ _id: user._id }, { $set: { picture: googleUser.picture } });
+      // পুরনো ইউজার - ছবি আপডেট করা
+      await usersCollection.updateOne(
+          { _id: user._id }, 
+          { $set: { picture: googleUser.picture } }
+      );
       user.picture = googleUser.picture;
     }
 
-    // ৪. অ্যাপ টোকেন জেনারেট করা
+    // ৪. আমাদের অ্যাপের জন্য JWT টোকেন তৈরি
     const userPayload = {
         _id: user._id.toString(),
         email: user.email,
@@ -80,8 +72,8 @@ export async function GET(request: NextRequest) {
 
     const appToken = jwt.sign(userPayload, JWT_SECRET, { expiresIn: '30d' });
     
-    // ৫. ফ্রন্টএন্ডে রিডাইরেক্ট করা (টোকেন এবং ইউজার ডেটা সহ)
-    // আমরা একটি স্পেশাল পেজে রিডাইরেক্ট করছি যা টোকেন রিসিভ করবে
+    // ৫. টোকেন সহ ফ্রন্টএন্ডে রিডাইরেক্ট
+    // আমরা টোকেন এবং ইউজার ডেটা URL প্যারামিটারে পাঠিয়ে দিচ্ছি
     const redirectUrl = `${APP_URL}/google-callback?token=${encodeURIComponent(appToken)}&user=${encodeURIComponent(JSON.stringify(userPayload))}`;
     
     return NextResponse.redirect(redirectUrl);

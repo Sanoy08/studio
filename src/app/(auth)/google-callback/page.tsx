@@ -1,5 +1,3 @@
-// src/app/(auth)/google-callback/page.tsx
-
 'use client';
 
 import { useEffect, Suspense } from 'react';
@@ -19,9 +17,9 @@ function GoogleCallbackProcessor() {
     if (token && userStr) {
       try {
         const userData = JSON.parse(userStr);
-        // লগইন ফাংশন কল করে স্টেট আপডেট এবং লোকাল স্টোরেজে সেভ
+        // আমাদের কাস্টম হুক দিয়ে লগইন করা হচ্ছে
         login(userData, token);
-        // অ্যাকাউন্টে রিডাইরেক্ট
+        // সফল হলে অ্যাকাউন্টে রিডাইরেক্ট
         router.push('/account');
       } catch (error) {
         console.error("Failed to parse user data:", error);
@@ -35,7 +33,7 @@ function GoogleCallbackProcessor() {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen">
       <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-      <p className="text-muted-foreground">Authenticating with Google...</p>
+      <p className="text-muted-foreground">Logging in with Google...</p>
     </div>
   );
 }
