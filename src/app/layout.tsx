@@ -21,8 +21,9 @@ const amarante = Amarante({
 });
 
 export const metadata: Metadata = {
-  title: 'Bumbas Kitchen',
-  description: 'Your favorite food delivered.',
+  title: "Bumba's Kitchen",
+  description: 'Authentic Bengali cuisine delivered to your doorstep.',
+  manifest: '/manifest.json', // ★ এটি থাকতে হবে
 };
 
 export default function RootLayout({
