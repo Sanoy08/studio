@@ -10,7 +10,8 @@ const uri = process.env.MONGODB_URI;
 const options = {
   serverApi: {
     version: ServerApiVersion.v1,
-    strict: true,
+    // ★★★ FIX: strict: true এর বদলে false করা হয়েছে ★★★
+    strict: false, 
     deprecationErrors: true,
   },
 };
@@ -36,6 +37,4 @@ if (process.env.NODE_ENV === 'development') {
   clientPromise = client.connect();
 }
 
-// Export a module-scoped MongoClient promise. By doing this in a
-// separate module, the client can be shared across functions.
 export { clientPromise };
