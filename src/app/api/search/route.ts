@@ -20,19 +20,59 @@ export async function GET(request: NextRequest) {
     const db = client.db(DB_NAME);
     const collection = db.collection(COLLECTION_NAME);
 
-    // আমরা 'Atlas Search' ($search) এর পরিবর্তে সাধারণ 'Regex' ($regex) ব্যবহার করছি।
-    // এটি কোনো কনফিগারেশন ছাড়াই কাজ করবে।
-    const regex = new RegExp(query, 'i'); // 'i' মানে ছোট/বড় হাতের অক্ষর ম্যাটার করবে না
+    // ★★★ AI Search Pipeline (MongoDB Atlas Search) ★★★
+    const pipeline = [
+        {
+            $search: {
+                index: 'menu_search_index', // আপনার তৈরি করা ইনডেক্সের নাম
+                compound: {
+                    should: [
+                        {
+                            autocomplete: {
+                                query: query,
+                                path: 'Name',
+                                fuzzy: { maxEdits: 1, prefixLength: 2 }, // বানান ভুল হলেও খুঁজবে
+                                score: { boost: { value: 5 } } // নামের গুরুত্ব বেশি
+                            }
+                        },
+                        {
+                            text: {
+                                query: query,
+                                path: 'Description',
+                                fuzzy: { maxEdits: 1 }
+                            }
+                        },
+                        {
+                            text: {
+                                query: query,
+                                path: 'Category',
+                                score: { boost: { value: 3 } }
+                            }
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            $project: {
+                _id: 1,
+                Name: 1,
+                Price: 1,
+                Category: 1,
+                Description: 1,
+                ImageURLs: 1,
+                InStock: 1,
+                Bestseller: 1,
+                CreatedAt: 1,
+                score: { $meta: "searchScore" } // ম্যাচিং স্কোর
+            }
+        },
+        { $limit: 20 } // সর্বোচ্চ ২০টি রেজাল্ট
+    ];
 
-    const results = await collection.find({
-        $or: [
-            { Name: { $regex: regex } },
-            { Description: { $regex: regex } },
-            { Category: { $regex: regex } }
-        ]
-    }).limit(20).toArray();
+    const results = await collection.aggregate(pipeline).toArray();
 
-    // ফ্রন্টএন্ডের Product টাইপে কনভার্ট করা
+    // ডেটা ফরম্যাট করা
     const products: Product[] = results.map((item: any) => ({
         id: item._id.toString(),
         name: item.Name,
@@ -44,14 +84,24 @@ export async function GET(request: NextRequest) {
         rating: 4.5,
         reviewCount: 0,
         stock: item.InStock ? 100 : 0,
-        featured: item.Bestseller === true,
-        reviews: []
+        featured: item.Bestseller === true || item.Bestseller === "true",
+        reviews: [],
+        createdAt: item.CreatedAt
     }));
 
     return NextResponse.json({ success: true, products }, { status: 200 });
 
   } catch (error: any) {
-    console.error("Search API Error:", error);
+    console.error("AI Search Error:", error);
+    
+    // ফলব্যাক: যদি ইনডেক্স না থাকে, তবে সাধারণ সার্চ কাজ করবে
+    if (error.message.includes("Remote error: Remote error from mongot")) {
+        return NextResponse.json({ 
+            success: false, 
+            error: "Search index not ready yet. Please try again later." 
+        }, { status: 503 });
+    }
+
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
