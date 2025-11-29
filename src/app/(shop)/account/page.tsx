@@ -20,7 +20,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from 'sonner';
-import { Loader2, Cake, Heart, Lock, Eye, EyeOff } from 'lucide-react'; // Eye আইকন ইমপোর্ট
+import { Loader2, Cake, Heart, Lock, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { NotificationPermission } from '@/components/shared/NotificationPermission';
 
@@ -46,7 +46,7 @@ const passwordFormSchema = z.object({
 type PasswordFormValues = z.infer<typeof passwordFormSchema>;
 
 export default function AccountProfilePage() {
-  const { user, login } = useAuth(); // refreshProfile এখানে লাগবে না যদি লগইন আপডেট করে
+  const { user, login } = useAuth(); // login ফাংশন ব্যবহার করব আপডেট করার জন্য
 
   // পাসওয়ার্ড ভিজিবিলিটি স্টেট
   const [showCurrentPass, setShowCurrentPass] = useState(false);
@@ -55,24 +55,43 @@ export default function AccountProfilePage() {
 
   const profileForm = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
-    defaultValues: {
-      firstName: '',
-      lastName: '',
-      email: '',
-      dob: '',
-      anniversary: '',
-    },
+    defaultValues: { firstName: '', lastName: '', email: '', dob: '', anniversary: '' },
   });
 
   const passwordForm = useForm<PasswordFormValues>({
     resolver: zodResolver(passwordFormSchema),
-    defaultValues: {
-        currentPassword: "",
-        newPassword: "",
-        confirmPassword: "",
-    }
+    defaultValues: { currentPassword: "", newPassword: "", confirmPassword: "" }
   });
 
+  // ★★★ ১. নতুন ফিচার: পেজ লোড হলেই সার্ভার থেকে লেটেস্ট ডেটা আনবে ★★★
+  useEffect(() => {
+    const fetchLatestData = async () => {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        try {
+            const res = await fetch('/api/auth/me', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            
+            if (res.ok) {
+                const data = await res.json();
+                if (data.success && data.user) {
+                    // login ফাংশন কল করে আমরা পুরো অ্যাপের স্টেট এবং লোকাল স্টোরেজ আপডেট করে দিচ্ছি
+                    // এতে অন্য ডিভাইসের পরিবর্তন এখানেও চলে আসবে
+                    login(data.user, token);
+                    console.log("Profile synced with server");
+                }
+            }
+        } catch (error) {
+            console.error("Failed to sync profile", error);
+        }
+    };
+
+    fetchLatestData();
+  }, []); // এটি শুধুমাত্র একবার রান হবে
+
+  // ২. ইউজার ডেটা অনুযায়ী ফর্ম ফিল করা
   useEffect(() => {
     if (user) {
       const nameParts = user.name?.split(' ') || ['', ''];
@@ -168,7 +187,6 @@ export default function AccountProfilePage() {
 
   return (
     <div className="space-y-8">
-      {/* Profile Update Card */}
       <Card>
           <CardHeader>
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -294,7 +312,6 @@ export default function AccountProfilePage() {
           </CardContent>
       </Card>
       
-      {/* Change Password Card */}
       <Card>
            <CardHeader>
                 <CardTitle>Change Password</CardTitle>
@@ -305,8 +322,6 @@ export default function AccountProfilePage() {
             <CardContent>
                  <Form {...passwordForm}>
                     <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="space-y-4">
-                        
-                        {/* Current Password */}
                         <FormField
                             control={passwordForm.control}
                             name="currentPassword"
@@ -315,16 +330,8 @@ export default function AccountProfilePage() {
                                     <FormLabel>Current Password</FormLabel>
                                     <FormControl>
                                         <div className="relative">
-                                            <Input 
-                                                type={showCurrentPass ? "text" : "password"} 
-                                                {...field} 
-                                                className="pr-10"
-                                            />
-                                            <button 
-                                                type="button"
-                                                onClick={() => setShowCurrentPass(!showCurrentPass)}
-                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                                            >
+                                            <Input type={showCurrentPass ? "text" : "password"} {...field} className="pr-10" />
+                                            <button type="button" onClick={() => setShowCurrentPass(!showCurrentPass)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                                                 {showCurrentPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                             </button>
                                         </div>
@@ -333,8 +340,6 @@ export default function AccountProfilePage() {
                                 </FormItem>
                             )}
                         />
-
-                         {/* New Password */}
                          <FormField
                             control={passwordForm.control}
                             name="newPassword"
@@ -343,16 +348,8 @@ export default function AccountProfilePage() {
                                     <FormLabel>New Password</FormLabel>
                                     <FormControl>
                                         <div className="relative">
-                                            <Input 
-                                                type={showNewPass ? "text" : "password"} 
-                                                {...field} 
-                                                className="pr-10"
-                                            />
-                                            <button 
-                                                type="button"
-                                                onClick={() => setShowNewPass(!showNewPass)}
-                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                                            >
+                                            <Input type={showNewPass ? "text" : "password"} {...field} className="pr-10" />
+                                            <button type="button" onClick={() => setShowNewPass(!showNewPass)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                                                 {showNewPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                             </button>
                                         </div>
@@ -361,8 +358,6 @@ export default function AccountProfilePage() {
                                 </FormItem>
                             )}
                         />
-
-                         {/* Confirm Password */}
                          <FormField
                             control={passwordForm.control}
                             name="confirmPassword"
@@ -371,16 +366,8 @@ export default function AccountProfilePage() {
                                     <FormLabel>Confirm New Password</FormLabel>
                                     <FormControl>
                                         <div className="relative">
-                                            <Input 
-                                                type={showConfirmPass ? "text" : "password"} 
-                                                {...field} 
-                                                className="pr-10"
-                                            />
-                                            <button 
-                                                type="button"
-                                                onClick={() => setShowConfirmPass(!showConfirmPass)}
-                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                                            >
+                                            <Input type={showConfirmPass ? "text" : "password"} {...field} className="pr-10" />
+                                            <button type="button" onClick={() => setShowConfirmPass(!showConfirmPass)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                                                 {showConfirmPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                             </button>
                                         </div>
@@ -389,7 +376,6 @@ export default function AccountProfilePage() {
                                 </FormItem>
                             )}
                         />
-                        
                         <div className="flex justify-end">
                             <Button type="submit" variant="outline" disabled={isPasswordSubmitting} className="w-full sm:w-auto">
                             {isPasswordSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

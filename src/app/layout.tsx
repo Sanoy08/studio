@@ -1,10 +1,15 @@
+// src/app/layout.tsx
+
 import type { Metadata, Viewport } from 'next';
 import { Poppins, Amarante } from 'next/font/google';
 import './globals.css';
 import { CartProvider } from '@/context/CartProvider';
 import { Toaster } from '@/components/ui/sonner';
 import { cn } from '@/lib/utils';
-import { RealtimeMenuUpdater } from '@/components/providers/RealtimeMenuUpdater'; // ★ ১. ইমপোর্ট যোগ করা হয়েছে
+import { RealtimeMenuUpdater } from '@/components/providers/RealtimeMenuUpdater'; 
+
+// ★★★ নোট: এখান থেকে Header এবং Footer ইমপোর্ট এবং ব্যবহার সরিয়ে ফেলা হয়েছে ★★★
+// কারণ এগুলো src/app/(shop)/layout.tsx এ অলরেডি আছে।
 
 const poppins = Poppins({
   subsets: ['latin'],
@@ -23,7 +28,18 @@ const amarante = Amarante({
 export const metadata: Metadata = {
   title: "Bumba's Kitchen",
   description: 'Authentic Bengali cuisine delivered to your doorstep.',
-  manifest: '/manifest.json', // ★ এটি থাকতে হবে
+  manifest: '/manifest.json',
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: 'white' },
+    { media: '(prefers-color-scheme: dark)', color: 'black' },
+  ],
 };
 
 export default function RootLayout({
@@ -34,28 +50,15 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={cn('font-sans antialiased', poppins.variable, amarante.variable)}>
-        {/* <FirebaseClientProvider> // REMOVED */}
           <CartProvider>
-            {/* ★ ২. রিয়েল-টাইম আপডেটার কম্পোনেন্ট যোগ করা হয়েছে */}
             <RealtimeMenuUpdater />
             
+            {/* শুধু চিলড্রেন রেন্ডার হবে, হেডার/ফুটার স্পেসিফিক লেআউট (যেমন shop) থেকে আসবে */}
             {children}
+            
             <Toaster />
           </CartProvider>
-        {/* </FirebaseClientProvider> // REMOVED */}
       </body>
     </html>
   );
 }
-
-// ★★★ এই অংশটি (Viewport) যেমন ছিল তেমনই আছে ★★★
-export const viewport: Viewport = {
-  width: 'device-width',
-  initialScale: 1,
-  maximumScale: 1,
-  userScalable: false, // অ্যাপের মতো ফিলিংস দেওয়ার জন্য জুম বন্ধ করা হলো (অপশনাল)
-  themeColor: [
-    { media: '(prefers-color-scheme: light)', color: 'white' },
-    { media: '(prefers-color-scheme: dark)', color: 'black' },
-  ],
-};
