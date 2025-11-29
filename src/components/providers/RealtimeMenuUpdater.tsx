@@ -11,6 +11,7 @@ export function RealtimeMenuUpdater() {
   const router = useRouter();
 
   useEffect(() => {
+    // কানেকশন সেটআপ
     const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY!, {
       cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
     });
@@ -21,22 +22,34 @@ export function RealtimeMenuUpdater() {
       console.log('Realtime update received:', data);
       
       // ১. ইউজারকে নোটিফিকেশন দেখানো
-      toast.info(data.message || 'Updating menu...', {
+      toast.info(data.message || 'Menu updating...', {
         duration: 3000,
         position: 'bottom-right',
         icon: '🔄'
       });
 
-      // ২. Vercel-এর ক্যাশ আপডেট হওয়ার জন্য একটু সময় দেওয়া (Double Refresh Strategy)
+      // ২. Vercel-এর ক্যাশ আপডেট হওয়ার জন্য Retry Strategy (একাধিকবার রিফ্রেশ)
       
       // প্রথম চেষ্টা: সাথে সাথে
       router.refresh();
 
-      // দ্বিতীয় চেষ্টা: ১.৫ সেকেন্ড পর (Vercel-এর ক্যাশ আপডেট হওয়ার পর)
+      // দ্বিতীয় চেষ্টা: ১ সেকেন্ড পর (Vercel-এর ক্যাশ আপডেট হওয়ার কথা)
       setTimeout(() => {
-        console.log('Triggering delayed refresh for Vercel consistency...');
+        console.log('Triggering delayed refresh (1s)...');
         router.refresh();
-      }, 1500);
+      }, 1000);
+
+      // তৃতীয় চেষ্টা: ৩ সেকেন্ড পর (যদি আগেরটা মিস হয়)
+      setTimeout(() => {
+          console.log('Triggering delayed refresh (3s)...');
+          router.refresh();
+      }, 3000);
+      
+      // চতুর্থ চেষ্টা: ৫ সেকেন্ড পর (ফাইনাল চেক)
+      setTimeout(() => {
+          console.log('Triggering delayed refresh (5s)...');
+          router.refresh();
+      }, 5000);
 
     });
 

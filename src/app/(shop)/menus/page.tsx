@@ -5,7 +5,7 @@ import { clientPromise } from '@/lib/mongodb';
 import { Product } from '@/lib/types';
 
 // প্রতি ৬০ সেকেন্ড পর পর ডেটা রিফ্রেশ হবে (ISR)
-export const revalidate = 60;
+export const dynamic = 'force-dynamic';
 
 async function getMenuData() {
   try {
