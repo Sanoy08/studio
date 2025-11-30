@@ -7,8 +7,6 @@ import { CartProvider } from '@/context/CartProvider';
 import { Toaster } from '@/components/ui/sonner';
 import { cn } from '@/lib/utils';
 import { RealtimeMenuUpdater } from '@/components/providers/RealtimeMenuUpdater'; 
-import { SpeedInsights } from "@vercel/speed-insights/next"
-import { Analytics } from "@vercel/analytics/next"
 
 // ★★★ নোট: এখান থেকে Header এবং Footer ইমপোর্ট এবং ব্যবহার সরিয়ে ফেলা হয়েছে ★★★
 // কারণ এগুলো src/app/(shop)/layout.tsx এ অলরেডি আছে।
