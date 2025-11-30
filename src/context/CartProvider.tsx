@@ -26,9 +26,8 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
       const { product, quantity } = action.payload;
       const existingItem = state.items.find((item) => item.id === product.id);
       
-      // ★ স্টক চেক লজিক (সিম্পল)
       const currentQty = existingItem ? existingItem.quantity : 0;
-      const maxStock = product.stock || 100; // ডিফল্ট ১০০ যদি স্টক না থাকে
+      const maxStock = product.stock || 100;
 
       if (currentQty + quantity > maxStock) {
           toast.error(`Sorry, only ${maxStock} items available in stock.`);
@@ -68,8 +67,6 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
           items: state.items.filter((item) => item.id !== action.payload.id),
         };
       }
-      // ★ স্টক চেক আপডেট করার সময়ও
-      // (এখানে product অবজেক্ট নেই, তাই সরাসরি চেক করা কঠিন, তবে বেসিক চেক রাখা যায়)
       return {
         ...state,
         items: state.items.map((item) =>
@@ -107,34 +104,9 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [state, dispatch] = useReducer(cartReducer, initialState);
   const [isInitialized, setIsInitialized] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
-  
-  // ★ Debounce এর জন্য রিফ
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // ১. কার্ট মার্জিং ফাংশন (Local + Server)
-  const mergeCarts = (localItems: CartItem[], serverItems: CartItem[]) => {
-      const mergedMap = new Map();
-
-      // সার্ভারের আইটেমগুলো আগে ম্যাপে রাখি
-      serverItems.forEach(item => mergedMap.set(item.id, item));
-
-      // লোকাল আইটেমগুলো যোগ করি
-      localItems.forEach(localItem => {
-          if (mergedMap.has(localItem.id)) {
-              // যদি দুই জায়গাতেই থাকে, তবে কোয়ান্টিটি যোগ করব (বা ম্যাক্স নেব)
-              const existing = mergedMap.get(localItem.id);
-              // অপশন ১: যোগ করা (User Friendly)
-              existing.quantity = Math.min(existing.quantity + localItem.quantity, 100); 
-              mergedMap.set(localItem.id, existing);
-          } else {
-              // নতুন আইটেম
-              mergedMap.set(localItem.id, localItem);
-          }
-      });
-
-      return Array.from(mergedMap.values());
-  };
-
+  // সার্ভারে ডেটা পাঠানোর ফাংশন
   const syncToDatabase = useCallback(async (items: CartItem[]) => {
       const token = localStorage.getItem('token');
       if (!token) return;
@@ -156,23 +128,27 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       }
   }, []);
 
-  // ২. ইনিশিয়াল লোড (স্মার্ট মার্জিং সহ)
+  // ★★★ ১. ইনিশিয়াল লোড এবং সিঙ্ক লজিক (ফিক্সড) ★★★
   useEffect(() => {
     const initializeCart = async () => {
         const token = localStorage.getItem('token');
         const storedCart = localStorage.getItem(CART_STORAGE_KEY);
         let localItems: CartItem[] = [];
         
+        // প্রথমে লোকাল ডেটা লোড করি (তাৎক্ষনিক দেখানোর জন্য)
         if (storedCart) {
             try {
                 const parsed = JSON.parse(storedCart);
-                if (parsed.items) localItems = parsed.items;
+                if (parsed.items) {
+                    localItems = parsed.items;
+                    dispatch({ type: 'SET_CART', payload: { items: localItems } });
+                }
             } catch (e) {}
         }
 
         if (token) {
             try {
-                // সার্ভার থেকে কার্ট আনা
+                // সার্ভার থেকে কার্ট আনি
                 const res = await fetch('/api/cart', {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
@@ -180,33 +156,31 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
                 
                 if (data.success) {
                     const serverItems = data.items || [];
-                    // ★ মার্জ করা হচ্ছে
-                    const finalItems = mergeCarts(localItems, serverItems);
                     
-                    dispatch({ type: 'SET_CART', payload: { items: finalItems } });
-                    
-                    // যদি মার্জ করার ফলে নতুন কিছু তৈরি হয়, তা সার্ভারে আপডেট করে দেওয়া
-                    if (JSON.stringify(finalItems) !== JSON.stringify(serverItems)) {
-                        syncToDatabase(finalItems);
+                    // ★★★ লজিক ফিক্স: ডুপ্লিকেশন বন্ধ করা ★★★
+                    if (serverItems.length > 0) {
+                        // যদি সার্ভারে ডেটা থাকে, তবে সেটাই আসল। লোকাল ডেটা ওভাররাইট হবে।
+                        // এটি রিফ্রেশ করলে ২১ -> ৪২ হওয়ার সমস্যা সমাধান করে।
+                        dispatch({ type: 'SET_CART', payload: { items: serverItems } });
+                        localStorage.setItem(CART_STORAGE_KEY, JSON.stringify({ items: serverItems }));
+                    } else if (localItems.length > 0) {
+                        // যদি সার্ভার খালি থাকে কিন্তু লোকালে আইটেম থাকে (যেমন: গেস্ট ইউজার লগইন করল)
+                        // তখন লোকাল ডেটা সার্ভারে পাঠাবো।
+                        await syncToDatabase(localItems);
                     }
-                } else {
-                    // সার্ভার এরর হলে লোকালটাই দেখাও
-                    dispatch({ type: 'SET_CART', payload: { items: localItems } });
                 }
             } catch (e) {
-                dispatch({ type: 'SET_CART', payload: { items: localItems } });
+                console.error("Error fetching cart:", e);
             }
-        } else {
-            // লগইন নেই, শুধু লোকাল
-            dispatch({ type: 'SET_CART', payload: { items: localItems } });
         }
+        
         setIsInitialized(true);
     };
 
     initializeCart();
-  }, [syncToDatabase]); // Only dependency needed for initial load logic extraction
+  }, [syncToDatabase]);
 
-  // ৩. রিয়েল-টাইম লিসেনার
+  // ২. রিয়েল-টাইম লিসেনার (Pusher)
   useEffect(() => {
       const token = localStorage.getItem('token');
       if (!token || !isInitialized) return;
@@ -220,21 +194,24 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       const channel = pusher.subscribe(`user-${userId}`);
       channel.bind('cart-updated', (data: any) => {
           if (!isSyncing) {
+              console.log("Cart updated from server!");
               dispatch({ type: 'SET_CART', payload: { items: data.items } });
+              localStorage.setItem(CART_STORAGE_KEY, JSON.stringify({ items: data.items }));
           }
       });
 
       return () => { pusher.unsubscribe(`user-${userId}`); };
   }, [isInitialized, isSyncing]);
 
-  // ৪. স্টেট সেভ করা (Debounced)
+  // ৩. স্টেট সেভ করা (Debounced Sync)
   useEffect(() => {
     if (isInitialized) {
+        // লোকাল আপডেট সাথে সাথে
         localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(state));
         
         const token = localStorage.getItem('token');
         if (token && !isSyncing) {
-            // ★ Debounce Logic (২ সেকেন্ড অপেক্ষা করবে)
+            // সার্ভার আপডেট একটু দেরি করে (২ সেকেন্ড), যাতে সার্ভারে লোড কম পড়ে
             if (timeoutRef.current) clearTimeout(timeoutRef.current);
             
             timeoutRef.current = setTimeout(() => {
@@ -242,7 +219,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
             }, 2000);
         }
     }
-  }, [state, isInitialized, syncToDatabase]); // isSyncing removed to avoid loop, logic handled inside
+  }, [state, isInitialized, syncToDatabase]);
 
   const addItem = (product: Product, quantity: number = 1) => {
     dispatch({ type: 'ADD_ITEM', payload: { product, quantity } });
