@@ -2,13 +2,10 @@
 
 'use client';
 
-import React, { createContext, useReducer, ReactNode, useEffect, useState, useCallback, useContext } from 'react';
+import React, { createContext, useReducer, ReactNode, useEffect, useState, useCallback, useRef } from 'react';
 import type { CartItem, Product } from '@/lib/types';
 import { toast } from 'sonner';
 import Pusher from 'pusher-js';
-
-// যেহেতু এখানে useAuth ব্যবহার করলে সার্কুলার ডিপেন্ডেন্সি হতে পারে,
-// তাই আমরা টোকেন থেকে ইউজার আইডি ডিকোড করব বা লোকাল স্টোরেজ চেক করব।
 
 const CART_STORAGE_KEY = 'bumbas-kitchen-cart';
 
@@ -28,6 +25,16 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
     case 'ADD_ITEM': {
       const { product, quantity } = action.payload;
       const existingItem = state.items.find((item) => item.id === product.id);
+      
+      // ★ স্টক চেক লজিক (সিম্পল)
+      const currentQty = existingItem ? existingItem.quantity : 0;
+      const maxStock = product.stock || 100; // ডিফল্ট ১০০ যদি স্টক না থাকে
+
+      if (currentQty + quantity > maxStock) {
+          toast.error(`Sorry, only ${maxStock} items available in stock.`);
+          return state;
+      }
+
       if (existingItem) {
         return {
           ...state,
@@ -61,6 +68,8 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
           items: state.items.filter((item) => item.id !== action.payload.id),
         };
       }
+      // ★ স্টক চেক আপডেট করার সময়ও
+      // (এখানে product অবজেক্ট নেই, তাই সরাসরি চেক করা কঠিন, তবে বেসিক চেক রাখা যায়)
       return {
         ...state,
         items: state.items.map((item) =>
@@ -79,25 +88,10 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
   }
 };
 
-const initialState: CartState = {
-  items: [],
-};
+const initialState: CartState = { items: [] };
 
-export const CartContext = createContext<
-  | {
-      state: CartState;
-      addItem: (product: Product, quantity?: number) => void;
-      removeItem: (id: string) => void;
-      updateQuantity: (id: string, quantity: number) => void;
-      clearCart: () => void;
-      itemCount: number;
-      totalPrice: number;
-      isInitialized: boolean;
-    }
-  | undefined
->(undefined);
+export const CartContext = createContext<any>(undefined);
 
-// হেল্পার: টোকেন থেকে ইউজার আইডি বের করা (সিম্পল ডিকোড)
 function getUserIdFromToken(token: string) {
     try {
         const base64Url = token.split('.')[1];
@@ -106,40 +100,46 @@ function getUserIdFromToken(token: string) {
             return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
         }).join(''));
         return JSON.parse(jsonPayload)._id;
-    } catch (e) {
-        return null;
-    }
+    } catch (e) { return null; }
 }
 
 export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [state, dispatch] = useReducer(cartReducer, initialState);
   const [isInitialized, setIsInitialized] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false); // লুপ আটকানোর জন্য ফ্ল্যাগ
+  const [isSyncing, setIsSyncing] = useState(false);
+  
+  // ★ Debounce এর জন্য রিফ
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // ১. ডাটাবেস থেকে ফেচ করা (বাধ্যতামূলক)
-  const fetchFromDatabase = useCallback(async (token: string) => {
-      try {
-          const res = await fetch('/api/cart', {
-              headers: { 'Authorization': `Bearer ${token}` }
-          });
-          const data = await res.json();
-          if (data.success) {
-              // সার্ভারের ডেটাই আসল (Source of Truth)
-              dispatch({ type: 'SET_CART', payload: { items: data.items } });
-              // লোকাল স্টোরেজও আপডেট করে দিই
-              localStorage.setItem(CART_STORAGE_KEY, JSON.stringify({ items: data.items }));
+  // ১. কার্ট মার্জিং ফাংশন (Local + Server)
+  const mergeCarts = (localItems: CartItem[], serverItems: CartItem[]) => {
+      const mergedMap = new Map();
+
+      // সার্ভারের আইটেমগুলো আগে ম্যাপে রাখি
+      serverItems.forEach(item => mergedMap.set(item.id, item));
+
+      // লোকাল আইটেমগুলো যোগ করি
+      localItems.forEach(localItem => {
+          if (mergedMap.has(localItem.id)) {
+              // যদি দুই জায়গাতেই থাকে, তবে কোয়ান্টিটি যোগ করব (বা ম্যাক্স নেব)
+              const existing = mergedMap.get(localItem.id);
+              // অপশন ১: যোগ করা (User Friendly)
+              existing.quantity = Math.min(existing.quantity + localItem.quantity, 100); 
+              mergedMap.set(localItem.id, existing);
+          } else {
+              // নতুন আইটেম
+              mergedMap.set(localItem.id, localItem);
           }
-      } catch (error) {
-          console.error("Failed to fetch cart", error);
-      }
-  }, []);
+      });
 
-  // ২. ডাটাবেসে সেভ করা
+      return Array.from(mergedMap.values());
+  };
+
   const syncToDatabase = useCallback(async (items: CartItem[]) => {
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      setIsSyncing(true); // সিঙ্কিং শুরু
+      setIsSyncing(true);
       try {
           await fetch('/api/cart', {
               method: 'POST',
@@ -152,39 +152,64 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       } catch (error) {
           console.error("Failed to sync cart", error);
       } finally {
-          setIsSyncing(false); // সিঙ্কিং শেষ
+          setIsSyncing(false);
       }
   }, []);
 
-  // ৩. ইনিশিয়াল লোড
+  // ২. ইনিশিয়াল লোড (স্মার্ট মার্জিং সহ)
   useEffect(() => {
     const initializeCart = async () => {
         const token = localStorage.getItem('token');
+        const storedCart = localStorage.getItem(CART_STORAGE_KEY);
+        let localItems: CartItem[] = [];
         
+        if (storedCart) {
+            try {
+                const parsed = JSON.parse(storedCart);
+                if (parsed.items) localItems = parsed.items;
+            } catch (e) {}
+        }
+
         if (token) {
-            // যদি লগইন থাকে, সরাসরি সার্ভার থেকে আনব (লোকাল ইগনোর করব যাতে কনফ্লিক্ট না হয়)
-            await fetchFromDatabase(token);
-        } else {
-            // লগইন না থাকলে লোকাল স্টোরেজ থেকে আনব
-            const storedCart = localStorage.getItem(CART_STORAGE_KEY);
-            if (storedCart) {
-                try {
-                    const parsed = JSON.parse(storedCart);
-                    if (parsed.items) dispatch({ type: 'SET_CART', payload: parsed });
-                } catch (e) {}
+            try {
+                // সার্ভার থেকে কার্ট আনা
+                const res = await fetch('/api/cart', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    const serverItems = data.items || [];
+                    // ★ মার্জ করা হচ্ছে
+                    const finalItems = mergeCarts(localItems, serverItems);
+                    
+                    dispatch({ type: 'SET_CART', payload: { items: finalItems } });
+                    
+                    // যদি মার্জ করার ফলে নতুন কিছু তৈরি হয়, তা সার্ভারে আপডেট করে দেওয়া
+                    if (JSON.stringify(finalItems) !== JSON.stringify(serverItems)) {
+                        syncToDatabase(finalItems);
+                    }
+                } else {
+                    // সার্ভার এরর হলে লোকালটাই দেখাও
+                    dispatch({ type: 'SET_CART', payload: { items: localItems } });
+                }
+            } catch (e) {
+                dispatch({ type: 'SET_CART', payload: { items: localItems } });
             }
+        } else {
+            // লগইন নেই, শুধু লোকাল
+            dispatch({ type: 'SET_CART', payload: { items: localItems } });
         }
         setIsInitialized(true);
     };
 
     initializeCart();
-  }, [fetchFromDatabase]);
+  }, [syncToDatabase]); // Only dependency needed for initial load logic extraction
 
-  // ৪. রিয়েল-টাইম লিসেনার (Pusher)
+  // ৩. রিয়েল-টাইম লিসেনার
   useEffect(() => {
       const token = localStorage.getItem('token');
       if (!token || !isInitialized) return;
-
       const userId = getUserIdFromToken(token);
       if (!userId) return;
 
@@ -193,35 +218,31 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       });
 
       const channel = pusher.subscribe(`user-${userId}`);
-
       channel.bind('cart-updated', (data: any) => {
-          // যদি আমি নিজে সিঙ্ক করছি, তবে ইভেন্ট ইগনোর করব (ডুপ্লিকেট রেন্ডার এড়াতে)
           if (!isSyncing) {
-              console.log("Cart updated from another device!");
               dispatch({ type: 'SET_CART', payload: { items: data.items } });
-              localStorage.setItem(CART_STORAGE_KEY, JSON.stringify({ items: data.items }));
           }
       });
 
-      return () => {
-          pusher.unsubscribe(`user-${userId}`);
-      };
+      return () => { pusher.unsubscribe(`user-${userId}`); };
   }, [isInitialized, isSyncing]);
 
-  // ৫. স্টেট পরিবর্তন হলে সেভ করা
+  // ৪. স্টেট সেভ করা (Debounced)
   useEffect(() => {
     if (isInitialized) {
-        // লোকাল আপডেট
         localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(state));
         
-        // সার্ভার আপডেট (যদি লগইন থাকে এবং এটা সার্ভার থেকে আসা আপডেট না হয়)
         const token = localStorage.getItem('token');
         if (token && !isSyncing) {
-             // ডিবাউন্স করার জন্য টাইমআউট ব্যবহার করা ভালো, কিন্তু সিম্পল রাখার জন্য ডাইরেক্ট দিচ্ছি
-             syncToDatabase(state.items);
+            // ★ Debounce Logic (২ সেকেন্ড অপেক্ষা করবে)
+            if (timeoutRef.current) clearTimeout(timeoutRef.current);
+            
+            timeoutRef.current = setTimeout(() => {
+                syncToDatabase(state.items);
+            }, 2000);
         }
     }
-  }, [state, isInitialized]); // syncToDatabase ডিপেন্ডেন্সি থেকে সরানো হয়েছে লুপ এড়াতে
+  }, [state, isInitialized, syncToDatabase]); // isSyncing removed to avoid loop, logic handled inside
 
   const addItem = (product: Product, quantity: number = 1) => {
     dispatch({ type: 'ADD_ITEM', payload: { product, quantity } });
