@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { clientPromise } from '@/lib/mongodb';
 import { ObjectId } from 'mongodb';
 import jwt from 'jsonwebtoken';
-import { pusherServer } from '@/lib/pusher'; // Pusher ইমপোর্ট
+import { pusherServer } from '@/lib/pusher';
 
 const DB_NAME = 'BumbasKitchenDB';
 const COLLECTION_NAME = 'users';
@@ -50,14 +50,19 @@ export async function POST(request: NextRequest) {
     const client = await clientPromise;
     const db = client.db(DB_NAME);
 
-    // ১. ডাটাবেস আপডেট
+    // ১. ডাটাবেস আপডেট (Timestamp সহ)
     await db.collection(COLLECTION_NAME).updateOne(
         { _id: new ObjectId(userId) },
-        { $set: { cart: items } }
+        { 
+            $set: { 
+                cart: items,
+                cartUpdatedAt: new Date(), // ★ সময় সেভ করা হচ্ছে
+                abandonedCartNotified: false // ★ নোটিফিকেশন ফ্ল্যাগ রিসেট
+            } 
+        }
     );
 
-    // ২. Pusher ট্রিগার (রিয়েল-টাইম আপডেটের জন্য)
-    // চ্যানেল নাম হবে: user-<userId>
+    // ২. Pusher ট্রিগার
     await pusherServer.trigger(`user-${userId}`, 'cart-updated', {
         items: items
     });
