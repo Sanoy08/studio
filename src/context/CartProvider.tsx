@@ -26,9 +26,9 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
       const { product, quantity } = action.payload;
       const existingItem = state.items.find((item) => item.id === product.id);
       
-      // স্টক চেক (Optional)
-      const currentQty = existingItem ? existingItem.quantity : 0;
       const maxStock = product.stock || 100; 
+      const currentQty = existingItem ? existingItem.quantity : 0;
+
       if (currentQty + quantity > maxStock) {
           toast.error(`Only ${maxStock} items available.`);
           return state;
@@ -103,7 +103,9 @@ function getUserIdFromToken(token: string) {
 export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [state, dispatch] = useReducer(cartReducer, initialState);
   const [isInitialized, setIsInitialized] = useState(false);
-  const [isDirty, setIsDirty] = useState(false); // চেঞ্জ ট্র্যাক করার জন্য
+  
+  // ★ এই ফ্ল্যাগটি আসল ম্যাজিক করবে। এটি ট্র্যাক করবে ইউজার নিজে কিছু চেঞ্জ করেছে কি না।
+  const [isDirty, setIsDirty] = useState(false); 
   const [isSyncing, setIsSyncing] = useState(false);
 
   // ১. ডাটাবেসে সিঙ্ক করার ফাংশন
@@ -122,7 +124,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
               body: JSON.stringify({ items })
           });
           console.log("Cart synced to database.");
-          setIsDirty(false); // সিঙ্ক সফল হলে ডার্টি ফ্ল্যাগ বন্ধ
+          setIsDirty(false); // ★ সিঙ্ক হয়ে গেলে ডার্টি ফ্ল্যাগ বন্ধ করে দেব
       } catch (error) {
           console.error("Failed to sync cart", error);
       } finally {
@@ -130,23 +132,21 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       }
   }, []);
 
-  // ২. ইনিশিয়াল লোড (Best Logic for preventing doubling)
+  // ২. ইনিশিয়াল লোড (সার্ভার থেকে ডেটা আনা)
   useEffect(() => {
     const initializeCart = async () => {
-        // প্রথমে লোকাল স্টোরেজ থেকে লোড করি (ফাস্ট রেন্ডারের জন্য)
-        const storedCart = localStorage.getItem(CART_STORAGE_KEY);
+        const token = localStorage.getItem('token');
+        
+        // ডিফল্টভাবে লোকাল কার্ট লোড করার চেষ্টা
         let localItems: CartItem[] = [];
+        const storedCart = localStorage.getItem(CART_STORAGE_KEY);
         if (storedCart) {
             try {
                 const parsed = JSON.parse(storedCart);
-                if (parsed.items) {
-                    localItems = parsed.items;
-                    dispatch({ type: 'SET_CART', payload: { items: localItems } });
-                }
+                if (parsed.items) localItems = parsed.items;
             } catch (e) {}
         }
 
-        const token = localStorage.getItem('token');
         if (token) {
             try {
                 // সার্ভার থেকে লেটেস্ট কার্ট আনি
@@ -157,55 +157,50 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
                 
                 if (data.success) {
                     const serverItems = data.items || [];
-
-                    if (serverItems.length > 0) {
-                        // ★ FIX: যদি সার্ভারে ডেটা থাকে, তবে সেটাই ফাইনাল।
-                        // লোকাল ডেটা আর যোগ হবে না (এতেই ডাবলিং ফিক্স হবে)
-                        dispatch({ type: 'SET_CART', payload: { items: serverItems } });
-                        localStorage.setItem(CART_STORAGE_KEY, JSON.stringify({ items: serverItems }));
-                    } else if (localItems.length > 0) {
-                        // যদি সার্ভার খালি থাকে কিন্তু লোকালে ডেটা থাকে (Guest User Login scenario)
-                        // তবে লোকাল ডেটা সার্ভারে পাঠাবো
-                        syncToDatabase(localItems);
-                    }
+                    // ★ সার্ভারের ডেটাই ফাইনাল। এটি সেট করার সময় আমরা isDirty TRUE করব না।
+                    dispatch({ type: 'SET_CART', payload: { items: serverItems } });
+                    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify({ items: serverItems }));
+                } else {
+                    // সার্ভার ফেইল করলে লোকাল ডেটা সেট করি
+                    dispatch({ type: 'SET_CART', payload: { items: localItems } });
                 }
             } catch (e) {
                 console.error("Error fetching server cart:", e);
+                dispatch({ type: 'SET_CART', payload: { items: localItems } });
             }
+        } else {
+            // লগইন নেই, তাই লোকাল ডেটাই ফাইনাল
+            dispatch({ type: 'SET_CART', payload: { items: localItems } });
         }
         
         setIsInitialized(true);
     };
 
     initializeCart();
-  }, [syncToDatabase]);
+  }, []);
 
-  // ৩. স্টেট পরিবর্তন হলে Local Storage আপডেট এবং Dirty Flag অন করা
+  // ৩. স্টেট সেভ করা (Local Storage - Always, Server - Conditional)
   useEffect(() => {
     if (isInitialized) {
         localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(state));
-        
-        // যদি এটি সার্ভার থেকে আসা আপডেট না হয়, তবেই ডার্টি মার্ক করব
-        if (!isSyncing) {
-            setIsDirty(true); 
-        }
     }
-  }, [state, isInitialized, isSyncing]);
+  }, [state, isInitialized]);
 
   // ৪. পর্যায়ক্রমিক সিঙ্ক (Periodic Sync - 30 Seconds)
   useEffect(() => {
     const interval = setInterval(() => {
         const token = localStorage.getItem('token');
-        // যদি লগইন থাকে এবং নতুন চেঞ্জ (Dirty) থাকে, তবেই সেভ হবে
+        // ★ মূল ফিক্স: যদি ইউজার লগইন থাকে এবং সে নিজে কিছু পরিবর্তন করে থাকে (isDirty), তবেই সেভ হবে।
+        // যদি Device A তে কার্ট খালি থাকে এবং ইউজার কিছু না করে, তবে isDirty false থাকবে এবং সেভ হবে না।
         if (token && isDirty && !isSyncing) {
             syncToDatabase(state.items);
         }
-    }, 30000); // ৩০ সেকেন্ড = ৩০০০০ মিলিসেকেন্ড
+    }, 30000);
 
     return () => clearInterval(interval);
   }, [isDirty, isSyncing, state.items, syncToDatabase]);
 
-  // ৫. রিয়েল-টাইম লিসেনার (Pusher) - অন্য ডিভাইস আপডেট করলে পাওয়ার জন্য
+  // ৫. রিয়েল-টাইম লিসেনার (Pusher)
   useEffect(() => {
       const token = localStorage.getItem('token');
       if (!token || !isInitialized) return;
@@ -219,12 +214,12 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
       const channel = pusher.subscribe(`user-${userId}`);
       channel.bind('cart-updated', (data: any) => {
-          // যদি আমি নিজে সিঙ্ক করছি না, তখন অন্য ডিভাইসের আপডেট নিব
+          // অন্য ডিভাইস আপডেট করলে সেটা রিসিভ করা
           if (!isSyncing) {
               console.log("Cart updated from another device!");
               dispatch({ type: 'SET_CART', payload: { items: data.items } });
               localStorage.setItem(CART_STORAGE_KEY, JSON.stringify({ items: data.items }));
-              setIsDirty(false); // সার্ভার থেকে এসেছে, তাই ডার্টি নয়
+              setIsDirty(false); // সার্ভার থেকে এসেছে, তাই এটি ফ্রেশ ডেটা
           }
       });
 
@@ -232,24 +227,28 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   }, [isInitialized, isSyncing]);
 
 
-  // অ্যাকশন ফাংশনগুলো
+  // ★ অ্যাকশন ফাংশনগুলো (এখানেই isDirty = true করা হচ্ছে)
   const addItem = (product: Product, quantity: number = 1) => {
     dispatch({ type: 'ADD_ITEM', payload: { product, quantity } });
+    setIsDirty(true); // ইউজার চেঞ্জ করেছে
     toast.success(`Added "${product.name}" to cart`);
   };
 
   const removeItem = (id: string) => {
     dispatch({ type: 'REMOVE_ITEM', payload: { id } });
+    setIsDirty(true); // ইউজার চেঞ্জ করেছে
     toast.info("Item removed");
   };
 
   const updateQuantity = (id: string, quantity: number) => {
     dispatch({ type: 'UPDATE_QUANTITY', payload: { id, quantity } });
+    setIsDirty(true); // ইউজার চেঞ্জ করেছে
   };
 
   const clearCart = () => {
     dispatch({ type: 'CLEAR_CART' });
-    // কার্ট ক্লিয়ার করলে সাথে সাথে সার্ভারেও ক্লিয়ার করা ভালো
+    setIsDirty(true); // ইউজার চেঞ্জ করেছে
+    // কার্ট ক্লিয়ার করলে সাথে সাথে সার্ভারেও ক্লিয়ার করা ভালো (দেরি না করে)
     const token = localStorage.getItem('token');
     if (token) syncToDatabase([]); 
   };
