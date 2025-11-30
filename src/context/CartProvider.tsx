@@ -2,10 +2,9 @@
 
 'use client';
 
-import React, { createContext, useReducer, ReactNode, useEffect, useState, useCallback } from 'react';
+import React, { createContext, useReducer, ReactNode, useEffect, useState } from 'react';
 import type { CartItem, Product } from '@/lib/types';
 import { toast } from 'sonner';
-import { useAuth } from '@/hooks/use-auth'; // Auth Hook লাগবে
 
 const CART_STORAGE_KEY = 'bumbas-kitchen-cart';
 
@@ -35,34 +34,38 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
           ),
         };
       }
-      // Image Structure Normalize
-      let imgUrl = '';
-      if (product.images && product.images.length > 0) {
-          imgUrl = product.images[0].url;
-      }
-      
       const newItem: CartItem = {
         id: product.id,
         slug: product.slug,
         name: product.name,
         price: product.price,
-        image: { id: 'img', url: imgUrl, alt: product.name },
+        image: product.images && product.images.length > 0 ? product.images[0] : { id: 'default', url: '', alt: product.name },
         quantity: quantity,
       };
       return { ...state, items: [...state.items, newItem] };
     }
-    case 'REMOVE_ITEM':
-      return { ...state, items: state.items.filter((item) => item.id !== action.payload.id) };
-    case 'UPDATE_QUANTITY':
-       if (action.payload.quantity <= 0) {
-        return { ...state, items: state.items.filter((item) => item.id !== action.payload.id) };
+    case 'REMOVE_ITEM': {
+      return {
+        ...state,
+        items: state.items.filter((item) => item.id !== action.payload.id),
+      };
+    }
+    case 'UPDATE_QUANTITY': {
+      if (action.payload.quantity <= 0) {
+        return {
+          ...state,
+          items: state.items.filter((item) => item.id !== action.payload.id),
+        };
       }
       return {
         ...state,
         items: state.items.map((item) =>
-          item.id === action.payload.id ? { ...item, quantity: action.payload.quantity } : item
+          item.id === action.payload.id
+            ? { ...item, quantity: action.payload.quantity }
+            : item
         ),
       };
+    }
     case 'CLEAR_CART':
       return { ...state, items: [] };
     case 'SET_CART':
@@ -72,99 +75,63 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
   }
 };
 
-const initialState: CartState = { items: [] };
+const initialState: CartState = {
+  items: [],
+};
 
-export const CartContext = createContext<any>(undefined);
+export const CartContext = createContext<
+  | {
+      state: CartState;
+      addItem: (product: Product, quantity?: number) => void;
+      removeItem: (id: string) => void;
+      updateQuantity: (id: string, quantity: number) => void;
+      clearCart: () => void;
+      itemCount: number;
+      totalPrice: number;
+      isInitialized: boolean; // ★ নতুন প্রপার্টি
+    }
+  | undefined
+>(undefined);
 
 export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [state, dispatch] = useReducer(cartReducer, initialState);
-  const [isInitialized, setIsInitialized] = useState(false);
-  const { user } = useAuth(); // ইউজার আছে কি না দেখার জন্য
+  const [isInitialized, setIsInitialized] = useState(false); // ★ লোডিং স্টেট
 
-  // ১. কার্ট সিঙ্ক করার ফাংশন (ডাটাবেসে সেভ)
-  const syncCartToDB = useCallback(async (cartItems: CartItem[]) => {
-     const token = localStorage.getItem('token');
-     if (!token) return;
-     try {
-        await fetch('/api/user/cart', {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}` 
-            },
-            body: JSON.stringify({ items: cartItems })
-        });
-     } catch (error) {
-        console.error("Failed to sync cart", error);
-     }
+  // ১. মাউন্ট হওয়ার সময় লোকাল স্টোরেজ থেকে ডেটা লোড করা
+  useEffect(() => {
+    const storedCart = localStorage.getItem(CART_STORAGE_KEY);
+    if (storedCart) {
+      try {
+        const parsedCart = JSON.parse(storedCart);
+        if (parsedCart && Array.isArray(parsedCart.items)) {
+          dispatch({ type: 'SET_CART', payload: parsedCart });
+        }
+      } catch (error) {
+        console.error('Failed to load cart from localStorage:', error);
+        localStorage.removeItem(CART_STORAGE_KEY);
+      }
+    }
+    setIsInitialized(true); // ★ লোড শেষ হলে true হবে
   }, []);
 
-  // ২. ইনিশিয়াল লোড (লগইন থাকলে ডিবি থেকে, না থাকলে লোকাল থেকে)
+  // ২. যখনই কার্ট স্টেট পরিবর্তন হবে, তা লোকাল স্টোরেজে সেভ করা
   useEffect(() => {
-    const initializeCart = async () => {
-        const token = localStorage.getItem('token');
-        
-        // যদি লগইন থাকে, সার্ভার থেকে কার্ট আনো
-        if (user && token) {
-            try {
-                const res = await fetch('/api/user/cart', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                const data = await res.json();
-                
-                if (data.success) {
-                    dispatch({ type: 'SET_CART', payload: { items: data.items } });
-                    
-                    // যদি সার্ভার বলে কিছু আইটেম রিমুভ হয়েছে (Out of Stock)
-                    if (data.message && data.message.includes("removed")) {
-                        toast.warning("Some items were removed because they are out of stock.");
-                    }
-                }
-            } catch (error) {
-                console.error("DB Cart Load Error", error);
-            }
-        } else {
-            // গেস্ট ইউজার: লোকাল স্টোরেজ থেকে লোড করো
-            const storedCart = localStorage.getItem(CART_STORAGE_KEY);
-            if (storedCart) {
-                try {
-                    const parsedCart = JSON.parse(storedCart);
-                    if (parsedCart && Array.isArray(parsedCart.items)) {
-                        dispatch({ type: 'SET_CART', payload: parsedCart });
-                    }
-                } catch (e) { localStorage.removeItem(CART_STORAGE_KEY); }
-            }
-        }
-        setIsInitialized(true);
-    };
-
-    initializeCart();
-  }, [user]); // ইউজার পরিবর্তন হলে (লগইন/লগআউট) আবার রান হবে
-
-  // ৩. কার্ট পরিবর্তন হলে সেভ করা
-  useEffect(() => {
-    if (!isInitialized) return;
-
-    // লোকাল স্টোরেজে সবসময় সেভ রাখব (ব্যাকআপ হিসেবে)
-    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(state));
-
-    // যদি ইউজার লগইন থাকে, তবে ডাটাবেসেও আপডেট পাঠাব (Debounce করা ভালো, তবে সিম্পল রাখছি)
-    if (user) {
-        const timeoutId = setTimeout(() => {
-            syncCartToDB(state.items);
-        }, 500); // ৫০০ms ডিলে দিয়ে সেভ হবে যাতে নেটওয়ার্ক জ্যাম না হয়
-        return () => clearTimeout(timeoutId);
+    if (isInitialized) {
+        localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(state));
     }
-  }, [state, isInitialized, user, syncCartToDB]);
+  }, [state, isInitialized]);
 
   const addItem = (product: Product, quantity: number = 1) => {
     dispatch({ type: 'ADD_ITEM', payload: { product, quantity } });
-    toast.success(`Added "${product.name}"`);
+    toast.success(`Added "${product.name}" to cart`);
   };
 
   const removeItem = (id: string) => {
-    dispatch({ type: 'REMOVE_ITEM', payload: { id } });
-    toast.info("Item removed");
+    const itemToRemove = state.items.find((item) => item.id === id);
+    if (itemToRemove) {
+      dispatch({ type: 'REMOVE_ITEM', payload: { id } });
+      toast.info(`Removed "${itemToRemove.name}" from cart`);
+    }
   };
 
   const updateQuantity = (id: string, quantity: number) => {
@@ -176,10 +143,24 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const itemCount = state.items.reduce((count, item) => count + item.quantity, 0);
-  const totalPrice = state.items.reduce((total, item) => total + item.price * item.quantity, 0);
+  const totalPrice = state.items.reduce(
+    (total, item) => total + item.price * item.quantity,
+    0
+  );
 
   return (
-    <CartContext.Provider value={{ state, addItem, removeItem, updateQuantity, clearCart, itemCount, totalPrice, isInitialized }}>
+    <CartContext.Provider
+      value={{
+        state,
+        addItem,
+        removeItem,
+        updateQuantity,
+        clearCart,
+        itemCount,
+        totalPrice,
+        isInitialized, // ★ এক্সপোর্ট করা হলো
+      }}
+    >
       {children}
     </CartContext.Provider>
   );
