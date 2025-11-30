@@ -4,12 +4,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { clientPromise } from '@/lib/mongodb';
 import { ObjectId } from 'mongodb';
 import jwt from 'jsonwebtoken';
+import { pusherServer } from '@/lib/pusher'; // Pusher ইমপোর্ট
 
 const DB_NAME = 'BumbasKitchenDB';
 const COLLECTION_NAME = 'users';
 const JWT_SECRET = process.env.JWT_SECRET || 'default_secret';
 
-// হেল্পার: ইউজার আইডি বের করা
 async function getUserId(request: NextRequest) {
   const authHeader = request.headers.get('authorization');
   if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
@@ -19,10 +19,9 @@ async function getUserId(request: NextRequest) {
   } catch { return null; }
 }
 
-// ১. কার্ট পাওয়া (GET)
 export async function GET(request: NextRequest) {
   const userId = await getUserId(request);
-  if (!userId) return NextResponse.json({ items: [] }); // লগইন না থাকলে খালি
+  if (!userId) return NextResponse.json({ items: [] });
 
   try {
     const client = await clientPromise;
@@ -41,22 +40,27 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// ২. কার্ট সিঙ্ক/আপডেট করা (POST)
 export async function POST(request: NextRequest) {
   const userId = await getUserId(request);
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   try {
-    const { items } = await request.json(); // ফ্রন্টএন্ড থেকে লেটেস্ট কার্ট আসবে
+    const { items } = await request.json();
 
     const client = await clientPromise;
     const db = client.db(DB_NAME);
 
-    // ইউজারের কার্ট আপডেট করা
+    // ১. ডাটাবেস আপডেট
     await db.collection(COLLECTION_NAME).updateOne(
         { _id: new ObjectId(userId) },
         { $set: { cart: items } }
     );
+
+    // ২. Pusher ট্রিগার (রিয়েল-টাইম আপডেটের জন্য)
+    // চ্যানেল নাম হবে: user-<userId>
+    await pusherServer.trigger(`user-${userId}`, 'cart-updated', {
+        items: items
+    });
 
     return NextResponse.json({ success: true, message: 'Cart synced' });
   } catch (error: any) {
