@@ -24,7 +24,8 @@ export async function GET(request: NextRequest) {
     const usersCollection = db.collection('users');
 
     // --- লজিক ১: মেয়াদ শেষ (Expire) ---
-    const ninetyDaysAgo = new Date(Date.now() - 1 * 60 * 1000);
+    const ninetyDaysAgo = new Date();
+    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
 
     // যাদের ৯০ দিন হয়ে গেছে এবং কয়েন আছে
     const expiredUsers = await usersCollection.find({
@@ -50,7 +51,8 @@ export async function GET(request: NextRequest) {
     }
 
     // --- লজিক ২: ওয়ার্নিং (Warning) ---
-   const warningDate = new Date(Date.now() - 30 * 1000);
+    const warningDate = new Date();
+    warningDate.setDate(warningDate.getDate() - 83); // 90 - 7 = 83 দিন পার হয়েছে (মানে ৭ দিন বাকি)
 
     // যারা ৮৩ দিন আগে লেনদেন করেছে (অর্থাৎ ৯০ দিন হতে আর ৭ দিন বাকি)
     // এবং যাদের ব্যালেন্স আছে
