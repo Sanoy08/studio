@@ -2,13 +2,13 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Loader2, Save, Plus, Trash2, UtensilsCrossed } from 'lucide-react';
+import { Loader2, Save, Plus, Trash2, UtensilsCrossed, Wand2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ImageUpload } from '@/components/admin/ImageUpload';
 import { FloatingInput } from '@/components/ui/floating-input';
@@ -16,6 +16,7 @@ import { FloatingInput } from '@/components/ui/floating-input';
 export default function DailyMenuPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   
   const [name, setName] = useState("Special Veg Thali");
   const [price, setPrice] = useState("");
@@ -23,9 +24,10 @@ export default function DailyMenuPage() {
   const [inStock, setInStock] = useState(true);
   const [notifyUsers, setNotifyUsers] = useState(false);
   
-  // আইটেম লিস্ট ম্যানেজমেন্ট
   const [items, setItems] = useState<string[]>(["Rice", "Dal"]);
   const [newItem, setNewItem] = useState("");
+
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -42,7 +44,6 @@ export default function DailyMenuPage() {
                 setImageUrl(d.imageUrl);
                 setInStock(d.inStock);
                 
-                // ডেসক্রিপশন থেকে আইটেম লিস্ট বের করা
                 if (d.description) {
                     const extractedItems = d.description.split('\n')
                         .map((line: string) => line.replace(/^•\s*/, '').trim())
@@ -70,6 +71,116 @@ export default function DailyMenuPage() {
       setItems(items.filter((_, i) => i !== index));
   };
 
+  // ★★★ আপডেটেড অটোমেটিক ইমেজ জেনারেটর (১৫০০x১৫০০) ★★★
+  const generateAndUploadImage = async () => {
+    if (!canvasRef.current) return;
+    setIsGenerating(true);
+
+    try {
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        // ★ ১. ক্যানভাস সাইজ আপডেট (১৫০০x১৫০০) ★
+        const SCALE_FACTOR = 3; // আগের ৫০০ এর ৩ গুণ
+        canvas.width = 500 * SCALE_FACTOR; // 1500
+        canvas.height = 500 * SCALE_FACTOR; // 1500
+
+        // স্কেলিং অ্যাপ্লাই করা যাতে আগের কোঅর্ডিনেটগুলো ঠিক থাকে
+        ctx.scale(SCALE_FACTOR, SCALE_FACTOR);
+
+        const bgImage = new Image();
+        bgImage.src = '/daily.jpg'; 
+        bgImage.crossOrigin = "anonymous";
+
+        await new Promise((resolve, reject) => {
+            bgImage.onload = resolve;
+            bgImage.onerror = reject;
+        });
+
+        // ব্যাকগ্রাউন্ড ড্র করা (অরিজিনাল সাইজে, তাই ৫০০x৫০০ ই থাকবে লজিকালি)
+        ctx.drawImage(bgImage, 0, 0, 500, 500);
+
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+
+        // --- ২. তারিখ (Date) ---
+        const today = new Date();
+        const day = String(today.getDate()).padStart(2, '0');
+        const month = String(today.getMonth() + 1).padStart(2, '0');
+        const year = String(today.getFullYear()).slice(-2);
+        const dateText = `${day}/${month}/${year}`;
+
+        ctx.save();
+        ctx.translate(330, 123); 
+        ctx.rotate(-4.39 * Math.PI / 180); 
+        ctx.fillStyle = "#00355b"; 
+        ctx.font = "900 15px 'Montserrat', sans-serif"; 
+        ctx.fillText(dateText, 0, 0);
+        ctx.restore();
+
+
+        // --- ৩. মেনু আইটেম (Menu Items) ---
+        ctx.save();
+        ctx.translate(250, 320); 
+        ctx.fillStyle = "#ffffffff"; 
+        ctx.font = "500 24px 'Anek Bangla', sans-serif"; 
+
+        const lineHeight = 30;
+        const totalHeight = items.length * lineHeight;
+        let currentY = -(totalHeight / 2) + (lineHeight / 2);
+
+        const displayItems = items.slice(0, 6);
+
+        displayItems.forEach(item => {
+            ctx.fillText(item, 0, currentY); 
+            currentY += lineHeight;
+        });
+        ctx.restore();
+
+
+        // --- ৪. দাম (Price) ---
+        ctx.save();
+        ctx.translate(79, 231);
+        ctx.fillStyle = "#000000ff"; 
+        ctx.font = "italic bold 32px sans-serif"; 
+        ctx.fillText(`₹${price}`, 0, 0);
+        ctx.restore();
+
+        // ★ নিচের লোগো রিমুভ করা হয়েছে ★
+
+        // ৩. আপলোড প্রসেস
+        const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/webp', 0.9));
+        if (!blob) throw new Error("Canvas conversion failed");
+
+        const formData = new FormData();
+        formData.append('file', blob);
+        
+        const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME_DISHES || "dk1acdtja";
+        const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET_DISHES || "bumbas-kitchen-dishes";
+        formData.append('upload_preset', uploadPreset);
+
+        const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+            method: 'POST',
+            body: formData,
+        });
+
+        const data = await res.json();
+        if (data.secure_url) {
+            setImageUrl(data.secure_url);
+            toast.success("High-Quality Poster Generated! ✨");
+        } else {
+            throw new Error("Upload failed");
+        }
+
+    } catch (error) {
+        console.error(error);
+        toast.error("Failed to generate image.");
+    } finally {
+        setIsGenerating(false);
+    }
+  };
+
   const handleSave = async () => {
     setIsSaving(true);
     const token = localStorage.getItem('token');
@@ -84,7 +195,7 @@ export default function DailyMenuPage() {
             body: JSON.stringify({
                 name,
                 price,
-                items, // অ্যারে পাঠানো হচ্ছে
+                items, 
                 imageUrl,
                 inStock,
                 notifyUsers
@@ -94,7 +205,7 @@ export default function DailyMenuPage() {
         const data = await res.json();
         if (res.ok) {
             toast.success("Daily menu updated!");
-            setNotifyUsers(false); // রিসেট
+            setNotifyUsers(false); 
         } else {
             toast.error(data.error || "Failed to update");
         }
@@ -115,16 +226,31 @@ export default function DailyMenuPage() {
             </div>
             <div>
                 <h1 className="text-2xl font-bold font-headline">Daily Menu Manager</h1>
-                <p className="text-sm text-muted-foreground">Update today's special Thali quickly.</p>
+                <p className="text-sm text-muted-foreground">Create today's special menu poster automatically.</p>
             </div>
         </div>
 
         <Card className="border-0 shadow-md">
             <CardContent className="p-6 space-y-6">
                 
-                {/* Image Upload */}
-                <div className="space-y-2">
-                    <Label>Menu Image</Label>
+                <canvas ref={canvasRef} className="hidden" />
+
+                <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                        <Label>Menu Poster</Label>
+                        <Button 
+                            type="button" 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={generateAndUploadImage}
+                            disabled={isGenerating || !price}
+                            className="text-amber-600 border-amber-200 hover:bg-amber-50"
+                        >
+                            {isGenerating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Wand2 className="h-4 w-4 mr-2" />}
+                            Auto Generate Poster
+                        </Button>
+                    </div>
+                    
                     <ImageUpload 
                         value={imageUrl ? [imageUrl] : []}
                         onChange={(urls) => setImageUrl(urls[0] || '')}
@@ -138,9 +264,8 @@ export default function DailyMenuPage() {
                     <FloatingInput label="Price (₹)" type="number" value={price} onChange={(e) => setPrice(e.target.value)} />
                 </div>
 
-                {/* Item List Manager */}
                 <div className="space-y-3 bg-muted/30 p-4 rounded-xl border">
-                    <Label>Menu Items (What's included?)</Label>
+                    <Label>Menu Items (Used in Poster)</Label>
                     
                     <div className="flex gap-2">
                         <Input 
@@ -162,11 +287,9 @@ export default function DailyMenuPage() {
                                 </button>
                             </div>
                         ))}
-                        {items.length === 0 && <p className="text-xs text-muted-foreground italic">No items added yet.</p>}
                     </div>
                 </div>
 
-                {/* Controls */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="flex items-center justify-between border p-3 rounded-xl">
                         <div className="space-y-0.5">

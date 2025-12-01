@@ -15,7 +15,7 @@ import Autoplay from "embla-carousel-autoplay";
 import { formatPrice } from '@/lib/utils';
 import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants';
 import type { Product } from '@/lib/types';
-import { Clock, Utensils } from 'lucide-react';
+import { SpecialDishCard } from './SpecialDishCard';
 
 export type HeroSlide = {
   id: string;
@@ -70,13 +70,8 @@ export function HomeClient({ heroSlides, offers, bestsellers, allProducts = [] }
   const [current, setCurrent] = useState(0)
   const [count, setCount] = useState(0)
   
-  // ★★★ নতুন লজিক: ফ্ল্যাগ দিয়ে খোঁজা ★★★
-  const vegThali = allProducts.find(p => p.featured === false && p.category.name === 'Thali') 
-                || allProducts.find(p => p.name.toLowerCase().includes('thali'));
-  // নোট: আমাদের API-তে isDailySpecial ফিল্ডটি ক্লায়েন্ট সাইড টাইপে নাও থাকতে পারে, 
-  // তবে আমরা ক্যাটাগরি "Thali" দিয়ে সহজেই খুঁজে পেতে পারি যা আমরা API তে সেট করেছি।
-
-  const todayDate = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+  // ডেইলি স্পেশাল খুঁজে বের করা
+  const dailySpecial = allProducts.find(p => p.isDailySpecial);
 
   useEffect(() => {
     if (!api) return
@@ -84,19 +79,6 @@ export function HomeClient({ heroSlides, offers, bestsellers, allProducts = [] }
     setCurrent(api.selectedScrollSnap())
     api.on("select", () => setCurrent(api.selectedScrollSnap()))
   }, [api])
-
-  const renderDescriptionList = (description: string) => {
-      return description.split('\n').map((line, index) => {
-          const cleanLine = line.trim().replace(/^[-•]\s*/, '');
-          if (!cleanLine) return null;
-          return (
-            <li key={index} className="flex items-start gap-2">
-                <span className="text-primary mt-1.5 text-xs">●</span>
-                <span>{cleanLine}</span>
-            </li>
-          );
-      });
-  };
 
   return (
     <div className="bg-background pb-20 md:pb-0">
@@ -122,7 +104,6 @@ export function HomeClient({ heroSlides, offers, bestsellers, allProducts = [] }
                         priority
                         unoptimized={true}
                       />
-                      {/* Slight overlay for better text visibility if needed */}
                       <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent"></div>
                     </Link>
                   </CarouselItem>
@@ -189,52 +170,53 @@ export function HomeClient({ heroSlides, offers, bestsellers, allProducts = [] }
         </section>
       )}
 
-      {/* ★★★ VEG THALI SECTION (UPDATED STYLE - CLEAN & BRIGHT) ★★★ */}
-      {vegThali && (
-        <section className="py-16 md:py-24 bg-amber-50/80">
+      {/* ★★★ DAILY SPECIAL SECTION (SIMPLIFIED) ★★★ */}
+      {dailySpecial && (
+        <section className="py-16 bg-amber-50/50">
             <div className="container">
-                <div className="max-w-4xl mx-auto bg-white rounded-3xl shadow-xl overflow-hidden flex flex-col md:flex-row border border-amber-100">
+                {/* হেডার */}
+                <div className="text-center mb-8">
+                    <h2 className="text-3xl md:text-4xl font-bold font-headline text-primary">Today's Special</h2>
+                    <p className="text-muted-foreground mt-2">Freshly prepared just for you.</p>
+                </div>
+
+                {/* মেইন কার্ড */}
+                <div className="max-w-md mx-auto bg-white p-4 rounded-3xl shadow-xl border border-amber-100 hover:shadow-2xl transition-shadow duration-300">
                     
-                    {/* Image Side (If available, otherwise show pattern) */}
-                    <div className="md:w-2/5 relative h-64 md:h-auto bg-amber-100 min-h-[300px]">
-                         <Image 
-                            src={vegThali.images && vegThali.images.length > 0 ? vegThali.images[0].url : PLACEHOLDER_IMAGE_URL}
-                            alt={vegThali.name}
-                            fill
-                            className="object-cover"
-                            unoptimized={true}
-                         />
+                    {/* ১. ইমেজ (বা জেনারেটেড কার্ড) */}
+                    <div className="relative aspect-square w-full rounded-2xl overflow-hidden shadow-sm bg-muted">
+                         {dailySpecial.images && dailySpecial.images.length > 0 && dailySpecial.images[0].url ? (
+                            <Image 
+                                src={dailySpecial.images[0].url}
+                                alt={dailySpecial.name}
+                                fill
+                                className="object-cover"
+                                unoptimized={true}
+                             />
+                         ) : (
+                             <SpecialDishCard 
+                                name={dailySpecial.name} 
+                                description={dailySpecial.description} 
+                                price={dailySpecial.price} 
+                             />
+                         )}
                     </div>
 
-                    {/* Content Side */}
-                    <div className="md:w-3/5 p-8 md:p-12 flex flex-col justify-center text-left">
-                        <div className="inline-flex items-center gap-2 text-amber-600 text-sm font-bold uppercase tracking-wider mb-2">
-                            <Utensils className="h-4 w-4" /> Today's Special
-                        </div>
-                        
-                        <h2 className="text-3xl md:text-4xl font-bold mb-2 font-headline text-gray-900">
-                            {vegThali.name}
-                        </h2>
-                        
-                        <div className="flex items-center gap-2 text-muted-foreground mb-6 text-sm">
-                            <Clock className="h-4 w-4" />
-                            <span>Menu for {todayDate}</span>
-                        </div>
-                        
-                        <div className="bg-gray-50 p-6 rounded-xl border border-gray-100 mb-8">
-                            <ul className="space-y-2 text-base md:text-lg text-gray-700 font-medium">
-                                {renderDescriptionList(vegThali.description)}
-                            </ul>
-                        </div>
-                        
-                        <div className="flex items-center justify-between gap-4 mt-auto pt-2">
-                            <p className="text-3xl md:text-4xl font-bold text-primary">
-                                {formatPrice(vegThali.price)}
-                            </p>
-                            <Button asChild size="lg" className="rounded-full px-8 text-lg shadow-lg shadow-primary/20 hover:scale-105 transition-transform">
-                                <Link href={`/menus/${vegThali.slug}`}>Order Now</Link>
-                            </Button>
-                        </div>
+                    {/* ২. বাটন (কোনো ওভারল্যাপ নেই, নিচে আলাদা) */}
+                    <div className="mt-6 px-2 pb-2">
+                        {/* যদি সাধারণ ছবি হয়, তবে নাম ও দাম দেখানো ভালো (অপশনাল, আপনি চাইলে এটিও বাদ দিতে পারেন) */}
+                        {dailySpecial.images && dailySpecial.images.length > 0 && (
+                            <div className="mb-4 text-center">
+                                <h3 className="text-xl font-bold text-gray-800">{dailySpecial.name}</h3>
+                                <p className="text-2xl font-extrabold text-primary mt-1">{formatPrice(dailySpecial.price)}</p>
+                            </div>
+                        )}
+
+                        <Button asChild size="lg" className="w-full rounded-xl text-lg font-bold h-14 shadow-md shadow-primary/20 hover:scale-[1.02] transition-transform">
+                            <Link href={`/menus/${dailySpecial.slug}`}>
+                                Order Now
+                            </Link>
+                        </Button>
                     </div>
                 </div>
             </div>

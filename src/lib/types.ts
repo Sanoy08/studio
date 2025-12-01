@@ -1,9 +1,14 @@
-// sanoy08/studio/studio-aa52e24a282afd08f6d0f650cbc4061b0fabac53/src/lib/types.ts
+// src/lib/types.ts
 
 export type Image = {
   id: string;
   url: string;
   alt: string;
+};
+
+export type Category = {
+  id: string;
+  name: string;
 };
 
 export type Review = {
@@ -14,25 +19,20 @@ export type Review = {
   date: string;
 };
 
-export type Category = {
+export type Product = {
   id: string;
   name: string;
-};
-
-// UPDATED: Reflects MongoDB structure (camelCase conversion for JS/TS naming convention)
-export type Product = {
-  id: string; // Will use MongoDB's _id as string
-  name: string; // Maps to 'Name'
   slug: string;
   description: string;
-  price: number; // Maps to 'Price'
-  category: Category; // Mapped from 'Category' string for uniformity
-  images: Image[]; // Mapped from 'ImageURLs' array of strings
+  price: number;
+  category: Category;
+  images: Image[];
   rating: number;
   reviewCount: number;
-  stock: number; // Mapped from 'InStock' (needs conversion logic)
+  stock: number;
   reviews: Review[];
-  featured: boolean; // Mapped from 'Bestseller'
+  featured: boolean;
+  isDailySpecial?: boolean; // ★ নতুন ফিল্ড
   createdAt?: string;
 };
 
