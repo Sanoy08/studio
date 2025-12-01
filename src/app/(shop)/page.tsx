@@ -51,7 +51,7 @@ async function getHomePageData() {
     const featured = allProducts.filter((p: any) => p.featured);
     const bestsellers = featured.length > 0 ? featured : allProducts.slice(0, 8);
 
-    return { heroSlides, offers, bestsellers };
+    return { heroSlides, offers, bestsellers, allProducts };
 
   } catch (error) {
     console.error("Error fetching homepage data:", error);
@@ -67,6 +67,7 @@ export default async function HomePage() {
       heroSlides={data.heroSlides} 
       offers={data.offers} 
       bestsellers={data.bestsellers as Product[]} 
+      allProducts={data.allProducts as Product[]} // ★ নতুন প্রপ্স
     />
   );
 }

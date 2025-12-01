@@ -27,6 +27,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { cn } from '@/lib/utils';
 import { Logo } from '@/components/shared/Logo';
 import { Loader2 } from 'lucide-react';
+import { CalendarDays } from 'lucide-react';
 
 const adminNavLinks = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
@@ -34,6 +35,7 @@ const adminNavLinks = [
   { href: '/admin/products', label: 'Menu Management', icon: Utensils },
   { href: '/admin/coupons', label: 'Coupons', icon: TicketPercent },
   { href: '/admin/users', label: 'Customers', icon: Users },
+  { href: '/admin/daily-menu', label: 'Daily Menu', icon: CalendarDays }, 
   { href: '/admin/special-dates', label: 'Events Calendar', icon: Calendar },
   { href: '/admin/hero-slides', label: 'Hero Section', icon: ImageIcon },
   { href: '/admin/offers', label: 'Offers Section', icon: Gift },

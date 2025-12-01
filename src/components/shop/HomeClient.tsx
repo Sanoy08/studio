@@ -15,8 +15,8 @@ import Autoplay from "embla-carousel-autoplay";
 import { formatPrice } from '@/lib/utils';
 import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants';
 import type { Product } from '@/lib/types';
+import { Clock, Utensils } from 'lucide-react';
 
-// টাইপ ডেফিনিশন
 export type HeroSlide = {
   id: string;
   imageUrl: string;
@@ -35,6 +35,7 @@ type HomeClientProps = {
   heroSlides: HeroSlide[];
   offers: Offer[];
   bestsellers: Product[];
+  allProducts?: Product[]; 
 };
 
 const testimonials = [
@@ -64,10 +65,18 @@ const testimonials = [
     }
 ];
 
-export function HomeClient({ heroSlides, offers, bestsellers }: HomeClientProps) {
+export function HomeClient({ heroSlides, offers, bestsellers, allProducts = [] }: HomeClientProps) {
   const [api, setApi] = useState<CarouselApi>()
   const [current, setCurrent] = useState(0)
   const [count, setCount] = useState(0)
+  
+  // ★★★ নতুন লজিক: ফ্ল্যাগ দিয়ে খোঁজা ★★★
+  const vegThali = allProducts.find(p => p.featured === false && p.category.name === 'Thali') 
+                || allProducts.find(p => p.name.toLowerCase().includes('thali'));
+  // নোট: আমাদের API-তে isDailySpecial ফিল্ডটি ক্লায়েন্ট সাইড টাইপে নাও থাকতে পারে, 
+  // তবে আমরা ক্যাটাগরি "Thali" দিয়ে সহজেই খুঁজে পেতে পারি যা আমরা API তে সেট করেছি।
+
+  const todayDate = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
 
   useEffect(() => {
     if (!api) return
@@ -75,6 +84,19 @@ export function HomeClient({ heroSlides, offers, bestsellers }: HomeClientProps)
     setCurrent(api.selectedScrollSnap())
     api.on("select", () => setCurrent(api.selectedScrollSnap()))
   }, [api])
+
+  const renderDescriptionList = (description: string) => {
+      return description.split('\n').map((line, index) => {
+          const cleanLine = line.trim().replace(/^[-•]\s*/, '');
+          if (!cleanLine) return null;
+          return (
+            <li key={index} className="flex items-start gap-2">
+                <span className="text-primary mt-1.5 text-xs">●</span>
+                <span>{cleanLine}</span>
+            </li>
+          );
+      });
+  };
 
   return (
     <div className="bg-background pb-20 md:pb-0">
@@ -98,9 +120,10 @@ export function HomeClient({ heroSlides, offers, bestsellers }: HomeClientProps)
                         fill
                         className="object-cover"
                         priority
+                        unoptimized={true}
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent flex flex-col justify-end p-8 pb-20 md:pb-8">
-                      </div>
+                      {/* Slight overlay for better text visibility if needed */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent"></div>
                     </Link>
                   </CarouselItem>
                 ))}
@@ -113,7 +136,7 @@ export function HomeClient({ heroSlides, offers, bestsellers }: HomeClientProps)
                 <button
                   key={index}
                   onClick={() => api?.scrollTo(index)}
-                  className={`h-2 rounded-full transition-all shadow-sm ${current === index ? 'w-6 bg-primary' : 'w-2 bg-white/70'}`}
+                  className={`h-2 rounded-full transition-all shadow-sm ${current === index ? 'w-6 bg-primary' : 'w-2 bg-white/80'}`}
                 />
               ))}
             </div>
@@ -131,26 +154,27 @@ export function HomeClient({ heroSlides, offers, bestsellers }: HomeClientProps)
 
       {/* Upcoming Special Offers */}
       {offers.length > 0 && (
-        <section className="py-12 md:py-24">
+        <section className="py-12 md:py-24 bg-secondary/30">
           <div className="container">
-            <h2 className="text-3xl font-bold text-center mb-12 font-headline">Upcoming Special Offers</h2>
+            <h2 className="text-3xl font-bold text-center mb-12 font-headline text-primary">Upcoming Special Offers</h2>
               <Carousel opts={{ align: "start", loop: true }} className="w-full">
                 <CarouselContent>
                   {offers.map((offer) => (
-                    <CarouselItem key={offer.id} className="md:basis-1/2 lg:basis-1/3">
+                    <CarouselItem key={offer.id} className="md:basis-1/2 lg:basis-1/3 pl-4">
                       <div className="p-1 h-full">
-                        <Card className="overflow-hidden group h-full border-none shadow-md">
+                        <Card className="overflow-hidden group h-full border-none shadow-lg rounded-2xl bg-card">
                           <CardContent className="p-0 relative aspect-[4/3]">
                             <Image
                               src={offer.imageUrl || PLACEHOLDER_IMAGE_URL}
                               alt={offer.title}
                               fill
-                              className="object-cover transition-transform duration-300 group-hover:scale-105"
+                              className="object-cover transition-transform duration-500 group-hover:scale-110"
+                              unoptimized={true}
                             />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-6 text-white">
-                                <h3 className="text-2xl font-bold mb-1">{offer.title}</h3>
-                                <p className="text-sm text-gray-200 line-clamp-2 mb-2">{offer.description}</p>
-                                <p className="text-xl font-bold text-accent">{formatPrice(offer.price)}</p>
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent flex flex-col justify-end p-6 text-white">
+                                <h3 className="text-2xl font-bold mb-1 text-yellow-400">{offer.title}</h3>
+                                <p className="text-sm text-gray-200 line-clamp-2 mb-3 opacity-90">{offer.description}</p>
+                                <p className="text-3xl font-bold text-white">{formatPrice(offer.price)}</p>
                             </div>
                           </CardContent>
                         </Card>
@@ -158,39 +182,69 @@ export function HomeClient({ heroSlides, offers, bestsellers }: HomeClientProps)
                     </CarouselItem>
                   ))}
                 </CarouselContent>
-                <CarouselPrevious className="left-2" />
-                <CarouselNext className="right-2" />
+                <CarouselPrevious className="left-2 bg-white/80 text-black hover:bg-white" />
+                <CarouselNext className="right-2 bg-white/80 text-black hover:bg-white" />
               </Carousel>
           </div>
         </section>
       )}
 
-      {/* Veg Thali Menu */}
-      <section className="py-12 md:py-24 bg-muted/30">
-        <div className="container text-center">
-          <h2 className="text-3xl font-bold mb-2 font-headline">Veg Thali Menu</h2>
-          <p className="text-muted-foreground mb-8">Today's Special</p>
-          <div className="max-w-md mx-auto text-left bg-background p-8 rounded-xl shadow-lg border border-border">
-            <ul className="space-y-3 list-disc list-inside text-lg">
-              <li>ভাত, ডাল (Rice, Dal)</li>
-              <li>পাঁচমিশালি সবজি (Mixed Vegetables)</li>
-              <li>বেগুন ভাজা (Fried Eggplant)</li>
-              <li>আমের চাটনি (Mango Chutney)</li>
-              <li>মিষ্টি দই (Sweet Yogurt)</li>
-              <li>রসগোল্লা (Rasgulla)</li>
-            </ul>
-            <p className="text-3xl font-bold text-accent mt-8 text-center">₹250</p>
-            <Button asChild size="lg" className="mt-6 w-full rounded-full">
-              <Link href="/menus">View Details</Link>
-            </Button>
-          </div>
-        </div>
-      </section>
+      {/* ★★★ VEG THALI SECTION (UPDATED STYLE - CLEAN & BRIGHT) ★★★ */}
+      {vegThali && (
+        <section className="py-16 md:py-24 bg-amber-50/80">
+            <div className="container">
+                <div className="max-w-4xl mx-auto bg-white rounded-3xl shadow-xl overflow-hidden flex flex-col md:flex-row border border-amber-100">
+                    
+                    {/* Image Side (If available, otherwise show pattern) */}
+                    <div className="md:w-2/5 relative h-64 md:h-auto bg-amber-100 min-h-[300px]">
+                         <Image 
+                            src={vegThali.images && vegThali.images.length > 0 ? vegThali.images[0].url : PLACEHOLDER_IMAGE_URL}
+                            alt={vegThali.name}
+                            fill
+                            className="object-cover"
+                            unoptimized={true}
+                         />
+                    </div>
+
+                    {/* Content Side */}
+                    <div className="md:w-3/5 p-8 md:p-12 flex flex-col justify-center text-left">
+                        <div className="inline-flex items-center gap-2 text-amber-600 text-sm font-bold uppercase tracking-wider mb-2">
+                            <Utensils className="h-4 w-4" /> Today's Special
+                        </div>
+                        
+                        <h2 className="text-3xl md:text-4xl font-bold mb-2 font-headline text-gray-900">
+                            {vegThali.name}
+                        </h2>
+                        
+                        <div className="flex items-center gap-2 text-muted-foreground mb-6 text-sm">
+                            <Clock className="h-4 w-4" />
+                            <span>Menu for {todayDate}</span>
+                        </div>
+                        
+                        <div className="bg-gray-50 p-6 rounded-xl border border-gray-100 mb-8">
+                            <ul className="space-y-2 text-base md:text-lg text-gray-700 font-medium">
+                                {renderDescriptionList(vegThali.description)}
+                            </ul>
+                        </div>
+                        
+                        <div className="flex items-center justify-between gap-4 mt-auto pt-2">
+                            <p className="text-3xl md:text-4xl font-bold text-primary">
+                                {formatPrice(vegThali.price)}
+                            </p>
+                            <Button asChild size="lg" className="rounded-full px-8 text-lg shadow-lg shadow-primary/20 hover:scale-105 transition-transform">
+                                <Link href={`/menus/${vegThali.slug}`}>Order Now</Link>
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+      )}
 
       {/* Explore Our Bestsellers */}
-       <section className="py-16 md:py-24">
+       <section className="py-16 md:py-24 bg-background">
         <div className="container">
-          <h2 className="text-3xl font-bold text-center mb-12 font-headline">Explore Our Bestsellers</h2>
+          <h2 className="text-3xl font-bold text-center mb-12 font-headline text-primary">Explore Our Bestsellers</h2>
           {bestsellers.length > 0 ? (
             <Carousel
               opts={{ align: "start", loop: true }}
@@ -198,7 +252,7 @@ export function HomeClient({ heroSlides, offers, bestsellers }: HomeClientProps)
             >
               <CarouselContent>
                 {bestsellers.map((product) => (
-                  <CarouselItem key={product.id} className="basis-full sm:basis-1/2 md:basis-1/3 lg:basis-1/4">
+                  <CarouselItem key={product.id} className="basis-full sm:basis-1/2 md:basis-1/3 lg:basis-1/4 pl-4">
                     <div className="p-1 h-full">
                       <ProductCard product={product} />
                     </div>
@@ -217,7 +271,7 @@ export function HomeClient({ heroSlides, offers, bestsellers }: HomeClientProps)
       {/* What Our Customers Say */}
       <section className="py-12 md:py-24 bg-primary/5">
         <div className="container">
-          <h2 className="text-3xl font-bold text-center mb-12 font-headline">What Our Customers Say</h2>
+          <h2 className="text-3xl font-bold text-center mb-12 font-headline text-primary">What Our Customers Say</h2>
             <Carousel
                 plugins={[Autoplay({ delay: 4000 })]}
                 opts={{ align: "start", loop: true }}

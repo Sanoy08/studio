@@ -6,10 +6,8 @@ import './globals.css';
 import { CartProvider } from '@/context/CartProvider';
 import { Toaster } from '@/components/ui/sonner';
 import { cn } from '@/lib/utils';
-import { RealtimeMenuUpdater } from '@/components/providers/RealtimeMenuUpdater'; 
-
-// ★★★ নোট: এখান থেকে Header এবং Footer ইমপোর্ট এবং ব্যবহার সরিয়ে ফেলা হয়েছে ★★★
-// কারণ এগুলো src/app/(shop)/layout.tsx এ অলরেডি আছে।
+import { RealtimeMenuUpdater } from '@/components/providers/RealtimeMenuUpdater';
+import { ServiceWorkerRegister } from '@/components/providers/ServiceWorkerRegister'; // সার্ভিস ওয়ার্কার (ক্যাশিং)
 
 const poppins = Poppins({
   subsets: ['latin'],
@@ -51,9 +49,13 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={cn('font-sans antialiased', poppins.variable, amarante.variable)}>
           <CartProvider>
+            {/* ১. রিয়েল-টাইম মেনু আপডেটার */}
             <RealtimeMenuUpdater />
             
-            {/* শুধু চিলড্রেন রেন্ডার হবে, হেডার/ফুটার স্পেসিফিক লেআউট (যেমন shop) থেকে আসবে */}
+            {/* ২. ইমেজ ক্যাশিং এর জন্য সার্ভিস ওয়ার্কার */}
+            <ServiceWorkerRegister />
+            
+            {/* ৩. মেইন কন্টেন্ট (হেডার/ফুটার ছাড়া) */}
             {children}
             
             <Toaster />
