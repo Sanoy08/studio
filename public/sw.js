@@ -1,6 +1,7 @@
 // public/sw.js
 
-const CACHE_NAME = 'bumbas-kitchen-images-v1';
+const CACHE_NAME = 'bumbas-kitchen-static-v1';
+const IMAGE_CACHE_NAME = 'bumbas-kitchen-images-v1';
 
 // ১. ইনস্টল ইভেন্ট
 self.addEventListener('install', (event) => {
@@ -8,64 +9,54 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 
-// ২. অ্যাক্টিভেট ইভেন্ট (পুরনো ক্যাশ ক্লিন করা)
+// ২. অ্যাক্টিভেট ইভেন্ট
 self.addEventListener('activate', (event) => {
   console.log('Service Worker Activated');
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
+          // পুরনো ক্যাশ ক্লিন করা (যদি ভার্সন বদলায়)
+          if (cacheName !== CACHE_NAME && cacheName !== IMAGE_CACHE_NAME) {
             return caches.delete(cacheName);
           }
         })
       );
-    }).then(() => self.clients.claim())
+    })
   );
+  return self.clients.claim();
 });
 
-// ৩. ফেচ ইভেন্ট (ইমেজ ক্যাশ করা) - এটিই আসল কাজ করবে
+// ৩. ★★★ ইমেজ ক্যাশিং লজিক (Network First, then Cache) ★★★
 self.addEventListener('fetch', (event) => {
-  const request = event.request;
+  const url = new URL(event.request.url);
 
-  // শুধুমাত্র GET রিকোয়েস্ট এবং ইমেজ ফাইল চেক করা হচ্ছে
-  // বিশেষ করে Cloudinary-র ছবিগুলো ক্যাশ করা হবে
-  if (
-    request.method === 'GET' && 
-    (request.destination === 'image' || request.url.includes('res.cloudinary.com'))
-  ) {
+  // শুধুমাত্র Cloudinary ইমেজগুলোর জন্য
+  if (url.hostname === 'res.cloudinary.com' && event.request.method === 'GET') {
     event.respondWith(
-      caches.match(request).then((cachedResponse) => {
-        // যদি ক্যাশে থাকে, তবে সেখান থেকেই দাও (ব্যান্ডউইথ বাঁচবে)
-        if (cachedResponse) {
-          return cachedResponse;
-        }
-
-        // যদি না থাকে, ইন্টারনেট থেকে আনো এবং ক্যাশে সেভ করো
-        return fetch(request).then((networkResponse) => {
-          // রেসপন্স ভ্যালিড কি না চেক করা
-          if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'cors') {
-            return networkResponse;
+      caches.open(IMAGE_CACHE_NAME).then((cache) => {
+        return cache.match(event.request).then((cachedResponse) => {
+          // যদি ক্যাশে থাকে, তবে সেখান থেকেই দাও
+          if (cachedResponse) {
+            return cachedResponse;
           }
 
-          // রেসপন্স ক্লোন করে ক্যাশে রাখা
-          const responseToCache = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(request, responseToCache);
+          // না থাকলে নেটওয়ার্ক থেকে আনো এবং ক্যাশে সেভ করো
+          return fetch(event.request).then((networkResponse) => {
+            // রেসপন্স ক্লোন করতে হবে কারণ এটি একবারই পড়া যায়
+            cache.put(event.request, networkResponse.clone());
+            return networkResponse;
           });
-
-          return networkResponse;
         });
       })
     );
   }
 });
 
-// ৪. পুশ নোটিফিকেশন লজিক (আগের মতো)
+// ৪. পুশ নোটিফিকেশন লজিক (আগের মতোই থাকবে)
 self.addEventListener('push', function(event) {
   if (event.data) {
     const data = event.data.json();
-    
     const options = {
       body: data.body,
       icon: data.icon || '/icons/icon-192.png',
@@ -77,22 +68,15 @@ self.addEventListener('push', function(event) {
         primaryKey: '2',
         url: data.url || '/'
       },
-      actions: [
-        { action: 'explore', title: 'View Details' }
-      ]
+      actions: [{ action: 'explore', title: 'View Details' }]
     };
-
-    event.waitUntil(
-      self.registration.showNotification(data.title, options)
-    );
+    event.waitUntil(self.registration.showNotification(data.title, options));
   }
 });
 
 self.addEventListener('notificationclick', function(event) {
   event.notification.close();
   if (event.notification.data.url) {
-      event.waitUntil(
-        clients.openWindow(event.notification.data.url)
-      );
+      event.waitUntil(clients.openWindow(event.notification.data.url));
   }
 });
