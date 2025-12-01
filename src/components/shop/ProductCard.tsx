@@ -6,23 +6,37 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import type { Product } from '@/lib/types';
 import { formatPrice } from '@/lib/utils';
 import { Plus, Minus, ShoppingCart, Ban } from 'lucide-react';
 import { useCart } from '@/hooks/useCart';
 import { Badge } from '../ui/badge';
 import { differenceInDays } from 'date-fns';
 import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants';
+import type { Product, CartItem } from '@/lib/types'; // CartItem যোগ করুন
 
 type ProductCardProps = {
   product: Product;
 };
 
+// ★★★ নতুন হেল্পার ফাংশন: ক্লাউডিনারি ইমেজ অপ্টিমাইজেশন ★★★
+// এটি ছবির সাইজ ছোট করে লোডিং স্পিড বাড়াবে এবং ল্যাগ কমাবে
+const getOptimizedImageUrl = (url: string) => {
+  if (!url || !url.includes('res.cloudinary.com')) return url;
+  
+  // যদি ইতিমধ্যে অপ্টিমাইজ করা থাকে তবে স্কিপ করব
+  if (url.includes('/q_') || url.includes('/w_')) return url;
+  
+  // w_500: উইডথ ৫০০ পিক্সেল (কার্ডের জন্য যথেষ্ট, মোবাইলের জন্য পারফেক্ট)
+  // q_auto: অটোমেটিক কোয়ালিটি (চোখে পার্থক্য বোঝা যাবে না কিন্তু সাইজ কমবে)
+  // f_auto: অটোমেটিক ফরম্যাট (webp বা avif ব্যবহার করবে যা ফাস্ট লোড হয়)
+  return url.replace('/upload/', '/upload/w_500,q_auto,f_auto/');
+};
+
 export function ProductCard({ product }: ProductCardProps) {
   const { state, addItem, updateQuantity } = useCart();
-  const cartItem = state.items.find(item => item.id === product.id);
+// item: any এর বদলে item: CartItem ব্যবহার করুন
+const cartItem = state.items.find((item: CartItem) => item.id === product.id);
 
-  // স্টক চেক (আমাদের API তে InStock: false হলে stock: 0 হয়)
   const isOutOfStock = product.stock <= 0;
 
   const handleAdd = (e: React.MouseEvent) => {
@@ -51,15 +65,18 @@ export function ProductCard({ product }: ProductCardProps) {
 
   const isNew = product.createdAt && differenceInDays(new Date(), new Date(product.createdAt)) < 7;
 
-  const imageSrc = (product.images && product.images.length > 0 && product.images[0].url) 
+  // ★★★ অপ্টিমাইজ করা ইমেজ URL তৈরি ★★★
+  const rawImageSrc = (product.images && product.images.length > 0 && product.images[0].url) 
     ? product.images[0].url 
     : PLACEHOLDER_IMAGE_URL;
+
+  // এখানে আমাদের নতুন ফাংশন ব্যবহার করা হচ্ছে
+  const imageSrc = getOptimizedImageUrl(rawImageSrc);
 
   return (
     <Card className={`flex flex-col overflow-hidden h-full transition-shadow hover:shadow-lg bg-card group border-muted/60 ${isOutOfStock ? 'opacity-75 grayscale-[0.5]' : ''}`}>
       
       <Link href={`/menus/${product.slug}`} className="block aspect-square relative overflow-hidden">
-        {/* ব্যাজ লজিক: আউট অফ স্টক হলে লাল ব্যাজ, নাহলে নতুন হলে NEW ব্যাজ */}
         {isOutOfStock ? (
             <Badge className="absolute top-2 right-2 bg-destructive text-destructive-foreground z-10 shadow-sm pointer-events-none">
                 Out of Stock
@@ -71,15 +88,14 @@ export function ProductCard({ product }: ProductCardProps) {
         )}
         
         <Image
-          src={imageSrc}
+          src={imageSrc} // অপ্টিমাইজড ইমেজ সোর্স
           alt={product.name}
-          width={300}
-          height={300}
+          width={500} // কার্ডের জন্য ৫০০ পিক্সেল যথেষ্ট
+          height={500}
           className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500"
           sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
         />
         
-        {/* আউট অফ স্টক হলে ইমেজের ওপর একটি লেয়ার দেওয়া যেতে পারে (অপশনাল) */}
         {isOutOfStock && (
             <div className="absolute inset-0 bg-background/30 z-0" />
         )}
