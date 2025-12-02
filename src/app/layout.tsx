@@ -1,7 +1,7 @@
 // src/app/layout.tsx
 
 import type { Metadata, Viewport } from 'next';
-import { Poppins, Amarante } from 'next/font/google';
+import { Poppins, Amarante, Montserrat, Anek_Bangla } from 'next/font/google';
 import './globals.css';
 import { CartProvider } from '@/context/CartProvider';
 import { Toaster } from '@/components/ui/sonner';
@@ -21,6 +21,19 @@ const amarante = Amarante({
   display: 'swap',
   variable: '--font-headline',
   weight: '400',
+});
+
+// নতুন ফন্ট যোগ করুন
+const montserrat = Montserrat({ 
+  subsets: ['latin'], 
+  variable: '--font-montserrat',
+  weight: ['900'] // Black weight
+});
+
+const anekBangla = Anek_Bangla({ 
+  subsets: ['bengali'], 
+  variable: '--font-anek-bangla',
+  weight: ['500'] // Medium weight
 });
 
 export const metadata: Metadata = {
@@ -47,7 +60,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={cn('font-sans antialiased', poppins.variable, amarante.variable)}>
+      <body className={cn('font-sans antialiased', poppins.variable, amarante.variable , montserrat.variable, anekBangla.variable)}>
           <CartProvider>
             {/* ১. রিয়েল-টাইম মেনু আপডেটার */}
             <RealtimeMenuUpdater />
