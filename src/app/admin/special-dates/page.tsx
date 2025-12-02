@@ -90,22 +90,22 @@ export default function SpecialDatesPage() {
       setIsDialogOpen(true);
   };
 
-  // ★★★ কুপন কোড জেনারেটর লজিক ★★★
-  const generateCouponCode = (name: string, dateStr: string) => {
+  // কুপন কোড জেনারেটর
+  const generateCouponCode = (name: string, dateStr: string, eventType: string) => {
       const nameParts = name.trim().split(" ");
       const firstInitial = nameParts[0] ? nameParts[0][0].toUpperCase() : "";
       const lastInitial = nameParts.length > 1 ? nameParts[nameParts.length - 1][0].toUpperCase() : "";
       
       const day = new Date(dateStr).getDate();
+      const codeSuffix = eventType === 'anniversary' ? 'ANNI' : 'BDAY';
       
-      return `${firstInitial}${lastInitial}BDAY${day}`;
+      return `${firstInitial}${lastInitial}${codeSuffix}${day}`;
   };
 
   const drawOnCanvas = async (canvas: HTMLCanvasElement) => {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // সাইজ ১৭৫৩ x ২৪৮০
     canvas.width = 1753;
     canvas.height = 2480;
 
@@ -131,43 +131,29 @@ export default function SpecialDatesPage() {
         ctx.textBaseline = "middle";
         const centerX = canvas.width / 2;
 
-        // --- ১. ইউজার নাম (Pacifico Font) ---
         ctx.fillStyle = "#f2ce00"; 
-        // নামের জন্য অনেক বড় ফন্ট (Pacifico)
         ctx.font = "400 200px Pacifico, cursive"; 
-        
-        // নাম বেশি বড় হলে ফন্ট ছোট হবে
         if (title.length > 10) ctx.font = "400 150px Pacifico, cursive";
+        ctx.fillText(title, centerX, 1050); 
         
-        // পজিশন: মাঝখানে, একটু উপরের দিকে
-        ctx.fillText(title, centerX, 1000); 
-        
-        
-        // --- ২. অফার টেক্সট (Poppins Font) ---
-        // তারিখ ফরম্যাট (যেমন: 15 August)
         const eventDate = new Date(date);
         const dateText = eventDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' });
         
-        ctx.fillStyle = "#ffffffff"; // সোনালী রঙ
+        ctx.fillStyle = "#ffffffff"; 
         ctx.font = "300 70px Poppins, sans-serif";
         
         const line1 = "As a small celebration from us, enjoy a";
         const line2 = `5% discount on your order after ${dateText}`;
         
-        // পজিশন: নামের নিচে
-        ctx.fillText(line1, centerX, 1500-30);
-        ctx.fillText(line2, centerX, 1590-30);
+        ctx.fillText(line1, centerX, 1470);
+        ctx.fillText(line2, centerX, 1560);
 
-
-        // --- ৩. কুপন কোড (Poppins Font) ---
-        const couponCode = generateCouponCode(title, date);
+        const couponCode = generateCouponCode(title, date, type);
         
         ctx.fillStyle = "#f2ce00"; 
-        ctx.font = "700 85px Poppins, sans-serif"; // বোল্ড ফন্ট
+        ctx.font = "700 85px Poppins, sans-serif"; 
         
-        // পজিশন: অফারের নিচে
         ctx.fillText(`Use code: ${couponCode}`, centerX, 1736);
-
 
     } catch (e) {
         console.error("Canvas drawing error:", e);
@@ -185,7 +171,60 @@ export default function SpecialDatesPage() {
     try {
         let finalImageUrl = manualImageUrl;
 
+        // ১. কুপন তৈরি করা (শুধুমাত্র বার্থডে বা অ্যানিভার্সারির জন্য)
+        if (type === 'birthday' || type === 'anniversary') {
+            const couponCode = generateCouponCode(title, date, type);
+            
+            // --- তারিখ ক্যালকুলেশন (Update) ---
+            
+            // Start Date: ইভেন্ট ডেট থেকে ১ দিন আগে
+            const startDateObj = new Date(date);
+            startDateObj.setDate(startDateObj.getDate() - 1);
+            const startDate = startDateObj.toISOString().split('T')[0];
+
+            // Expiry Date: ইভেন্ট ডেট + ২ দিন
+            const expiryDateObj = new Date(date);
+            expiryDateObj.setDate(expiryDateObj.getDate() + 2);
+            const expiryDate = expiryDateObj.toISOString().split('T')[0];
+
+            try {
+                const couponRes = await fetch('/api/admin/coupons', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json', 
+                        'Authorization': `Bearer ${token}` 
+                    },
+                    body: JSON.stringify({
+                        code: couponCode,
+                        description: `${type === 'birthday' ? 'Birthday' : 'Anniversary'} Special for ${title}`,
+                        discountType: 'percentage',
+                        value: 5, // ৫% ডিসকাউন্ট
+                        minOrder: 0,
+                        usageLimit: 1, // ১ বার ব্যবহারযোগ্য
+                        startDate: startDate, // আপডেট: ১ দিন আগে শুরু
+                        expiryDate: expiryDate, // ২ দিন পর শেষ
+                        isActive: true
+                    })
+                });
+
+                const couponData = await couponRes.json();
+                if (couponRes.ok) {
+                    toast.success("Automatic Coupon Created! 🎟️");
+                } else if (couponData.error === 'Coupon code already exists') {
+                    toast.info("Coupon already exists, proceeding...");
+                } else {
+                    console.error("Coupon creation failed:", couponData.error);
+                    toast.warning(`Could not create coupon: ${couponData.error}`);
+                }
+            } catch (couponErr) {
+                console.error("Coupon API Error:", couponErr);
+            }
+        }
+
+        // ২. পোস্টার জেনারেট ও আপলোড
         if ((type === 'birthday' || type === 'anniversary') && canvasRef.current) {
+            toast.info(`Generating ${type === 'birthday' ? 'Birthday' : 'Anniversary'} Poster...`);
+            
             const blob = await new Promise<Blob | null>(resolve => 
                 canvasRef.current?.toBlob(resolve, 'image/jpeg', 0.90)
             );
@@ -206,6 +245,7 @@ export default function SpecialDatesPage() {
             finalImageUrl = uploadData.secure_url;
         }
 
+        // ৩. ইভেন্ট সেভ করা
         const res = await fetch('/api/admin/special-dates', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -213,7 +253,7 @@ export default function SpecialDatesPage() {
         });
 
         if (res.ok) {
-            toast.success("Event Saved Successfully! 🎉");
+            toast.success("Event & Poster Saved Successfully! 🎉");
             setIsDialogOpen(false);
             fetchData();
         } else {
@@ -261,7 +301,7 @@ export default function SpecialDatesPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Upcoming Celebrations */}
+            {/* Upcoming Customer Celebrations */}
             <Card className="border-0 shadow-md bg-primary/5 border-primary/10 h-fit">
                 <CardHeader className="pb-3">
                     <CardTitle className="text-lg flex items-center gap-2">
@@ -353,9 +393,8 @@ export default function SpecialDatesPage() {
                 </DialogHeader>
                 
                 <div className="grid md:grid-cols-2 gap-6">
-                    {/* Form Side */}
                     <div className="space-y-4">
-                         <FloatingInput label="Event Title / Name" value={title} onChange={(e) => setTitle(e.target.value)} />
+                         <FloatingInput label="Event Title" value={title} onChange={(e) => setTitle(e.target.value)} />
                          <FloatingInput label="Date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
                          
                          <div className="space-y-1">
@@ -363,9 +402,9 @@ export default function SpecialDatesPage() {
                             <Select value={type} onValueChange={(val: any) => setType(val)}>
                                 <SelectTrigger className="h-12 rounded-xl"><SelectValue /></SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="birthday"><div className="flex items-center gap-2"><Cake className="h-4 w-4 text-pink-500"/> Birthday (Auto Poster)</div></SelectItem>
-                                    <SelectItem value="anniversary"><div className="flex items-center gap-2"><Gift className="h-4 w-4 text-purple-500"/> Anniversary (Auto Poster)</div></SelectItem>
-                                    <SelectItem value="other"><div className="flex items-center gap-2"><CalendarHeart className="h-4 w-4 text-blue-500"/> Other</div></SelectItem>
+                                    <SelectItem value="birthday">Birthday (Auto Poster + Coupon)</SelectItem>
+                                    <SelectItem value="anniversary">Anniversary (Auto Poster + Coupon)</SelectItem>
+                                    <SelectItem value="other">Other</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
@@ -383,7 +422,6 @@ export default function SpecialDatesPage() {
                         )}
                     </div>
 
-                    {/* Preview Side */}
                     <div className="flex flex-col items-center justify-center bg-muted/30 rounded-xl border p-4 min-h-[300px]">
                         {type === 'birthday' || type === 'anniversary' ? (
                             <>
