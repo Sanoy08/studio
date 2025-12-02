@@ -6,8 +6,8 @@ import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Loader2, Plus, Trash2, CalendarHeart, Cake, Gift, Sparkles, ArrowRight, Save, Wand2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { Loader2, Plus, Trash2, CalendarHeart, Cake, Gift, Sparkles, ArrowRight, Save, Download, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { FloatingInput } from '@/components/ui/floating-input';
 import Image from 'next/image';
@@ -36,8 +36,13 @@ export default function SpecialDatesPage() {
   const [customerEvents, setCustomerEvents] = useState<CustomerEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
   
+  // Dialog States
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isWarningOpen, setIsWarningOpen] = useState(false); // ওয়ার্নিং এর জন্য স্টেট
+  const [pendingCustomer, setPendingCustomer] = useState<CustomerEvent | null>(null); // টেম্পোরারি স্টোরেজ
+  
+  // Form States
   const [title, setTitle] = useState("");
   const [date, setDate] = useState("");
   const [type, setType] = useState<'birthday' | 'anniversary' | 'other'>("birthday");
@@ -75,6 +80,23 @@ export default function SpecialDatesPage() {
     }
   }, [isDialogOpen, title, date, type]);
 
+  // ★★★ আপগ্রেড: ইভেন্ট চেক এবং ওয়ার্নিং লজিক ★★★
+  const handlePreCheck = (cust: CustomerEvent) => {
+      // চেক করা হচ্ছে এই ইভেন্ট অলরেডি আছে কিনা
+      const alreadyExists = events.some(e => 
+          e.title.toLowerCase() === cust.name.toLowerCase() && 
+          e.type === cust.type &&
+          new Date(e.date).getFullYear() === new Date(cust.nextDate).getFullYear()
+      );
+
+      if (alreadyExists) {
+          setPendingCustomer(cust);
+          setIsWarningOpen(true); // ডুপ্লিকেট হলে ওয়ার্নিং দেখাও
+      } else {
+          handleOpenDialog(cust); // নতুন হলে সরাসরি ওপেন করো
+      }
+  };
+
   const handleOpenDialog = (prefill?: CustomerEvent) => {
       if (prefill) {
           setTitle(prefill.name);
@@ -88,9 +110,10 @@ export default function SpecialDatesPage() {
           setManualImageUrl("");
       }
       setIsDialogOpen(true);
+      setIsWarningOpen(false); // ওয়ার্নিং বন্ধ করে দাও
+      setPendingCustomer(null);
   };
 
-  // কুপন কোড জেনারেটর
   const generateCouponCode = (name: string, dateStr: string, eventType: string) => {
       const nameParts = name.trim().split(" ");
       const firstInitial = nameParts[0] ? nameParts[0][0].toUpperCase() : "";
@@ -160,7 +183,23 @@ export default function SpecialDatesPage() {
     }
   };
 
-  const handleSave = async () => {
+  const downloadPoster = () => {
+    if (!canvasRef.current) return;
+    try {
+        const link = document.createElement('a');
+        const filename = `${title.replace(/\s+/g, '_')}_${type}_Poster.jpg`;
+        link.download = filename;
+        link.href = canvasRef.current.toDataURL('image/jpeg', 0.95);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        toast.success("Poster Downloaded! 📥");
+    } catch (e) {
+        toast.error("Failed to download image");
+    }
+  };
+
+  const handleSaveAndDownload = async () => {
     if (!title || !date) {
         toast.error("Title and Date required");
         return;
@@ -169,20 +208,15 @@ export default function SpecialDatesPage() {
     const token = localStorage.getItem('token');
 
     try {
-        let finalImageUrl = manualImageUrl;
+        let finalImageUrl = manualImageUrl; 
 
-        // ১. কুপন তৈরি করা (শুধুমাত্র বার্থডে বা অ্যানিভার্সারির জন্য)
         if (type === 'birthday' || type === 'anniversary') {
             const couponCode = generateCouponCode(title, date, type);
             
-            // --- তারিখ ক্যালকুলেশন (Update) ---
-            
-            // Start Date: ইভেন্ট ডেট থেকে ১ দিন আগে
             const startDateObj = new Date(date);
             startDateObj.setDate(startDateObj.getDate() - 1);
             const startDate = startDateObj.toISOString().split('T')[0];
 
-            // Expiry Date: ইভেন্ট ডেট + ২ দিন
             const expiryDateObj = new Date(date);
             expiryDateObj.setDate(expiryDateObj.getDate() + 2);
             const expiryDate = expiryDateObj.toISOString().split('T')[0];
@@ -198,54 +232,28 @@ export default function SpecialDatesPage() {
                         code: couponCode,
                         description: `${type === 'birthday' ? 'Birthday' : 'Anniversary'} Special for ${title}`,
                         discountType: 'percentage',
-                        value: 5, // ৫% ডিসকাউন্ট
+                        value: 5,
                         minOrder: 0,
-                        usageLimit: 1, // ১ বার ব্যবহারযোগ্য
-                        startDate: startDate, // আপডেট: ১ দিন আগে শুরু
-                        expiryDate: expiryDate, // ২ দিন পর শেষ
+                        usageLimit: 1,
+                        startDate: startDate,
+                        expiryDate: expiryDate, 
                         isActive: true
                     })
                 });
 
-                const couponData = await couponRes.json();
                 if (couponRes.ok) {
                     toast.success("Automatic Coupon Created! 🎟️");
-                } else if (couponData.error === 'Coupon code already exists') {
-                    toast.info("Coupon already exists, proceeding...");
-                } else {
-                    console.error("Coupon creation failed:", couponData.error);
-                    toast.warning(`Could not create coupon: ${couponData.error}`);
                 }
             } catch (couponErr) {
                 console.error("Coupon API Error:", couponErr);
             }
+
+            if (canvasRef.current) {
+                downloadPoster();
+                finalImageUrl = ""; 
+            }
         }
 
-        // ২. পোস্টার জেনারেট ও আপলোড
-        if ((type === 'birthday' || type === 'anniversary') && canvasRef.current) {
-            toast.info(`Generating ${type === 'birthday' ? 'Birthday' : 'Anniversary'} Poster...`);
-            
-            const blob = await new Promise<Blob | null>(resolve => 
-                canvasRef.current?.toBlob(resolve, 'image/jpeg', 0.90)
-            );
-            if (!blob) throw new Error("Image generation failed");
-
-            const formData = new FormData();
-            formData.append('file', blob);
-            const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || "dhhfisazd";
-            const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || "bumbas-kitchen-uploads";
-            formData.append('upload_preset', uploadPreset);
-
-            const uploadRes = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
-                method: 'POST',
-                body: formData,
-            });
-            const uploadData = await uploadRes.json();
-            if (!uploadData.secure_url) throw new Error("Upload failed");
-            finalImageUrl = uploadData.secure_url;
-        }
-
-        // ৩. ইভেন্ট সেভ করা
         const res = await fetch('/api/admin/special-dates', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -253,7 +261,7 @@ export default function SpecialDatesPage() {
         });
 
         if (res.ok) {
-            toast.success("Event & Poster Saved Successfully! 🎉");
+            toast.success("Event Saved Successfully! 🎉");
             setIsDialogOpen(false);
             fetchData();
         } else {
@@ -282,6 +290,9 @@ export default function SpecialDatesPage() {
   const isPast = (eventDate: string) => {
       return new Date(eventDate) < new Date(new Date().setHours(0,0,0,0));
   }
+
+  // ★★★ সর্টিং লজিক (Sorting by Date) ★★★
+  const sortedEvents = [...events].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   if (isLoading) return <div className="flex justify-center p-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
 
@@ -328,7 +339,8 @@ export default function SpecialDatesPage() {
                                             </p>
                                         </div>
                                     </div>
-                                    <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => handleOpenDialog(cust)}>
+                                    {/* এখানে handlePreCheck কল করা হচ্ছে */}
+                                    <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => handlePreCheck(cust)}>
                                         Generate <ArrowRight className="ml-1 h-3 w-3" />
                                     </Button>
                                 </div>
@@ -338,17 +350,18 @@ export default function SpecialDatesPage() {
                 </CardContent>
             </Card>
 
-            {/* Saved Events List */}
+            {/* Saved Events List (Sorted) */}
             <Card className="border-0 shadow-md">
                 <CardHeader>
                     <CardTitle>Saved Events & Posters</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <div className="space-y-4">
-                        {events.length === 0 ? (
+                        {sortedEvents.length === 0 ? (
                             <p className="text-center text-muted-foreground py-8">No events saved yet.</p>
                         ) : (
-                            events.map((event) => {
+                            // এখানে sortedEvents ম্যাপ করা হচ্ছে
+                            sortedEvents.map((event) => {
                                 const past = isPast(event.date);
                                 return (
                                     <div key={event.id} className={`flex items-center gap-4 p-4 rounded-xl border bg-card hover:shadow-sm transition-all ${past ? 'opacity-60' : ''}`}>
@@ -385,7 +398,7 @@ export default function SpecialDatesPage() {
             </Card>
         </div>
 
-        {/* Modal */}
+        {/* Create Modal */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
@@ -436,13 +449,36 @@ export default function SpecialDatesPage() {
 
                 <DialogFooter>
                     <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-                    <Button onClick={handleSave} disabled={isSaving}>
-                        {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-                        Save & Publish
+                    <Button onClick={handleSaveAndDownload} disabled={isSaving} className="gap-2">
+                        {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                        Save & Download
                     </Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
+
+        {/* Warning Dialog for Duplicates */}
+        <Dialog open={isWarningOpen} onOpenChange={setIsWarningOpen}>
+            <DialogContent className="max-w-md">
+                <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2 text-amber-600">
+                        <AlertTriangle className="h-6 w-6" /> Duplicate Event Detected
+                    </DialogTitle>
+                    <DialogDescription className="pt-2">
+                        An event for <strong>{pendingCustomer?.name}</strong> already exists in the saved list for this year.
+                        <br/><br/>
+                        Do you want to create it again?
+                    </DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsWarningOpen(false)}>Cancel</Button>
+                    <Button onClick={() => pendingCustomer && handleOpenDialog(pendingCustomer)}>
+                        Continue Anyway
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
     </div>
   );
 }
