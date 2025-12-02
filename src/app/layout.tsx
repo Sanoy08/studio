@@ -1,13 +1,13 @@
 // src/app/layout.tsx
 
 import type { Metadata, Viewport } from 'next';
-import { Poppins, Amarante, Montserrat, Anek_Bangla } from 'next/font/google';
+import { Poppins, Amarante, Montserrat, Anek_Bangla, Pacifico } from 'next/font/google'; // Pacifico ইমপোর্ট
 import './globals.css';
 import { CartProvider } from '@/context/CartProvider';
 import { Toaster } from '@/components/ui/sonner';
 import { cn } from '@/lib/utils';
 import { RealtimeMenuUpdater } from '@/components/providers/RealtimeMenuUpdater';
-import { ServiceWorkerRegister } from '@/components/providers/ServiceWorkerRegister'; // সার্ভিস ওয়ার্কার (ক্যাশিং)
+import { ServiceWorkerRegister } from '@/components/providers/ServiceWorkerRegister';
 
 const poppins = Poppins({
   subsets: ['latin'],
@@ -23,17 +23,23 @@ const amarante = Amarante({
   weight: '400',
 });
 
-// নতুন ফন্ট যোগ করুন
 const montserrat = Montserrat({ 
   subsets: ['latin'], 
   variable: '--font-montserrat',
-  weight: ['900'] // Black weight
+  weight: ['900'] 
 });
 
 const anekBangla = Anek_Bangla({ 
   subsets: ['bengali'], 
   variable: '--font-anek-bangla',
-  weight: ['500'] // Medium weight
+  weight: ['500'] 
+});
+
+// ★ নতুন ফন্ট: Pacifico
+const pacifico = Pacifico({
+  subsets: ['latin'],
+  variable: '--font-pacifico',
+  weight: '400',
 });
 
 export const metadata: Metadata = {
@@ -60,17 +66,18 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={cn('font-sans antialiased', poppins.variable, amarante.variable , montserrat.variable, anekBangla.variable)}>
+      <body className={cn(
+          'font-sans antialiased', 
+          poppins.variable, 
+          amarante.variable,
+          montserrat.variable,
+          anekBangla.variable,
+          pacifico.variable // ★ যোগ করা হয়েছে
+      )}>
           <CartProvider>
-            {/* ১. রিয়েল-টাইম মেনু আপডেটার */}
             <RealtimeMenuUpdater />
-            
-            {/* ২. ইমেজ ক্যাশিং এর জন্য সার্ভিস ওয়ার্কার */}
             <ServiceWorkerRegister />
-            
-            {/* ৩. মেইন কন্টেন্ট (হেডার/ফুটার ছাড়া) */}
             {children}
-            
             <Toaster />
           </CartProvider>
       </body>
