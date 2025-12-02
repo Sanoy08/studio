@@ -4,7 +4,7 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -12,9 +12,10 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Plus, Trash2, Pencil, TicketPercent, Search, RefreshCcw, Calendar } from 'lucide-react';
+import { Loader2, Plus, Trash2, Pencil, TicketPercent, Search, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatPrice } from '@/lib/utils';
+import { FloatingInput } from '@/components/ui/floating-input';
 
 type Coupon = {
   id: string;
@@ -170,7 +171,6 @@ export default function AdminCouponsPage() {
         </div>
       </div>
 
-      {/* Mobile View: Cards */}
       <div className="grid grid-cols-1 md:hidden gap-4">
         {filteredCoupons.map((coupon) => {
             const expired = isExpired(coupon.expiryDate);
@@ -187,7 +187,6 @@ export default function AdminCouponsPage() {
                                 {expired ? 'Expired' : (coupon.isActive ? 'Active' : 'Inactive')}
                             </Badge>
                         </div>
-
                         <div className="grid grid-cols-2 gap-2 py-2 border-t border-b border-dashed">
                              <div>
                                  <p className="text-xs text-muted-foreground">Discount</p>
@@ -200,19 +199,15 @@ export default function AdminCouponsPage() {
                                  <p className="font-medium">{formatPrice(coupon.minOrder)}</p>
                              </div>
                         </div>
-
                         <div className="flex justify-between items-center pt-1">
                             <div className="flex items-center gap-1 text-xs text-muted-foreground bg-muted/50 px-2 py-1 rounded">
                                 <Calendar className="h-3 w-3" />
-                                Expires: {new Date(coupon.expiryDate).toLocaleDateString()}
+                                {/* ★★★ FIX: DD/MM/YYYY ফরম্যাট ★★★ */}
+                                Expires: {new Date(coupon.expiryDate).toLocaleDateString('en-GB')}
                             </div>
                             <div className="flex gap-2">
-                                <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600 bg-blue-50 hover:bg-blue-100" onClick={() => handleOpenDialog(coupon)}>
-                                    <Pencil className="h-4 w-4"/>
-                                </Button>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 text-red-600 bg-red-50 hover:bg-red-100" onClick={() => handleDelete(coupon.id)}>
-                                    <Trash2 className="h-4 w-4"/>
-                                </Button>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600 bg-blue-50 hover:bg-blue-100" onClick={() => handleOpenDialog(coupon)}><Pencil className="h-4 w-4"/></Button>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-red-600 bg-red-50 hover:bg-red-100" onClick={() => handleDelete(coupon.id)}><Trash2 className="h-4 w-4"/></Button>
                             </div>
                         </div>
                     </div>
@@ -221,7 +216,6 @@ export default function AdminCouponsPage() {
         })}
       </div>
 
-      {/* Desktop View: Table */}
       <Card className="hidden md:block overflow-hidden border-0 shadow-md">
         <CardContent className="p-0">
           <div className="overflow-x-auto">
@@ -256,7 +250,8 @@ export default function AdminCouponsPage() {
                             </TableCell>
                             <TableCell className="hidden sm:table-cell">{formatPrice(coupon.minOrder)}</TableCell>
                             <TableCell className="hidden md:table-cell text-muted-foreground">
-                                {new Date(coupon.expiryDate).toLocaleDateString()}
+                                {/* ★★★ FIX: DD/MM/YYYY ফরম্যাট ★★★ */}
+                                {new Date(coupon.expiryDate).toLocaleDateString('en-GB')}
                             </TableCell>
                             <TableCell>
                                 <Badge variant={coupon.isActive && !expired ? "default" : "secondary"} className={coupon.isActive && !expired ? "bg-green-100 text-green-700 hover:bg-green-100 border-green-200" : ""}>
@@ -284,49 +279,32 @@ export default function AdminCouponsPage() {
             <DialogHeader>
                 <DialogTitle>{editingCoupon ? 'Edit Coupon' : 'Create New Coupon'}</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                    <Label>Coupon Code</Label>
-                    <Input value={formData.code} onChange={(e) => setFormData({...formData, code: e.target.value.toUpperCase()})} placeholder="Ex: SAVE20" />
-                </div>
-                
+            <div className="space-y-5 py-4">
+                <FloatingInput label="Coupon Code" value={formData.code} onChange={(e) => setFormData({...formData, code: e.target.value.toUpperCase()})} />
+                <FloatingInput label="Description (Optional)" value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} />
+
                 <div className="grid grid-cols-2 gap-4">
-                     <div className="space-y-2">
-                        <Label>Discount Type</Label>
+                     <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground ml-1">Discount Type</Label>
                         <Select value={formData.discountType} onValueChange={(val: any) => setFormData({...formData, discountType: val})}>
-                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectTrigger className="h-12 rounded-xl"><SelectValue /></SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="percentage">Percentage (%)</SelectItem>
                                 <SelectItem value="flat">Flat Amount (₹)</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
-                     <div className="space-y-2">
-                        <Label>Value</Label>
-                        <Input type="number" value={formData.value} onChange={(e) => setFormData({...formData, value: e.target.value})} placeholder={formData.discountType === 'percentage' ? "20" : "100"} />
-                    </div>
+                    <FloatingInput label="Value" type="number" value={formData.value} onChange={(e) => setFormData({...formData, value: e.target.value})} />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                        <Label>Min. Order (₹)</Label>
-                        <Input type="number" value={formData.minOrder} onChange={(e) => setFormData({...formData, minOrder: e.target.value})} placeholder="0" />
-                    </div>
-                    <div className="space-y-2">
-                        <Label>Usage Limit</Label>
-                        <Input type="number" value={formData.usageLimit} onChange={(e) => setFormData({...formData, usageLimit: e.target.value})} placeholder="0 for unlimited" />
-                    </div>
+                    <FloatingInput label="Min. Order (₹)" type="number" value={formData.minOrder} onChange={(e) => setFormData({...formData, minOrder: e.target.value})} />
+                    <FloatingInput label="Usage Limit" type="number" value={formData.usageLimit} onChange={(e) => setFormData({...formData, usageLimit: e.target.value})} />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                        <Label>Start Date</Label>
-                        <Input type="date" value={formData.startDate} onChange={(e) => setFormData({...formData, startDate: e.target.value})} />
-                    </div>
-                    <div className="space-y-2">
-                        <Label>Expiry Date</Label>
-                        <Input type="date" value={formData.expiryDate} onChange={(e) => setFormData({...formData, expiryDate: e.target.value})} />
-                    </div>
+                    <FloatingInput label="Start Date" type="date" value={formData.startDate} onChange={(e) => setFormData({...formData, startDate: e.target.value})} />
+                    <FloatingInput label="Expiry Date" type="date" value={formData.expiryDate} onChange={(e) => setFormData({...formData, expiryDate: e.target.value})} />
                 </div>
                 
                 <div className="flex items-center justify-between bg-muted/30 p-3 rounded-lg border">

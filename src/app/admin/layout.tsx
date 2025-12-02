@@ -39,7 +39,7 @@ const adminNavLinks = [
   { href: '/admin/special-dates', label: 'Events Calendar', icon: Calendar },
   { href: '/admin/hero-slides', label: 'Hero Section', icon: ImageIcon },
   { href: '/admin/offers', label: 'Offers Section', icon: Gift },
-  // { href: '/admin/reports', label: 'Reports', icon: BarChart3 }, 
+  { href: '/admin/reports', label: 'Reports', icon: BarChart3 },
   { href: '/admin/notifications', label: 'Push Notifications', icon: Send },
   { href: '/admin/settings', label: 'Settings', icon: Settings },
 ];
