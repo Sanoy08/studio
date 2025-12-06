@@ -157,26 +157,26 @@ export default function SpecialDatesPage() {
         ctx.fillStyle = "#f2ce00"; 
         ctx.font = "400 200px Pacifico, cursive"; 
         if (title.length > 10) ctx.font = "400 150px Pacifico, cursive";
-        ctx.fillText(title, centerX, 1050); 
+        ctx.fillText(title, centerX, 1000); 
         
         const eventDate = new Date(date);
         const dateText = eventDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' });
         
-        ctx.fillStyle = "#ffffffff"; 
+        ctx.fillStyle = "#000000ff"; 
         ctx.font = "300 70px Poppins, sans-serif";
         
         const line1 = "As a small celebration from us, enjoy a";
         const line2 = `5% discount on your order after ${dateText}`;
         
-        ctx.fillText(line1, centerX, 1470);
-        ctx.fillText(line2, centerX, 1560);
+        ctx.fillText(line1, centerX, 1470-40);
+        ctx.fillText(line2, centerX, 1560-40);
 
         const couponCode = generateCouponCode(title, date, type);
         
         ctx.fillStyle = "#f2ce00"; 
         ctx.font = "700 85px Poppins, sans-serif"; 
         
-        ctx.fillText(`Use code: ${couponCode}`, centerX, 1736);
+        ctx.fillText(`Use code: ${couponCode}`, centerX, 1736-15);
 
     } catch (e) {
         console.error("Canvas drawing error:", e);

@@ -15,54 +15,41 @@ import Autoplay from "embla-carousel-autoplay";
 import { formatPrice } from '@/lib/utils';
 import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants';
 import type { Product } from '@/lib/types';
+import { Clock, Utensils, Truck, ShieldCheck, Leaf, ChevronRight } from 'lucide-react';
 import { SpecialDishCard } from './SpecialDishCard';
 
-export type HeroSlide = {
-  id: string;
-  imageUrl: string;
-  clickUrl: string;
-};
-
-export type Offer = {
-  id: string;
-  title: string;
-  description: string;
-  price: number;
-  imageUrl: string;
-};
-
-type HomeClientProps = {
-  heroSlides: HeroSlide[];
-  offers: Offer[];
-  bestsellers: Product[];
+// --- Types ---
+export type HeroSlide = { id: string; imageUrl: string; clickUrl: string; };
+export type Offer = { id: string; title: string; description: string; price: number; imageUrl: string; };
+type HomeClientProps = { 
+  heroSlides: HeroSlide[]; 
+  offers: Offer[]; 
+  bestsellers: Product[]; 
   allProducts?: Product[]; 
 };
 
+// --- Data Constants ---
+const CATEGORIES = [
+    { name: "Fried", image: "/Categories/Fried.webp", link: "/menus?category=Fried", color: "from-green-400 to-emerald-600" },
+    { name: "Rolls", image: "/Categories/fried.webp", link: "/menus?category=rolls", color: "from-yellow-400 to-orange-500" },
+    { name: "Paneer", image: "/Categories/paneer.webp", link: "/menus?category=paneer", color: "from-blue-400 to-indigo-500" },
+    { name: "Chicken", image: "/Categories/chicken.webp", link: "/menus?category=chicken", color: "from-red-400 to-rose-600" },
+    { name: "Fish", image: "/Categories/fish.webp", link: "/menus?category=fish", color: "from-cyan-400 to-blue-500" },
+    { name: "Mutton", image: "/Categories/mutton.webp", link: "/menus?category=mutton", color: "from-amber-400 to-orange-600" },
+    { name: "Veg", image: "/Categories/veg.webp", link: "/menus?category=veg", color: "from-green-400 to-lime-600" },
+];
+
+const FEATURES = [
+    { icon: Truck, title: "Safe & Secure", desc: "Get Secured Delivery", color: "text-blue-500", bg: "bg-blue-50" },
+    { icon: Leaf, title: "Fresh & Organic", desc: "Farm fresh ingredients", color: "text-green-500", bg: "bg-green-50" },
+    { icon: ShieldCheck, title: "Safety First", desc: "100% Hygienic Kitchen", color: "text-purple-500", bg: "bg-purple-50" },
+];
+
 const testimonials = [
-    {
-      name: 'Ishita M.',
-      location: 'Kolkata',
-      rating: 5,
-      quote: "The food is very tasty and the price is reasonable. A must try for all food lovers."
-    },
-    {
-      name: 'Rohan G.',
-      location: 'Hooghly',
-      rating: 4.5,
-      quote: "Amazing home-style food! The chicken kosha was simply out of this world. Delivery was on time too."
-    },
-    {
-      name: 'Priya S.',
-      location: 'Serampore',
-      rating: 5,
-      quote: "Bumba's Kitchen is my go-to for weekend meals. The quality is always consistent and the taste is authentic Bengali."
-    },
-    {
-        name: 'Ankit B.',
-        location: 'Konnagar',
-        rating: 4,
-        quote: "I ordered the veg thali and it was wholesome and delicious. Great value for money. Highly recommended!"
-    }
+    { name: 'Ishita M.', location: 'Kolkata', rating: 5, quote: "The food is very tasty and the price is reasonable. A must try!" },
+    { name: 'Rohan G.', location: 'Hooghly', rating: 4.5, quote: "Amazing home-style food! The chicken kosha was simply out of this world." },
+    { name: 'Priya S.', location: 'Serampore', rating: 5, quote: "Bumba's Kitchen is my go-to for weekend meals. Consistent quality!" },
+    { name: 'Ankit B.', location: 'Konnagar', rating: 4, quote: "Ordered the veg thali and it was wholesome and delicious. Highly recommended!" }
 ];
 
 export function HomeClient({ heroSlides, offers, bestsellers, allProducts = [] }: HomeClientProps) {
@@ -70,7 +57,7 @@ export function HomeClient({ heroSlides, offers, bestsellers, allProducts = [] }
   const [current, setCurrent] = useState(0)
   const [count, setCount] = useState(0)
   
-  // ডেইলি স্পেশাল খুঁজে বের করা
+  // Find Daily Special
   const dailySpecial = allProducts.find(p => p.isDailySpecial);
 
   useEffect(() => {
@@ -83,107 +70,99 @@ export function HomeClient({ heroSlides, offers, bestsellers, allProducts = [] }
   return (
     <div className="bg-background pb-20 md:pb-0">
       
-      {/* Hero Section */}
+      {/* 1. Hero Section */}
       <section className="relative -mt-16">
         {heroSlides.length > 0 ? (
           <>
-            <Carousel
-              setApi={setApi}
-              opts={{ loop: true }}
-              plugins={[Autoplay({ delay: 5000 })]}
-            >
+            <Carousel setApi={setApi} opts={{ loop: true }} plugins={[Autoplay({ delay: 5000 })]}>
               <CarouselContent>
                 {heroSlides.map((slide) => (
                   <CarouselItem key={slide.id}>
-                    <Link href={slide.clickUrl} className="block relative h-[50vh] md:h-screen overflow-hidden">
-                      <Image
-                        src={slide.imageUrl}
-                        alt="Hero Slide"
-                        fill
-                        className="object-cover"
-                        priority
-                        unoptimized={true}
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent"></div>
+                    <Link href={slide.clickUrl} className="block relative h-[55vh] md:h-[85vh] overflow-hidden">
+                      <Image src={slide.imageUrl} alt="Hero Slide" fill className="object-cover" priority unoptimized={true} />
+                      <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/60"></div>
                     </Link>
                   </CarouselItem>
                 ))}
               </CarouselContent>
-              <CarouselPrevious className="left-4 hidden md:flex" />
-              <CarouselNext className="right-4 hidden md:flex" />
             </Carousel>
-            <div className="absolute bottom-4 md:bottom-8 left-1/2 -translate-x-1/2 z-10 flex gap-2">
+            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex gap-2">
               {Array.from({ length: count }).map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => api?.scrollTo(index)}
-                  className={`h-2 rounded-full transition-all shadow-sm ${current === index ? 'w-6 bg-primary' : 'w-2 bg-white/80'}`}
-                />
+                <button key={index} onClick={() => api?.scrollTo(index)} className={`h-1.5 rounded-full transition-all duration-300 ${current === index ? 'w-8 bg-white' : 'w-2 bg-white/50'}`} />
               ))}
             </div>
           </>
         ) : (
            <div className="relative h-[50vh] md:h-screen overflow-hidden bg-gray-100 flex items-center justify-center">
               <div className="text-center">
-                  <h1 className="text-4xl md:text-6xl font-bold text-primary mb-4">Bumba's Kitchen</h1>
-                  <p className="text-xl text-muted-foreground mb-8">Delicious food delivered to you.</p>
-                  <Button asChild size="lg"><Link href="/menus">Order Now</Link></Button>
+                  <h1 className="text-4xl font-bold text-primary mb-4 font-headline">Bumba's Kitchen</h1>
+                  <Button asChild size="lg" className="rounded-full"><Link href="/menus">Order Now</Link></Button>
               </div>
            </div>
         )}
       </section>
 
-      {/* Upcoming Special Offers */}
-      {offers.length > 0 && (
-        <section className="py-12 md:py-24 bg-secondary/30">
+      {/* 2. Category Slider */}
+      <section className="py-8 md:py-12 bg-background">
           <div className="container">
-            <h2 className="text-3xl font-bold text-center mb-12 font-headline text-primary">Upcoming Special Offers</h2>
-              <Carousel opts={{ align: "start", loop: true }} className="w-full">
-                <CarouselContent>
-                  {offers.map((offer) => (
-                    <CarouselItem key={offer.id} className="md:basis-1/2 lg:basis-1/3 pl-4">
-                      <div className="p-1 h-full">
-                        <Card className="overflow-hidden group h-full border-none shadow-lg rounded-2xl bg-card">
-                          <CardContent className="p-0 relative aspect-[4/3]">
-                            <Image
-                              src={offer.imageUrl || PLACEHOLDER_IMAGE_URL}
-                              alt={offer.title}
-                              fill
-                              className="object-cover transition-transform duration-500 group-hover:scale-110"
-                              unoptimized={true}
-                            />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent flex flex-col justify-end p-6 text-white">
-                                <h3 className="text-2xl font-bold mb-1 text-yellow-400">{offer.title}</h3>
-                                <p className="text-sm text-gray-200 line-clamp-2 mb-3 opacity-90">{offer.description}</p>
-                                <p className="text-3xl font-bold text-white">{formatPrice(offer.price)}</p>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </div>
-                    </CarouselItem>
+              <div className="flex items-center justify-between mb-6 px-1">
+                  <h3 className="text-lg font-bold flex items-center gap-2 text-foreground">
+                      <Utensils className="h-5 w-5 text-primary" /> What's on your mind?
+                  </h3>
+              </div>
+              
+              <div className="flex gap-4 md:gap-8 overflow-x-auto pb-6 pt-2 px-1 scrollbar-hide">
+                  {CATEGORIES.map((cat, idx) => (
+                      <Link key={idx} href={cat.link} className="flex flex-col items-center gap-3 min-w-[85px] group cursor-pointer">
+                          <div className={`relative h-20 w-20 md:h-24 md:w-24 rounded-full p-1 bg-gradient-to-tr ${cat.color} shadow-lg group-hover:shadow-xl group-hover:-translate-y-1 transition-all duration-300`}>
+                              <div className="relative h-full w-full rounded-full overflow-hidden border-2 border-white bg-white">
+                                  <Image 
+                                    src={cat.image} 
+                                    alt={cat.name} 
+                                    fill 
+                                    className="object-cover group-hover:scale-110 transition-transform duration-500" 
+                                    unoptimized={true}
+                                  />
+                              </div>
+                          </div>
+                          <span className="text-sm font-semibold text-gray-700 group-hover:text-primary transition-colors">{cat.name}</span>
+                      </Link>
                   ))}
-                </CarouselContent>
-                <CarouselPrevious className="left-2 bg-white/80 text-black hover:bg-white" />
-                <CarouselNext className="right-2 bg-white/80 text-black hover:bg-white" />
-              </Carousel>
+              </div>
           </div>
-        </section>
-      )}
+      </section>
 
-      {/* ★★★ DAILY SPECIAL SECTION (SIMPLIFIED) ★★★ */}
+      {/* 3. Trust Badges */}
+      <section className="py-8 bg-gray-50/50 border-y border-gray-100">
+          <div className="container">
+              <div className="grid grid-cols-3 gap-3 md:gap-8">
+                  {FEATURES.map((feat, idx) => (
+                      <div key={idx} className="flex flex-col items-center text-center p-3 md:p-6 rounded-2xl bg-white border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+                          <div className={`h-10 w-10 md:h-12 md:w-12 rounded-full ${feat.bg} flex items-center justify-center mb-2 md:mb-3`}>
+                              <feat.icon className={`h-5 w-5 md:h-6 md:w-6 ${feat.color}`} />
+                          </div>
+                          <h3 className="font-bold text-xs md:text-base text-gray-900">{feat.title}</h3>
+                          <p className="text-[10px] md:text-sm text-muted-foreground mt-0.5 hidden md:block">{feat.desc}</p>
+                      </div>
+                  ))}
+              </div>
+          </div>
+      </section>
+
+      {/* 4. Daily Special Section (Simplified: Image + Button) */}
       {dailySpecial && (
         <section className="py-16 bg-amber-50/50">
             <div className="container">
-                {/* হেডার */}
+                {/* Header */}
                 <div className="text-center mb-8">
                     <h2 className="text-3xl md:text-4xl font-bold font-headline text-primary">Today's Special</h2>
                     <p className="text-muted-foreground mt-2">Freshly prepared just for you.</p>
                 </div>
 
-                {/* মেইন কার্ড */}
+                {/* Main Card */}
                 <div className="max-w-md mx-auto bg-white p-4 rounded-3xl shadow-xl border border-amber-100 hover:shadow-2xl transition-shadow duration-300">
                     
-                    {/* ১. ইমেজ (বা জেনারেটেড কার্ড) */}
+                    {/* 1. Image (or Generated Card) */}
                     <div className="relative aspect-square w-full rounded-2xl overflow-hidden shadow-sm bg-muted">
                          {dailySpecial.images && dailySpecial.images.length > 0 && dailySpecial.images[0].url ? (
                             <Image 
@@ -202,19 +181,11 @@ export function HomeClient({ heroSlides, offers, bestsellers, allProducts = [] }
                          )}
                     </div>
 
-                    {/* ২. বাটন (কোনো ওভারল্যাপ নেই, নিচে আলাদা) */}
+                    {/* 2. Button (Below, No Overlap) */}
                     <div className="mt-6 px-2 pb-2">
-                        {/* যদি সাধারণ ছবি হয়, তবে নাম ও দাম দেখানো ভালো (অপশনাল, আপনি চাইলে এটিও বাদ দিতে পারেন) */}
-                        {dailySpecial.images && dailySpecial.images.length > 0 && (
-                            <div className="mb-4 text-center">
-                                <h3 className="text-xl font-bold text-gray-800">{dailySpecial.name}</h3>
-                                <p className="text-2xl font-extrabold text-primary mt-1">{formatPrice(dailySpecial.price)}</p>
-                            </div>
-                        )}
-
                         <Button asChild size="lg" className="w-full rounded-xl text-lg font-bold h-14 shadow-md shadow-primary/20 hover:scale-[1.02] transition-transform">
                             <Link href={`/menus/${dailySpecial.slug}`}>
-                                Order Now
+                                Order Now - {formatPrice(dailySpecial.price)}
                             </Link>
                         </Button>
                     </div>
@@ -223,21 +194,56 @@ export function HomeClient({ heroSlides, offers, bestsellers, allProducts = [] }
         </section>
       )}
 
-      {/* Explore Our Bestsellers */}
+      {/* 5. Upcoming Offers */}
+      {offers.length > 0 && (
+        <section className="py-16 bg-background">
+          <div className="container">
+            <div className="flex justify-between items-end mb-10">
+                <div>
+                    <h2 className="text-3xl font-bold font-headline text-gray-900">Hot Offers 🔥</h2>
+                    <p className="text-muted-foreground mt-1">Grab the best deals before they are gone.</p>
+                </div>
+            </div>
+            <Carousel opts={{ align: "start", loop: true }} className="w-full">
+            <CarouselContent>
+                {offers.map((offer) => (
+                <CarouselItem key={offer.id} className="md:basis-1/2 lg:basis-1/3 pl-4">
+                    <div className="p-1 h-full">
+                    <Card className="overflow-hidden group h-full border-none shadow-md rounded-2xl bg-card hover:shadow-xl transition-shadow">
+                        <CardContent className="p-0 relative aspect-[16/9]">
+                        <Image src={offer.imageUrl || PLACEHOLDER_IMAGE_URL} alt={offer.title} fill className="object-cover transition-transform duration-500 group-hover:scale-110" unoptimized={true} />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end p-5 text-white">
+                            <h3 className="text-xl font-bold mb-1 text-white">{offer.title}</h3>
+                            <p className="text-sm text-gray-200 line-clamp-1">{offer.description}</p>
+                        </div>
+                        <div className="absolute top-3 right-3 bg-white text-black font-bold px-3 py-1 rounded-full text-sm shadow-sm">
+                            {formatPrice(offer.price)}
+                        </div>
+                        </CardContent>
+                    </Card>
+                    </div>
+                </CarouselItem>
+                ))}
+            </CarouselContent>
+            </Carousel>
+          </div>
+        </section>
+      )}
+
+      {/* 6. Bestsellers */}
        <section className="py-16 md:py-24 bg-background">
         <div className="container">
-          <h2 className="text-3xl font-bold text-center mb-12 font-headline text-primary">Explore Our Bestsellers</h2>
+          <div className="text-center mb-12">
+             <h2 className="text-3xl font-bold font-headline mb-2">Customer Favorites ❤️</h2>
+             <p className="text-muted-foreground">The most loved dishes from our kitchen.</p>
+          </div>
+          
           {bestsellers.length > 0 ? (
-            <Carousel
-              opts={{ align: "start", loop: true }}
-              className="w-full max-w-sm sm:max-w-xl md:max-w-3xl lg:max-w-6xl mx-auto"
-            >
+            <Carousel opts={{ align: "start", loop: true }} className="w-full max-w-sm sm:max-w-xl md:max-w-3xl lg:max-w-6xl mx-auto">
               <CarouselContent>
                 {bestsellers.map((product) => (
                   <CarouselItem key={product.id} className="basis-full sm:basis-1/2 md:basis-1/3 lg:basis-1/4 pl-4">
-                    <div className="p-1 h-full">
-                      <ProductCard product={product} />
-                    </div>
+                    <div className="p-1 h-full"><ProductCard product={product} /></div>
                   </CarouselItem>
                 ))}
               </CarouselContent>
@@ -247,28 +253,35 @@ export function HomeClient({ heroSlides, offers, bestsellers, allProducts = [] }
           ) : (
             <p className="text-center text-muted-foreground">No products found.</p>
           )}
+          
+          <div className="text-center mt-10">
+              <Button asChild variant="outline" className="rounded-full px-8 border-primary/50 text-primary hover:bg-primary/5">
+                  <Link href="/menus">View Full Menu</Link>
+              </Button>
+          </div>
         </div>
       </section>
 
-      {/* What Our Customers Say */}
-      <section className="py-12 md:py-24 bg-primary/5">
+      {/* 7. Testimonials */}
+      <section className="py-16 bg-slate-50">
         <div className="container">
-          <h2 className="text-3xl font-bold text-center mb-12 font-headline text-primary">What Our Customers Say</h2>
-            <Carousel
-                plugins={[Autoplay({ delay: 4000 })]}
-                opts={{ align: "start", loop: true }}
-                className="w-full max-w-2xl mx-auto"
-            >
+          <h2 className="text-3xl font-bold text-center mb-12 font-headline">Happy Tummies 😊</h2>
+            <Carousel plugins={[Autoplay({ delay: 4000 })]} opts={{ align: "start", loop: true }} className="w-full max-w-4xl mx-auto">
                 <CarouselContent>
                     {testimonials.map((testimonial, index) => (
-                        <CarouselItem key={index}>
-                            <Card className="border-none shadow-none bg-transparent">
-                                <CardContent className="p-8 text-center">
-                                    <Rating rating={testimonial.rating} className="justify-center mb-6" />
-                                    <blockquote className="text-xl md:text-2xl italic text-foreground/80 font-medium leading-relaxed">"{testimonial.quote}"</blockquote>
-                                    <div className="mt-8">
-                                        <p className="font-bold text-lg text-primary">{testimonial.name}</p>
-                                        <p className="text-sm text-muted-foreground">{testimonial.location}</p>
+                        <CarouselItem key={index} className="md:basis-1/2 pl-4">
+                            <Card className="border-none shadow-md bg-white h-full rounded-2xl">
+                                <CardContent className="p-6 flex flex-col h-full">
+                                    <div className="flex gap-1 mb-4"><Rating rating={testimonial.rating} className="" /></div>
+                                    <p className="text-gray-600 italic flex-grow">"{testimonial.quote}"</p>
+                                    <div className="mt-6 flex items-center gap-3">
+                                        <div className="h-10 w-10 bg-primary/20 rounded-full flex items-center justify-center font-bold text-primary">
+                                            {testimonial.name[0]}
+                                        </div>
+                                        <div>
+                                            <p className="font-bold text-sm text-gray-900">{testimonial.name}</p>
+                                            <p className="text-xs text-muted-foreground">{testimonial.location}</p>
+                                        </div>
                                     </div>
                                 </CardContent>
                             </Card>

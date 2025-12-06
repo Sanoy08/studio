@@ -21,10 +21,11 @@ export async function GET(request: NextRequest) {
     const collection = db.collection(COLLECTION_NAME);
 
     // ★★★ AI Search Pipeline (MongoDB Atlas Search) ★★★
+    // নোট: এটি কাজ করার জন্য Atlas-এ 'menu_search_index' নামে ইনডেক্স থাকতে হবে
     const pipeline = [
         {
             $search: {
-                index: 'menu_search_index', // আপনার তৈরি করা ইনডেক্সের নাম
+                index: 'menu_search_index', 
                 compound: {
                     should: [
                         {
@@ -32,7 +33,7 @@ export async function GET(request: NextRequest) {
                                 query: query,
                                 path: 'Name',
                                 fuzzy: { maxEdits: 1, prefixLength: 2 }, // বানান ভুল হলেও খুঁজবে
-                                score: { boost: { value: 5 } } // নামের গুরুত্ব বেশি
+                                score: { boost: { value: 5 } }
                             }
                         },
                         {
@@ -63,14 +64,27 @@ export async function GET(request: NextRequest) {
                 ImageURLs: 1,
                 InStock: 1,
                 Bestseller: 1,
+                isDailySpecial: 1, // স্পেশাল ফ্ল্যাগ
                 CreatedAt: 1,
-                score: { $meta: "searchScore" } // ম্যাচিং স্কোর
+                score: { $meta: "searchScore" }
             }
         },
-        { $limit: 20 } // সর্বোচ্চ ২০টি রেজাল্ট
+        { $limit: 20 }
     ];
 
-    const results = await collection.aggregate(pipeline).toArray();
+    let results;
+    try {
+        results = await collection.aggregate(pipeline).toArray();
+    } catch (e: any) {
+        // যদি Atlas Search ইনডেক্স না থাকে, তবে সাধারণ Regex সার্চ ফলব্যাক হিসেবে কাজ করবে
+        console.warn("Atlas Search failed, falling back to Regex:", e.message);
+        results = await collection.find({
+            $or: [
+                { Name: { $regex: query, $options: 'i' } },
+                { Category: { $regex: query, $options: 'i' } }
+            ]
+        }).limit(20).toArray();
+    }
 
     // ডেটা ফরম্যাট করা
     const products: Product[] = results.map((item: any) => ({
@@ -85,6 +99,7 @@ export async function GET(request: NextRequest) {
         reviewCount: 0,
         stock: item.InStock ? 100 : 0,
         featured: item.Bestseller === true || item.Bestseller === "true",
+        isDailySpecial: item.isDailySpecial === true,
         reviews: [],
         createdAt: item.CreatedAt
     }));
@@ -92,16 +107,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ success: true, products }, { status: 200 });
 
   } catch (error: any) {
-    console.error("AI Search Error:", error);
-    
-    // ফলব্যাক: যদি ইনডেক্স না থাকে, তবে সাধারণ সার্চ কাজ করবে
-    if (error.message.includes("Remote error: Remote error from mongot")) {
-        return NextResponse.json({ 
-            success: false, 
-            error: "Search index not ready yet. Please try again later." 
-        }, { status: 503 });
-    }
-
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }

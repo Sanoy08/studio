@@ -3,16 +3,17 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Loader2, RefreshCcw, ShoppingBag, Search, Filter } from 'lucide-react';
+import { Loader2, RefreshCcw, ShoppingBag, Search, FileText, Download } from 'lucide-react'; // আইকন ইমপোর্ট
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/use-auth';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { formatPrice } from '@/lib/utils';
+import { generateInvoice } from '@/lib/invoiceGenerator'; // জেনারেটর ইমপোর্ট
 
 type Order = {
   _id: string;
@@ -25,6 +26,9 @@ type Order = {
   Items: any[];
   OrderType: string;
   Address: string;
+  DeliveryAddress?: string;
+  Subtotal: number;
+  Discount: number;
 };
 
 const STATUS_OPTIONS = ['Received', 'Cooking', 'Ready', 'Out for Delivery', 'Delivered', 'Cancelled'];
@@ -35,32 +39,44 @@ export default function AdminOrdersPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [isLoading, setIsLoading] = useState(true);
+  const { user } = useAuth();
 
   const fetchOrders = async () => {
     const token = localStorage.getItem('token');
     if (!token) return;
+
     setIsLoading(true);
     try {
       const res = await fetch('/api/admin/orders', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await res.json();
+      
       if (data.success) {
         setOrders(data.orders);
         setFilteredOrders(data.orders);
+      } else {
+        toast.error(data.error || "Failed to load orders.");
       }
     } catch (error) {
+      console.error(error);
       toast.error("Error loading orders.");
     } finally {
       setIsLoading(false);
     }
   };
 
-  useEffect(() => { fetchOrders(); }, []);
+  useEffect(() => {
+    fetchOrders();
+  }, []);
 
   useEffect(() => {
     let result = orders;
-    if (statusFilter !== 'All') result = result.filter(o => o.Status === statusFilter);
+    
+    if (statusFilter !== 'All') {
+        result = result.filter(o => o.Status === statusFilter);
+    }
+
     if (searchQuery) {
         const lowerQ = searchQuery.toLowerCase();
         result = result.filter(o => 
@@ -77,14 +93,23 @@ export default function AdminOrdersPage() {
     try {
         const res = await fetch('/api/admin/orders', {
             method: 'PATCH',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}` 
+            },
             body: JSON.stringify({ orderId, status: newStatus })
         });
+
         if (res.ok) {
             toast.success(`Status updated to ${newStatus}`);
             setOrders(prev => prev.map(o => o._id === orderId ? { ...o, Status: newStatus } : o));
-        } else { toast.error("Update failed"); }
-    } catch (error) { toast.error("Error updating status"); }
+        } else {
+            toast.error("Failed to update status");
+        }
+    } catch (error) {
+        console.error(error);
+        toast.error("Error updating status");
+    }
   }
 
   const getStatusColor = (status: string) => {
@@ -97,7 +122,20 @@ export default function AdminOrdersPage() {
       }
   };
 
-  if (isLoading) return <div className="flex justify-center p-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+  // ★ ইনভয়েস ডাউনলোড হ্যান্ডলার
+  const handleDownloadInvoice = (order: Order) => {
+      try {
+          generateInvoice(order);
+          toast.success("Invoice downloaded");
+      } catch (e) {
+          console.error(e);
+          toast.error("Failed to generate invoice");
+      }
+  };
+
+  if (isLoading) {
+    return <div className="flex justify-center p-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+  }
 
   return (
     <div className="space-y-6 max-w-[1600px] mx-auto">
@@ -163,17 +201,23 @@ export default function AdminOrdersPage() {
                              <p className="text-xs text-muted-foreground">{order.OrderType}</p>
                          </div>
                     </div>
-                    <div>
-                        <Select defaultValue={order.Status} onValueChange={(val) => handleStatusChange(order._id, val)}>
-                            <SelectTrigger className="w-full h-9 bg-muted/50">
-                                <SelectValue placeholder="Update Status" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {STATUS_OPTIONS.map(status => (
-                                    <SelectItem key={status} value={status}>{status}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                    <div className="flex gap-2 items-center pt-1">
+                        <div className="flex-1">
+                            <Select defaultValue={order.Status} onValueChange={(val) => handleStatusChange(order._id, val)}>
+                                <SelectTrigger className="w-full h-9 bg-muted/50">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {STATUS_OPTIONS.map(status => (
+                                        <SelectItem key={status} value={status}>{status}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        {/* ★ মোবাইল ইনভয়েস বাটন ★ */}
+                        <Button size="icon" variant="outline" className="h-9 w-9 text-blue-600 border-blue-200 bg-blue-50" onClick={() => handleDownloadInvoice(order)}>
+                            <FileText className="h-4 w-4" />
+                        </Button>
                     </div>
                 </div>
             </Card>
@@ -189,28 +233,38 @@ export default function AdminOrdersPage() {
                 <TableRow>
                     <TableHead className="pl-6">Order #</TableHead>
                     <TableHead>Customer</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Type</TableHead>
+                    <TableHead className="hidden md:table-cell">Date</TableHead>
+                    <TableHead className="hidden lg:table-cell">Type</TableHead>
                     <TableHead>Amount</TableHead>
-                    <TableHead className="pr-6">Status</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right pr-6">Invoice</TableHead>
                 </TableRow>
                 </TableHeader>
                 <TableBody>
                 {filteredOrders.map(order => (
-                    <TableRow key={order._id} className="hover:bg-muted/20">
-                        <TableCell className="pl-6 font-mono font-medium">{order.OrderNumber}</TableCell>
+                    <TableRow key={order._id} className="hover:bg-muted/20 transition-colors">
+                        <TableCell className="pl-6 font-mono font-medium text-sm">
+                            {order.OrderNumber}
+                        </TableCell>
                         <TableCell>
-                            <div className="font-medium">{order.Name}</div>
+                            <div className="font-medium text-sm">{order.Name}</div>
                             <div className="text-xs text-muted-foreground">{order.Phone}</div>
                         </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                            {new Date(order.Timestamp).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}
+                        <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
+                            {new Date(order.Timestamp).toLocaleDateString()}
                         </TableCell>
-                        <TableCell><Badge variant="outline">{order.OrderType}</Badge></TableCell>
-                        <TableCell className="font-bold">{formatPrice(order.FinalPrice)}</TableCell>
-                        <TableCell className="pr-6">
-                            <Select defaultValue={order.Status} onValueChange={(val) => handleStatusChange(order._id, val)}>
-                                <SelectTrigger className={`w-[140px] h-8 border-0 shadow-sm ${getStatusColor(order.Status)}`}>
+                        <TableCell className="hidden lg:table-cell">
+                            <Badge variant="secondary" className="font-normal text-xs bg-background border">
+                                {order.OrderType}
+                            </Badge>
+                        </TableCell>
+                        <TableCell className="font-bold text-sm">{formatPrice(order.FinalPrice)}</TableCell>
+                        <TableCell>
+                            <Select 
+                                defaultValue={order.Status} 
+                                onValueChange={(val) => handleStatusChange(order._id, val)}
+                            >
+                                <SelectTrigger className={`w-[130px] h-8 text-xs font-medium border-0 shadow-sm ${getStatusColor(order.Status)}`}>
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -219,6 +273,17 @@ export default function AdminOrdersPage() {
                                     ))}
                                 </SelectContent>
                             </Select>
+                        </TableCell>
+                        {/* ★ ডেস্কটপ ইনভয়েস বাটন ★ */}
+                        <TableCell className="text-right pr-6">
+                            <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="text-muted-foreground hover:text-blue-600 hover:bg-blue-50"
+                                onClick={() => handleDownloadInvoice(order)}
+                            >
+                                <Download className="h-4 w-4 mr-2" /> PDF
+                            </Button>
                         </TableCell>
                     </TableRow>
                 ))}

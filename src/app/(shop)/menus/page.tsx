@@ -4,7 +4,8 @@ import { MenusClient } from './MenusClient';
 import { clientPromise } from '@/lib/mongodb';
 import { Product } from '@/lib/types';
 
-export const dynamic = 'force-dynamic'; // রিয়েল-টাইম আপডেটের জন্য
+// রিয়েল-টাইম আপডেটের জন্য ক্যাশিং বন্ধ (Pusher এর সাথে সিঙ্ক থাকার জন্য)
+export const dynamic = 'force-dynamic';
 
 async function getMenuData() {
   try {
@@ -32,7 +33,7 @@ async function getMenuData() {
       reviewCount: 0,
       stock: doc.InStock ? 100 : 0,
       featured: doc.Bestseller === true || doc.Bestseller === "true",
-      isDailySpecial: doc.isDailySpecial === true, // ★ ম্যাপ করা হলো
+      isDailySpecial: doc.isDailySpecial === true,
       reviews: [],
       createdAt: doc.CreatedAt ? new Date(doc.CreatedAt).toISOString() : undefined
     }));
@@ -50,15 +51,7 @@ export default async function MenusPage() {
 
   return (
     <div>
-      <div className="bg-primary/5 py-8 md:py-12 mb-6">
-        <div className="container text-center">
-            <h1 className="text-3xl md:text-5xl font-bold font-headline text-primary mb-3">Our Menu</h1>
-            <p className="text-muted-foreground max-w-2xl mx-auto">
-                Explore our wide range of authentic delicacies.
-            </p>
-        </div>
-      </div>
-      
+      {/* হেডার সেকশন রিমুভ করা হয়েছে */}
       <MenusClient initialProducts={products} />
     </div>
   );
