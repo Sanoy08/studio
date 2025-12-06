@@ -325,3 +325,4 @@ export function ProductDetailsClient({ product, relatedProducts }: { product: Pr
     </div>
   );
 }
+
