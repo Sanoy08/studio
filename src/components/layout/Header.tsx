@@ -134,7 +134,9 @@ export function Header() {
                             <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
                             
                             <div className="relative z-10">
-                                <Logo className="text-white mb-6 brightness-200" /> {/* Ensure Logo accepts className */}
+                                <div className="text-white mb-6 brightness-200">
+                                    <Logo />
+                                </div>
                                 
                                 {user ? (
                                     <div className="flex items-center gap-4 animate-in slide-in-from-left duration-500">

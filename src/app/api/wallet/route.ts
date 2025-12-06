@@ -12,7 +12,6 @@ const JWT_SECRET = process.env.JWT_SECRET || 'default_secret';
 
 export async function GET(request: NextRequest) {
   try {
-    // ১. টোকেন ভেরিফিকেশন
     const authHeader = request.headers.get('authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
@@ -29,29 +28,40 @@ export async function GET(request: NextRequest) {
 
     const client = await clientPromise;
     const db = client.db(DB_NAME);
+    const userObjectId = new ObjectId(userId);
 
-    // ২. ইউজারের বর্তমান ব্যালেন্স আনা
+    // ইউজারের ওয়ালেট তথ্য আনা
     const user = await db.collection(USERS_COLLECTION).findOne(
-        { _id: new ObjectId(userId) },
-        { projection: { wallet: 1 } }
+        { _id: userObjectId },
+        { projection: { wallet: 1, totalSpent: 1 } }
     );
 
-    const currentBalance = user?.wallet?.currentBalance || 0;
-
-    // ৩. ট্রানজেকশন হিস্ট্রি আনা
+    // ট্রানজেকশন হিস্ট্রি আনা
     const transactions = await db.collection(TRANSACTIONS_COLLECTION)
-        .find({ userId: new ObjectId(userId) })
-        .sort({ createdAt: -1 }) // লেটেস্ট আগে
-        .limit(20) // শেষ ২০টি ট্রানজেকশন
+        .find({ userId: userObjectId })
+        .sort({ createdAt: -1 })
+        .limit(20)
         .toArray();
 
-    return NextResponse.json({ 
-        success: true, 
-        balance: currentBalance, 
-        transactions 
-    }, { status: 200 });
+    // ★★★ FIX: _id কে id তে ম্যাপ করা ★★★
+    const formattedTransactions = transactions.map(txn => ({
+        id: txn._id.toString(), // এটি ইউনিক কি হিসেবে ব্যবহার হবে
+        type: txn.type,
+        amount: txn.amount,
+        description: txn.description,
+        date: txn.createdAt
+    }));
+
+    return NextResponse.json({
+        success: true,
+        balance: user?.wallet?.currentBalance || 0,
+        tier: user?.wallet?.tier || 'Bronze',
+        totalSpent: user?.totalSpent || 0,
+        transactions: formattedTransactions // ফিক্সড ডেটা পাঠানো হচ্ছে
+    });
 
   } catch (error: any) {
+    console.error("Wallet API Error:", error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
