@@ -16,7 +16,7 @@ export async function PUT(request: NextRequest) {
   try {
     const { orderId, status } = await request.json();
 
-    console.log(`[API] Updating Status: Order ${orderId} -> ${status}`); // Debug Log 1
+    console.log(`[API] Updating Status: Order ${orderId} -> ${status}`);
 
     if (!orderId || !status) {
         return NextResponse.json({ success: false, error: 'Missing fields' }, { status: 400 });
@@ -29,7 +29,6 @@ export async function PUT(request: NextRequest) {
     try {
         await session.withTransaction(async () => {
             
-            // ১. অর্ডার খোঁজা
             const order = await db.collection(ORDERS_COLLECTION).findOne({ _id: new ObjectId(orderId) }, { session });
             
             if (!order) {
@@ -37,61 +36,50 @@ export async function PUT(request: NextRequest) {
                 throw new Error("Order not found");
             }
 
-            // ২. স্ট্যাটাস আপডেট
             await db.collection(ORDERS_COLLECTION).updateOne(
                 { _id: new ObjectId(orderId) },
                 { $set: { Status: status } },
                 { session }
             );
 
-            // ইউজার আইডি চেক (এটি স্ট্রিং বা অবজেক্ট আইডি হতে পারে, তাই সেফ কনভারশন করছি)
             let userId = null;
             if (order.userId) {
                 userId = new ObjectId(order.userId);
             }
 
-            console.log(`[API] User ID found: ${userId ? userId.toString() : 'Guest User'}`); // Debug Log 2
-
             // --- লজিক: Earning (Delivered) ---
             if (status === 'Delivered') {
                 
-                if (!userId) {
-                    console.log("[API] Skipping Coin Award: User is Guest (No User ID)");
-                } else if (order.coinsAwarded) {
-                    console.log("[API] Skipping Coin Award: Already Awarded");
-                } else {
-                    // ইউজার এবং বর্তমান খরচ বের করা
+                if (userId && !order.coinsAwarded) {
                     const user = await db.collection(USERS_COLLECTION).findOne({ _id: userId }, { session });
                     
                     if (user) {
-                        const orderTotal = parseFloat(order.FinalPrice) || 0; // Safe number conversion
+                        const orderTotal = parseFloat(order.FinalPrice) || 0;
                         const currentTotalSpent = (user.totalSpent || 0) + orderTotal;
                         
-                        console.log(`[API] Calculation: Order Total ${orderTotal}, Prev Spent ${user.totalSpent || 0}`); // Debug Log 3
-
                         // টায়ার লজিক
                         let newTier = "Bronze";
-                        let earnRate = 2; // 2%
+                        let earnRate = 2; 
 
                         if (currentTotalSpent >= 15000) { newTier = "Gold"; earnRate = 6; } 
                         else if (currentTotalSpent >= 5000) { newTier = "Silver"; earnRate = 4; }
 
                         const coinsEarned = Math.floor((orderTotal * earnRate) / 100);
 
-                        console.log(`[API] Coins Earned: ${coinsEarned} (Rate: ${earnRate}%)`); // Debug Log 4
-
                         if (coinsEarned > 0) {
-                            // আপডেট ইউজার
+                            // ★★★ FIX: lastTransactionDate আপডেট করা হলো ★★★
                             await db.collection(USERS_COLLECTION).updateOne(
                                 { _id: userId },
                                 { 
                                     $inc: { "wallet.currentBalance": coinsEarned, "totalSpent": orderTotal },
-                                    $set: { "wallet.tier": newTier }
+                                    $set: { 
+                                        "wallet.tier": newTier,
+                                        "lastTransactionDate": new Date() // এই লাইনটি মিসিং ছিল
+                                    }
                                 },
                                 { session }
                             );
 
-                            // ইনসার্ট ট্রানজেকশন
                             await db.collection(TRANSACTIONS_COLLECTION).insertOne({
                                 userId: userId,
                                 type: 'earn',
@@ -100,20 +88,14 @@ export async function PUT(request: NextRequest) {
                                 createdAt: new Date()
                             }, { session });
 
-                            // ফ্ল্যাগ আপডেট
                             await db.collection(ORDERS_COLLECTION).updateOne(
                                 { _id: new ObjectId(orderId) },
                                 { $set: { coinsAwarded: true } },
                                 { session }
                             );
 
-                            console.log("[API] Coins Successfully Awarded!"); // Debug Log 5
-
-                            // নোটিফিকেশন
                             sendNotificationToUser(client, userId.toString(), "🎉 Coins Earned!", `You earned ${coinsEarned} coins!`, '/account/wallet').catch(e => console.error("Notif Error", e));
                         }
-                    } else {
-                        console.error("[API] User found in order but not in Users collection!");
                     }
                 }
             }
@@ -121,11 +103,13 @@ export async function PUT(request: NextRequest) {
             // --- লজিক: Refund (Cancelled) ---
             if (status === 'Cancelled' && userId && order.CoinsRedeemed > 0 && !order.coinsRefunded) {
                 
-                console.log(`[API] Refunding ${order.CoinsRedeemed} coins...`);
-
+                // ★★★ FIX: Refund এর সময়ও lastTransactionDate আপডেট করা হলো ★★★
                 await db.collection(USERS_COLLECTION).updateOne(
                     { _id: userId },
-                    { $inc: { "wallet.currentBalance": order.CoinsRedeemed } },
+                    { 
+                        $inc: { "wallet.currentBalance": order.CoinsRedeemed },
+                        $set: { "lastTransactionDate": new Date() } // আপডেট
+                    },
                     { session }
                 );
 
@@ -146,7 +130,6 @@ export async function PUT(request: NextRequest) {
                 sendNotificationToUser(client, userId.toString(), "Coins Refunded", `${order.CoinsRedeemed} coins refunded.`, '/account/wallet').catch(console.error);
             }
 
-            // স্ট্যাটাস চেঞ্জ নোটিফিকেশন
             if (userId) {
                 sendNotificationToUser(client, userId.toString(), `Order ${status}`, `Order #${order.OrderNumber} is now ${status}.`, '/account/orders').catch(console.error);
             }
