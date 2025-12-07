@@ -9,7 +9,10 @@ const DB_NAME = 'BumbasKitchenDB';
 const ORDERS_COLLECTION = 'orders';
 const USERS_COLLECTION = 'users';
 const TRANSACTIONS_COLLECTION = 'coinTransactions';
-const COUPONS_COLLECTION = 'coupons'; // ★★★ নতুন কনস্ট্যান্ট যোগ করা হলো ★★★
+const COUPONS_COLLECTION = 'coupons'; 
+
+// ★★★ ফিক্সের জন্য নতুন কনস্ট্যান্ট ★★★
+const SUCCESS_STATUSES = ['Received', 'Delivered'];
 
 export async function PUT(request: NextRequest) {
   try {
@@ -34,41 +37,42 @@ export async function PUT(request: NextRequest) {
                 console.error("[API] Order not found in DB");
                 throw new Error("Order not found");
             }
-            
-            let orderUpdate: any = { Status: status }; // অর্ডারে আপডেটের জন্য একটি ডাইনামিক অবজেক্ট
+
+            // অর্ডারে আপডেটের জন্য একটি ডাইনামিক অবজেক্ট
+            let orderUpdate: any = { Status: status }; 
             
             const couponCode = order.CouponCode;
             const orderCouponIncremented = order.couponUsageTracked === true;
-            const isReceived = status === 'Received';
+            
+            // কুপন ব্যবহারের সফল স্ট্যাটাসগুলির মধ্যে আছে কিনা তা চেক করা হচ্ছে 
+            const isSuccessStatus = SUCCESS_STATUSES.includes(status);
             const isCancelled = status === 'Cancelled';
             
-            // --- কুপন ব্যবহারের লজিক যোগ করা হলো ---
+            // --- কুপন ব্যবহারের ফিক্সড লজিক ---
             if (couponCode) {
-                if (isReceived && !orderCouponIncremented) {
-                    // যদি 'Received' হয় এবং আগে ব্যবহার কাউন্ট না করা হয়ে থাকে 
+                if (isSuccessStatus && !orderCouponIncremented) {
+                    // ১. যদি স্ট্যাটাস 'Received' বা 'Delivered' হয় এবং কুপন ব্যবহার এখনো গণনা না করা হয়ে থাকে 
                     await db.collection(COUPONS_COLLECTION).updateOne(
                         { code: couponCode },
                         { $inc: { timesUsed: 1 } },
                         { session }
                     );
                     orderUpdate.couponUsageTracked = true; // একবার কাউন্ট হয়েছে, তার জন্য ফ্ল্যাগ সেট করা হলো
-                    console.log(`[API] Coupon ${couponCode} usage incremented for order ${orderId}.`);
+                    console.log(`[API] Coupon ${couponCode} usage incremented for order ${orderId} on status ${status}.`);
                 } else if (isCancelled && orderCouponIncremented) {
-                    // যদি 'Cancelled' হয় এবং আগে একবার কাউন্ট করা হয়ে থাকে (অর্থাৎ, Received হয়েছিল)
-                    // ইউজার রিকোয়েস্ট মেনে শুধুমাত্র আগে increment হলে তবেই decrement করা হচ্ছে
+                    // ২. যদি 'Cancelled' হয় এবং আগে একবার গণনা করা হয়ে থাকে (অর্থাৎ, Received/Delivered হয়েছিল)
                     await db.collection(COUPONS_COLLECTION).updateOne(
                         { code: couponCode },
                         { $inc: { timesUsed: -1 } },
                         { session }
                     );
                     orderUpdate.couponUsageTracked = false; // ফ্ল্যাগ রিসেট করা হলো
-                    console.log(`[API] Coupon ${couponCode} usage decremented for order ${orderId}.`);
+                    console.log(`[API] Coupon ${couponCode} usage decremented for order ${orderId} on cancellation.`);
                 }
             }
-            // --- কুপন ব্যবহারের লজিক শেষ ---
+            // --- কুপন ব্যবহারের ফিক্সড লজিক শেষ ---
             
             // অর্ডারের স্ট্যাটাস এবং কুপন ট্র্যাকিং ফ্ল্যাগ আপডেট করা হলো
-            // (এটি অরিজিনাল status update লাইনকে প্রতিস্থাপন করছে)
             await db.collection(ORDERS_COLLECTION).updateOne(
                 { _id: new ObjectId(orderId) },
                 { $set: orderUpdate },
@@ -80,7 +84,7 @@ export async function PUT(request: NextRequest) {
                 userId = new ObjectId(order.userId);
             }
 
-            // --- লজিক: Earning (Delivered) ---
+            // --- অরিজিনাল লজিক: Earning (Delivered) ---
             if (status === 'Delivered') {
                 
                 if (userId && !order.coinsAwarded) {
@@ -107,7 +111,7 @@ export async function PUT(request: NextRequest) {
                                     $inc: { "wallet.currentBalance": coinsEarned, "totalSpent": orderTotal },
                                     $set: { 
                                         "wallet.tier": newTier,
-                                        "lastTransactionDate": new Date() // এই লাইনটি মিসিং ছিল
+                                        "lastTransactionDate": new Date() 
                                     }
                                 },
                                 { session }
@@ -133,7 +137,7 @@ export async function PUT(request: NextRequest) {
                 }
             }
 
-            // --- লজিক: Refund (Cancelled) ---
+            // --- অরিজিনাল লজিক: Refund (Cancelled) ---
             if (status === 'Cancelled' && userId && order.CoinsRedeemed > 0 && !order.coinsRefunded) {
                 
                 // ★★★ FIX: Refund এর সময়ও lastTransactionDate আপডেট করা হলো ★★★
