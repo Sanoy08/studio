@@ -11,7 +11,7 @@ const USERS_COLLECTION = 'users';
 const TRANSACTIONS_COLLECTION = 'coinTransactions';
 const COUPONS_COLLECTION = 'coupons'; 
 
-const SUCCESS_STATUSES = ['Received', 'Delivered'];
+const SUCCESS_STATUSES = ['Received', 'Delivered']; // কুপন ব্যবহারের জন্য সফল স্ট্যাটাস
 
 export async function PUT(request: NextRequest) {
   try {
@@ -45,51 +45,29 @@ export async function PUT(request: NextRequest) {
             const isSuccessStatus = SUCCESS_STATUSES.includes(status);
             const isCancelled = status === 'Cancelled';
             
-            // ★★★ ডিবাগ লগ ১: অর্ডারের কুপন সংক্রান্ত বর্তমান ডেটা ★★★
-            console.log(`[DEBUG] Fetched Order State: CouponCode=${couponCode}, Tracked=${orderCouponIncremented}, New Status=${status}`);
-            console.log(`[DEBUG] Calculated Conditions: isSuccessStatus=${isSuccessStatus}, isCancelled=${isCancelled}`);
-
-            // --- কুপন ব্যবহারের ফিক্সড লজিক ---
+            // --- কুপন ব্যবহারের লজিক ---
             if (couponCode) {
                 if (isSuccessStatus && !orderCouponIncremented) {
                     // ১. যদি স্ট্যাটাস 'Received' বা 'Delivered' হয় এবং কুপন ব্যবহার এখনো গণনা না করা হয়ে থাকে 
-                    
-                    // ★★★ ডিবাগ লগ ২: ইনক্রিমেন্ট প্রচেষ্টা ★★★
-                    console.log(`[DEBUG] ACTION: Attempting to INCREMENT timesUsed for coupon: ${couponCode}`);
-                    
                     await db.collection(COUPONS_COLLECTION).updateOne(
                         { code: couponCode },
                         { $inc: { timesUsed: 1 } },
                         { session }
                     );
-                    orderUpdate.couponUsageTracked = true; 
-                    console.log(`[API] Coupon ${couponCode} usage incremented for order ${orderId} on status ${status}.`);
+                    orderUpdate.couponUsageTracked = true;
                 } else if (isCancelled && orderCouponIncremented) {
                     // ২. যদি 'Cancelled' হয় এবং আগে একবার গণনা করা হয়ে থাকে 
-                    
-                    // ★★★ ডিবাগ লগ ৩: ডিক্রিমেন্ট প্রচেষ্টা ★★★
-                    console.log(`[DEBUG] ACTION: Attempting to DECREMENT timesUsed for coupon: ${couponCode}`);
-
                     await db.collection(COUPONS_COLLECTION).updateOne(
                         { code: couponCode },
                         { $inc: { timesUsed: -1 } },
                         { session }
                     );
-                    orderUpdate.couponUsageTracked = false; 
-                    console.log(`[API] Coupon ${couponCode} usage decremented for order ${orderId} on cancellation.`);
-                } else {
-                    // ★★★ ডিবাগ লগ ৪: কোন পরিবর্তন হচ্ছে না ★★★
-                     console.log(`[DEBUG] ACTION: Coupon ${couponCode} used, but no change in timesUsed required for status ${status}.`);
+                    orderUpdate.couponUsageTracked = false;
                 }
-            } else {
-                 console.log("[DEBUG] ACTION: No CouponCode found in order. Skipping coupon logic.");
             }
-            // --- কুপন ব্যবহারের ফিক্সড লজিক শেষ ---
+            // --- কুপন ব্যবহারের লজিক শেষ ---
             
             // অর্ডারের স্ট্যাটাস এবং কুপন ট্র্যাকিং ফ্ল্যাগ আপডেট করা হলো
-            // ★★★ ডিবাগ লগ ৫: অর্ডারে ফাইনাল $set পে লোড ★★★
-            console.log("[DEBUG] Final $set payload for Order:", orderUpdate);
-            
             await db.collection(ORDERS_COLLECTION).updateOne(
                 { _id: new ObjectId(orderId) },
                 { $set: orderUpdate },
@@ -111,6 +89,7 @@ export async function PUT(request: NextRequest) {
                         const orderTotal = parseFloat(order.FinalPrice) || 0;
                         const currentTotalSpent = (user.totalSpent || 0) + orderTotal;
                         
+                        // টায়ার লজিক
                         let newTier = "Bronze";
                         let earnRate = 2; 
 
@@ -120,13 +99,14 @@ export async function PUT(request: NextRequest) {
                         const coinsEarned = Math.floor((orderTotal * earnRate) / 100);
 
                         if (coinsEarned > 0) {
+                            // lastTransactionDate আপডেট করা হচ্ছে
                             await db.collection(USERS_COLLECTION).updateOne(
                                 { _id: userId },
                                 { 
                                     $inc: { "wallet.currentBalance": coinsEarned, "totalSpent": orderTotal },
                                     $set: { 
                                         "wallet.tier": newTier,
-                                        "lastTransactionDate": new Date()
+                                        "lastTransactionDate": new Date() 
                                     }
                                 },
                                 { session }
@@ -155,6 +135,7 @@ export async function PUT(request: NextRequest) {
             // --- লজিক: Refund (Cancelled) ---
             if (status === 'Cancelled' && userId && order.CoinsRedeemed > 0 && !order.coinsRefunded) {
                 
+                // Refund এর সময়ও lastTransactionDate আপডেট করা হচ্ছে
                 await db.collection(USERS_COLLECTION).updateOne(
                     { _id: userId },
                     { 
@@ -190,8 +171,6 @@ export async function PUT(request: NextRequest) {
 
     } catch (error: any) {
         console.error("[API] Transaction Error:", error);
-        // Transaction failed, log the error details
-        console.error(`[DEBUG] Transaction Failed for Order ID: ${orderId}. Error Message: ${error.message}`);
         throw error;
     } finally {
         await session.endSession();

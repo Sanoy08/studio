@@ -15,34 +15,34 @@ const JWT_SECRET = process.env.JWT_SECRET || 'default_secret';
 const COIN_VALUE = 1; 
 
 export async function POST(request: NextRequest) {
-  try {
+   try {
     const orderData = await request.json();
 
     // ১. অথেন্টিকেশন
-    let userIdToSave: ObjectId | null = null;
-    const authHeader = request.headers.get('authorization');
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      const token = authHeader.split(' ')[1];
-      try {
-        const decoded: any = jwt.verify(token, JWT_SECRET);
-        userIdToSave = new ObjectId(decoded._id);
-      } catch (e) { console.warn("Invalid token"); }
-    }
+     let userIdToSave: ObjectId | null = null;
+     const authHeader = request.headers.get('authorization');
+     if (authHeader && authHeader.startsWith('Bearer ')) {
+       const token = authHeader.split(' ')[1];
+       try {
+         const decoded: any = jwt.verify(token, JWT_SECRET);
+         userIdToSave = new ObjectId(decoded._id);
+       } catch (e) { console.warn("Invalid token"); }
+     }
 
-    const client = await clientPromise;
-    const db = client.db(DB_NAME);
-    const session = client.startSession();
+      const client = await clientPromise;
+     const db = client.db(DB_NAME);
+     const session = client.startSession();
 
-    const orderNumber = `BK-${Date.now().toString().slice(-5)}${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+     const orderNumber = `BK-${Date.now().toString().slice(-5)}${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
 
-    try {
-        await session.withTransaction(async () => {
-            
-            let finalDiscount = 0;
-            let coinsRedeemed = 0;
-            let subtotal = parseFloat(orderData.subtotal);
+     try {
+         await session.withTransaction(async () => {
 
-            // ২. কয়েন রিডিমশন (কাটা হবে, কিন্তু আর্ন হবে না)
+             let finalDiscount = 0;
+             let coinsRedeemed = 0;
+             let subtotal = parseFloat(orderData.subtotal);
+
+            // ২. কয়েন রিডিমশন (কাটা হবে, কিন্তু আর্ন হবে না)
             if (userIdToSave && orderData.useCoins) {
                 const user = await db.collection(USERS_COLLECTION).findOne({ _id: userIdToSave }, { session });
                 const userBalance = user?.wallet?.currentBalance || 0;
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
                 finalDiscount = coinsRedeemed * COIN_VALUE;
 
                 if (coinsRedeemed > 0) {
-                    // ওয়ালেট থেকে কয়েন কাটা হচ্ছে
+                    // ওয়ালেট থেকে কয়েন কাটা হচ্ছে
                     await db.collection(USERS_COLLECTION).updateOne(
                         { _id: userIdToSave },
                         { $inc: { "wallet.currentBalance": -coinsRedeemed } },
@@ -73,10 +73,7 @@ export async function POST(request: NextRequest) {
             }
 
             // ৩. ফাইনাল প্রাইস ক্যালকুলেশন
-            // (এখানে কুপন ডিসকাউন্ট থাকলে সেটাও বাদ দিতে হবে, আমি ধরে নিচ্ছি orderData.discount এর মধ্যে সব আছে)
-            // তবে আপনার লজিক অনুযায়ী subtotal - coinDiscount
             const finalPrice = subtotal - finalDiscount; 
-            // বা যদি আলাদা কুপন থাকে: const finalPrice = orderData.total; 
 
             // ৪. অর্ডার সেভ করা (Status: Pending Verification)
             const newOrder = {
@@ -93,17 +90,16 @@ export async function POST(request: NextRequest) {
                 Instructions: orderData.instructions,
                 Subtotal: subtotal,
                 Discount: orderData.discount || finalDiscount, // টোটাল ডিসকাউন্ট সেভ করা
+                CouponCode: orderData.couponCode, // ★★★ FIX: কুপন কোড যোগ করা হলো ★★★
                 CoinsRedeemed: coinsRedeemed,
                 FinalPrice: orderData.total, // ফ্রন্টএন্ড থেকে আসা ক্যালকুলেটেড টোটাল
                 Items: orderData.items, 
-                Status: "Pending Verification", // ★ এখানে চেঞ্জ করা হয়েছে
-                coinsAwarded: false, // ফ্ল্যাগ: এখনো আর্ন হয়নি
-                coinsRefunded: false // ফ্ল্যাগ: এখনো রিফান্ড হয়নি
+                Status: "Pending Verification", 
+                coinsAwarded: false, 
+                coinsRefunded: false 
             };
 
             await db.collection(ORDERS_COLLECTION).insertOne(newOrder, { session });
-
-            // ★ নোট: আর্নিং লজিক এখান থেকে সরিয়ে ফেলা হয়েছে ★
 
             // ৫. নোটিফিকেশন
             sendNotificationToAdmins(
@@ -132,6 +128,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to place order.' },
       { status: 500 }
-    );
+   
+ );
   }
 }
