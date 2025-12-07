@@ -108,31 +108,31 @@ export function CartSheet() {
               </div>
             </div>
             
-            {/* Footer Section */}
-            <SheetFooter className="mt-auto border-t pt-6 bg-background">
-                <div className="w-full space-y-4">
-                    <div className="space-y-1.5">
-                        <div className="flex justify-between text-sm text-muted-foreground">
-                            <span>Subtotal</span>
-                            <span>{formatPrice(totalPrice)}</span>
-                        </div>
-                        {/* Shipping and Taxes REMOVED */}
-                        <div className="flex justify-between font-bold text-xl pt-2 border-t mt-2">
-                            <span>Total</span>
-                            <span className="text-primary">{formatPrice(totalPrice)}</span>
-                        </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-3 pt-2">
-                      <Button asChild size="lg" variant="outline" className="w-full rounded-xl border-primary/20 hover:bg-primary/5 hover:text-primary">
-                          <Link href="/cart">View Cart</Link>
-                      </Button>
-                      <Button asChild size="lg" className="w-full rounded-xl shadow-lg shadow-primary/20">
-                          <Link href="/checkout">Checkout</Link>
-                      </Button>
-                    </div>
-                </div>
-            </SheetFooter>
+            {/* Footer Section - শুধু এই অংশটুকু চেঞ্জ হবে */}
+<SheetFooter className="mt-auto border-t pt-6 bg-background">
+    <div className="w-full space-y-4">
+        <div className="space-y-1.5">
+            <div className="flex justify-between text-sm text-muted-foreground">
+                <span>Subtotal</span>
+                <span>{formatPrice(totalPrice)}</span>
+            </div>
+            <div className="flex justify-between font-bold text-xl pt-2 border-t mt-2">
+                <span>Total</span>
+                <span className="text-primary">{formatPrice(totalPrice)}</span>
+            </div>
+        </div>
+        
+        <div className="grid grid-cols-2 gap-3 pt-2">
+            <Button asChild size="lg" variant="outline" className="w-full rounded-xl border-primary/20 hover:bg-primary/5 hover:text-primary">
+                <Link href="/cart">View Cart</Link>
+            </Button>
+            {/* ★★★ পরিবর্তন: Checkout এর বদলে Summary পেজে যাবে ★★★ */}
+            <Button asChild size="lg" className="w-full rounded-xl shadow-lg shadow-primary/20">
+                <Link href="/checkout/summary">Proceed</Link>
+            </Button>
+        </div>
+    </div>
+</SheetFooter>
           </>
         ) : (
           <div className="flex flex-col items-center justify-center h-full text-center space-y-4 pb-12">

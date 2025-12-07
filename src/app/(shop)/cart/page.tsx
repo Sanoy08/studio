@@ -127,14 +127,15 @@ export default function CartPage() {
                 </div>
               </CardContent>
               <CardFooter>
-                <Button
-                  size="lg"
-                  className="w-full"
-                  onClick={() => router.push('/checkout')}
-                >
-                  Proceed to Checkout
-                </Button>
-              </CardFooter>
+    {/* ★★★ পরিবর্তন: বাটন টেক্সট এবং অনক্লিক ফাংশন ★★★ */}
+    <Button
+        size="lg"
+        className="w-full"
+        onClick={() => router.push('/checkout/summary')} // নতুন পেজে যাবে
+    >
+        Proceed to Summary
+    </Button>
+</CardFooter>
             </Card>
           </div>
         </div>

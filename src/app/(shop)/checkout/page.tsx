@@ -13,7 +13,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Lock, ChevronDown, ChevronUp, MapPin, Loader2, Coins } from 'lucide-react';
+import { Lock, ChevronDown, ChevronUp, MapPin, Loader2, Info, Ticket, Coins } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -30,6 +30,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { toast } from 'sonner';
 import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants';
 
+// --- Zod Schema ---
 const checkoutSchema = z.object({
   name: z.string().min(2, 'Please enter a valid name.'),
   address: z.string().min(10, 'Please enter your primary address (at least 10 characters).'),
@@ -44,6 +45,7 @@ const checkoutSchema = z.object({
   shareLocation: z.boolean().optional(),
 });
 
+// --- Helper Components ---
 const FloatingLabelInput = ({ field, label, type = 'text' }: any) => (
   <div className="relative">
     <Input 
@@ -73,94 +75,20 @@ const FloatingLabelTextarea = ({ field, label }: any) => (
   </div>
 );
 
-// ★ অর্ডার সামারি কম্পোনেন্ট (বাইরে)
-const OrderSummaryContent = ({ state, totalPrice, useCoins, walletBalance, coinDiscount, handleUseCoinsChange, finalTotal }: any) => (
-    <>
-      <h3 className="font-bold text-lg mb-4">Your Order</h3>
-       <div className="space-y-5">
-        {state.items.map((item: any) => {
-            const imageSrc = (item.image && item.image.url && item.image.url.trim() !== '') 
-                ? item.image.url 
-                : PLACEHOLDER_IMAGE_URL;
-
-            return (
-                <div key={item.id} className="flex items-center gap-4 relative">
-                    <div className="relative h-16 w-16">
-                        <div className="relative h-full w-full rounded-md overflow-hidden border bg-muted">
-                            <Image src={imageSrc} alt={item.name} fill className="object-cover" />
-                        </div>
-                        <div className="absolute -top-2 -right-2 bg-primary text-primary-foreground text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center z-10 shadow-sm border border-background">
-                            {item.quantity}
-                        </div>
-                    </div>
-                    <div className="flex-grow">
-                        <p className="font-medium text-sm line-clamp-2">{item.name}</p>
-                    </div>
-                    <p className="font-semibold text-sm whitespace-nowrap">{formatPrice(item.price * item.quantity)}</p>
-                </div>
-            );
-        })}
-      </div>
-      <Separator className="my-4" />
-      
-      {/* ★★★ নতুন: কয়েন রিডিমশন অপশন ★★★ */}
-      {walletBalance > 0 && (
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
-              <div className="flex items-start gap-3">
-                  <Checkbox 
-                    id="useCoins" 
-                    checked={useCoins} 
-                    onCheckedChange={handleUseCoinsChange}
-                    className="mt-1 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
-                  />
-                  <div className="grid gap-1.5 leading-none">
-                    <label
-                        htmlFor="useCoins"
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer text-amber-900"
-                    >
-                        Use my Bumba Coins
-                    </label>
-                    <p className="text-xs text-amber-700">
-                        Available: {walletBalance} coins (Save up to 50% of order)
-                    </p>
-                  </div>
-              </div>
-          </div>
-      )}
-
-      <div className="space-y-2">
-        <div className="flex justify-between">
-          <p className="text-muted-foreground">Subtotal</p>
-          <p>{formatPrice(totalPrice)}</p>
-        </div>
-        {/* কয়েন ডিসকাউন্ট দেখানো */}
-        {useCoins && coinDiscount > 0 && (
-            <div className="flex justify-between text-green-600 font-medium">
-                <div className="flex items-center gap-1"><Coins className="h-3 w-3"/> Coin Discount</div>
-                <p>- {formatPrice(coinDiscount)}</p>
-            </div>
-        )}
-      </div>
-      <Separator className="my-4" />
-      <div className="flex justify-between font-bold text-lg">
-        <p>Total</p>
-        <p className="text-primary">{formatPrice(finalTotal)}</p>
-      </div>
-    </>
-);
-
+// --- Main Component ---
 export default function CheckoutPage() {
-  const { state, totalPrice, itemCount, clearCart, isInitialized } = useCart();
+  const { state, totalPrice, itemCount, clearCart, isInitialized, checkoutState } = useCart();
   const { user, isLoading } = useAuth();
   const router = useRouter();
+
+  // ★ ১. Context থেকে ডেটা রিড করা (URL থেকে নয়)
+  const { couponCode, couponDiscount, useCoins } = checkoutState;
+
   const [orderType, setOrderType] = useState<'delivery' | 'pickup'>('delivery');
+  const [walletBalance, setWalletBalance] = useState(0);
   const [isSummaryExpanded, setIsSummaryExpanded] = useState(false);
 
-  // ★ নতুন স্টেট: ওয়ালেট ব্যালেন্স এবং কয়েন ব্যবহার
-  const [walletBalance, setWalletBalance] = useState(0);
-  const [useCoins, setUseCoins] = useState(false);
-
-  // ১. ওয়ালেট ব্যালেন্স ফেচ করা
+  // ২. ওয়ালেট ব্যালেন্স ফেচ করা (কয়েন ডিসকাউন্ট ক্যালকুলেশনের জন্য)
   useEffect(() => {
       const fetchWallet = async () => {
           const token = localStorage.getItem('token');
@@ -171,9 +99,10 @@ export default function CheckoutPage() {
               if(data.success) setWalletBalance(data.balance);
           } catch(e) {}
       };
-      fetchWallet();
-  }, []);
+      if (user) fetchWallet();
+  }, [user]);
 
+  // ৩. অথেন্টিকেশন চেক
   useEffect(() => {
     if (!isLoading && !isInitialized) return;
     if (!isLoading && !user) {
@@ -197,6 +126,7 @@ export default function CheckoutPage() {
   const primaryAddress = watch('address');
   const [isSameAsAddress, setIsSameAsAddress] = useState(false);
 
+  // ৪. ফর্ম প্রি-ফিল করা
   useEffect(() => {
     const initializeCheckoutData = async () => {
         if (!user) return;
@@ -212,9 +142,17 @@ export default function CheckoutPage() {
                 }
             }
         } catch (error) {}
+        
         reset({
-            name: user.name || '', address: savedAddress, altPhone: '', deliveryAddress: '',
-            preferredDate: '', mealTime: 'lunch', instructions: '', terms: false, shareLocation: false,
+            name: user.name || '', 
+            address: savedAddress, 
+            altPhone: '', 
+            deliveryAddress: '',
+            preferredDate: '', 
+            mealTime: 'lunch', 
+            instructions: '', 
+            terms: false, 
+            shareLocation: false,
         });
     };
     initializeCheckoutData();
@@ -225,16 +163,13 @@ export default function CheckoutPage() {
     else if (watch('deliveryAddress') === primaryAddress) setValue('deliveryAddress', '');
   }, [isSameAsAddress, primaryAddress, setValue, watch]);
 
-  // ★ কয়েন ক্যালকুলেশন (Max 50% of Subtotal)
-  const maxRedeemable = totalPrice * 0.5;
-  const coinDiscount = Math.min(walletBalance, Math.floor(maxRedeemable));
-  const finalTotal = useCoins ? (totalPrice - coinDiscount) : totalPrice;
+  // ★ ৫. ফাইনাল ক্যালকুলেশন
+  const maxCoinDiscount = totalPrice * 0.5;
+  const coinDiscountAmount = useCoins ? Math.min(walletBalance, Math.floor(maxCoinDiscount)) : 0;
+  // টোটাল থেকে কুপন এবং কয়েন দুটোই বাদ যাবে
+  const finalTotal = Math.max(0, totalPrice - couponDiscount - coinDiscountAmount);
 
-  const handleUseCoinsChange = (checked: boolean) => {
-      setUseCoins(checked);
-      if(checked) toast.success(`₹${coinDiscount} discount applied!`);
-  };
-
+  // ৬. অর্ডার সাবমিট
   async function onSubmit(values: z.infer<typeof checkoutSchema>) {
     const token = localStorage.getItem('token');
     try {
@@ -242,10 +177,12 @@ export default function CheckoutPage() {
             ...values,
             items: state.items,
             subtotal: totalPrice,
-            total: finalTotal, // ডিসকাউন্টেড প্রাইস
+            total: finalTotal,
+            discount: couponDiscount + coinDiscountAmount, // মোট ডিসকাউন্ট
+            couponCode: couponCode, 
+            useCoins: useCoins,
             orderType: orderType,
             deliveryAddress: orderType === 'delivery' ? (values.deliveryAddress || values.address) : undefined,
-            useCoins: useCoins // ★ এই ফ্ল্যাগটি API-তে যাচ্ছে
         };
 
         const res = await fetch('/api/orders', {
@@ -260,8 +197,8 @@ export default function CheckoutPage() {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Order placement failed');
 
-        toast.success('Order placed successfully!');
-        clearCart();
+        toast.success('Order placed successfully! 🎉');
+        clearCart(); // কার্ট ক্লিয়ার করলে Context এর CheckoutState ও রিসেট হবে (CartProvider এ লজিক আছে)
         router.push('/account/orders');
 
     } catch (error: any) {
@@ -270,97 +207,189 @@ export default function CheckoutPage() {
     }
   }
 
-  if (!isInitialized || isLoading) return <div className="container py-20 text-center"><p>Loading...</p></div>;
+  if (!isInitialized || isLoading) return <div className="flex justify-center p-20"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>;
   if (!user || itemCount === 0) return null;
   
   return (
-    <div className="container py-8 md:py-12">
-      <div className="lg:hidden mb-4">
-        <Card>
-            <CardHeader className="flex flex-row items-center justify-between p-4 cursor-pointer" onClick={() => setIsSummaryExpanded(!isSummaryExpanded)}>
+    <div className="container py-8 md:py-12 max-w-6xl">
+      
+      {/* Mobile Summary Accordion */}
+      <div className="lg:hidden mb-6">
+        <Card className="border shadow-sm">
+            <CardHeader className="flex flex-row items-center justify-between p-4 cursor-pointer bg-muted/10" onClick={() => setIsSummaryExpanded(!isSummaryExpanded)}>
               <div className="flex items-center gap-2">
-                <h2 className="text-lg font-semibold">Order Summary</h2>
+                <h2 className="text-base font-semibold">Order Summary</h2>
                 {isSummaryExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
               </div>
-              <p className="font-bold text-lg">{formatPrice(finalTotal)}</p>
+              <p className="font-bold text-lg text-primary">{formatPrice(finalTotal)}</p>
             </CardHeader>
             {isSummaryExpanded && (
-              <CardContent className="p-4 border-t">
-                  <OrderSummaryContent 
-                    state={state} 
-                    totalPrice={totalPrice} 
-                    useCoins={useCoins} 
-                    walletBalance={walletBalance}
-                    coinDiscount={coinDiscount}
-                    handleUseCoinsChange={handleUseCoinsChange}
-                    finalTotal={finalTotal}
-                  />
+              <CardContent className="p-4 border-t bg-white">
+                  <div className="space-y-3 text-sm">
+                      {state.items.map((item) => (
+                          <div key={item.id} className="flex justify-between">
+                              <span className="text-muted-foreground">{item.quantity}x {item.name}</span>
+                              <span className="font-medium">{formatPrice(item.price * item.quantity)}</span>
+                          </div>
+                      ))}
+                      <Separator className="my-2"/>
+                      <div className="flex justify-between text-muted-foreground"><span>Subtotal</span><span>{formatPrice(totalPrice)}</span></div>
+                      {couponDiscount > 0 && <div className="flex justify-between text-green-600"><span>Coupon</span><span>- {formatPrice(couponDiscount)}</span></div>}
+                      {coinDiscountAmount > 0 && <div className="flex justify-between text-amber-600"><span>Coins</span><span>- {formatPrice(coinDiscountAmount)}</span></div>}
+                  </div>
               </CardContent>
             )}
         </Card>
       </div>
 
-       <h1 className="text-3xl md:text-4xl font-bold font-headline mb-8 text-center">
-        Enter Your Details
+      <h1 className="text-3xl md:text-4xl font-bold font-headline mb-8 text-center">
+        Final Checkout
       </h1>
 
       <div className="grid lg:grid-cols-2 gap-12 items-start">
+        
+        {/* --- LEFT: FORM SECTION --- */}
         <div className="lg:col-span-1">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <FormField control={form.control} name="name" render={({ field }) => ( <FormItem><FormControl><FloatingLabelInput field={field} label="Full Name" /></FormControl><FormMessage /></FormItem> )} />
-              <FormField control={form.control} name="address" render={({ field }) => ( <FormItem><FormControl><FloatingLabelInput field={field} label="Delivery Address" /></FormControl><FormMessage /></FormItem> )} />
-              <FormField control={form.control} name="altPhone" render={({ field }) => ( <FormItem><FormControl><FloatingLabelInput field={field} label="Phone Number" type="tel" /></FormControl><FormMessage /></FormItem> )} />
-
-              <div className="flex gap-4">
-                  <Button type="button" onClick={() => setOrderType('delivery')} className={cn("flex-1 h-12 rounded-xl font-medium", orderType === 'delivery' ? "bg-primary text-primary-foreground shadow-md" : "bg-muted text-muted-foreground hover:bg-muted/80")}>Delivery</Button>
-                  <Button type="button" onClick={() => setOrderType('pickup')} className={cn("flex-1 h-12 rounded-xl font-medium", orderType === 'pickup' ? "bg-primary text-primary-foreground shadow-md" : "bg-muted text-muted-foreground hover:bg-muted/80")}>Pickup</Button>
+              
+              {/* Personal Details */}
+              <div className="space-y-4">
+                  <h3 className="text-lg font-bold">Contact Info</h3>
+                  <FormField control={form.control} name="name" render={({ field }) => ( <FormItem><FormControl><FloatingLabelInput field={field} label="Full Name" /></FormControl><FormMessage /></FormItem> )} />
+                  <FormField control={form.control} name="altPhone" render={({ field }) => ( <FormItem><FormControl><FloatingLabelInput field={field} label="Phone Number" type="tel" /></FormControl><FormMessage /></FormItem> )} />
               </div>
 
-              {orderType === 'delivery' && (
-                <div className="space-y-6 p-4 border rounded-xl bg-muted/10 animate-in fade-in-50">
-                    <FormField control={form.control} name="deliveryAddress" render={({ field }) => ( <FormItem><FormControl><FloatingLabelInput field={field} label="Delivery Address (If different)" /></FormControl><FormMessage /></FormItem> )} />
-                    <FormItem className="flex flex-row items-center space-x-3 space-y-0"><FormControl><Checkbox checked={isSameAsAddress} onCheckedChange={() => setIsSameAsAddress(prev => !prev)} /></FormControl><div className="space-y-1 leading-none"><FormLabel className="font-normal">Same as primary address</FormLabel></div></FormItem>
+              {/* Delivery / Pickup Toggle */}
+              <div className="space-y-4">
+                  <h3 className="text-lg font-bold">Delivery Method</h3>
+                  <div className="flex gap-4 p-1 bg-muted/20 rounded-2xl border">
+                      <Button type="button" onClick={() => setOrderType('delivery')} className={cn("flex-1 h-12 rounded-xl font-medium transition-all", orderType === 'delivery' ? "bg-white text-primary shadow-sm border border-primary/10" : "bg-transparent text-muted-foreground hover:bg-white/50")}>Delivery</Button>
+                      <Button type="button" onClick={() => setOrderType('pickup')} className={cn("flex-1 h-12 rounded-xl font-medium transition-all", orderType === 'pickup' ? "bg-white text-primary shadow-sm border border-primary/10" : "bg-transparent text-muted-foreground hover:bg-white/50")}>Pickup</Button>
+                  </div>
+              </div>
+
+              {/* Address Section */}
+              {orderType === 'delivery' ? (
+                <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
+                    <FormField control={form.control} name="address" render={({ field }) => ( <FormItem><FormControl><FloatingLabelInput field={field} label="Primary Address" /></FormControl><FormMessage /></FormItem> )} />
+                    
+                    <div className="p-4 border rounded-xl bg-gray-50/50 space-y-4">
+                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                            <FormControl><Checkbox checked={isSameAsAddress} onCheckedChange={() => setIsSameAsAddress(prev => !prev)} /></FormControl>
+                            <div className="space-y-1 leading-none"><FormLabel className="font-normal cursor-pointer">Use as delivery address</FormLabel></div>
+                        </FormItem>
+                        
+                        {!isSameAsAddress && (
+                            <FormField control={form.control} name="deliveryAddress" render={({ field }) => ( <FormItem><FormControl><FloatingLabelInput field={field} label="Delivery Address" /></FormControl><FormMessage /></FormItem> )} />
+                        )}
+                    </div>
+                </div>
+              ) : (
+                <div className="p-5 border rounded-xl bg-blue-50/50 animate-in fade-in slide-in-from-top-2 text-center space-y-2 border-blue-100">
+                    <p className="font-medium text-lg text-blue-900"><strong>Store Location:</strong> Janai, Garbagan, Hooghly</p>
+                    <a href="https://maps.google.com/?q=Janai,Garbagan,Hooghly" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-primary hover:text-primary/80 underline font-medium text-sm transition-colors"><MapPin className="h-4 w-4" /> View on Google Maps</a>
                 </div>
               )}
-               {orderType === 'pickup' && (
-                <div className="p-5 border rounded-xl bg-muted/50 animate-in fade-in-50 text-center space-y-2">
-                    <p className="font-medium text-lg"><strong>Pickup Address:</strong> Janai, Garbagan, Hooghly</p>
-                    <a href="https://maps.app.goo.gl/WV2JF8GJRJW9JwtW8" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-primary hover:text-primary/80 underline font-medium text-sm transition-colors"><MapPin className="h-4 w-4" /> View on Google Maps</a>
-                    <p className="text-sm text-muted-foreground pt-2">Please collect your order from the counter.</p>
-                </div>
-              )}
-              <h3 className="text-2xl font-bold font-headline text-center pt-4">Preferences</h3>
-              <FormField control={form.control} name="preferredDate" render={({ field }) => ( <FormItem><FormLabel className="text-muted-foreground text-xs ml-1">Delivery Date</FormLabel><FormControl><Input type="date" {...field} value={field.value ?? ''} min={new Date().toISOString().split("T")[0]} className="h-12 rounded-xl border-muted-foreground/30" /></FormControl><FormMessage /></FormItem> )} />
-               <FormField control={form.control} name="mealTime" render={({ field }) => ( <FormItem><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger className="h-12 rounded-xl border-muted-foreground/30"><SelectValue placeholder="Select Meal Time" /></SelectTrigger></FormControl><SelectContent><SelectItem value="lunch">Lunch</SelectItem><SelectItem value="dinner">Dinner</SelectItem></SelectContent></Select><FormMessage /></FormItem> )} />
-              <FormField control={form.control} name="instructions" render={({ field }) => ( <FormItem><FormControl><FloatingLabelTextarea field={field} label="Special Cooking Instructions (Optional)" /></FormControl><FormMessage /></FormItem> )} />
-              {orderType === 'delivery' && ( <FormField control={form.control} name="shareLocation" render={({ field }) => ( <FormItem className="flex flex-row items-center space-x-3 space-y-0 bg-muted/10 p-3 rounded-lg border"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl><div className="space-y-1 leading-none"><FormLabel className="font-normal cursor-pointer">Share my live location for better delivery</FormLabel></div></FormItem> )} /> )}
-              <FormField control={form.control} name="terms" render={({ field }) => ( <FormItem className="flex flex-row items-start space-x-3 space-y-0"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl><div className="space-y-1 leading-none"><FormLabel className="font-normal">I agree to the <a href="/terms" target="_blank" className="underline text-primary font-medium">Terms and Conditions</a></FormLabel><FormMessage /></div></FormItem> )} />
+
+              {/* Preferences */}
+              <div className="space-y-4 pt-2">
+                  <h3 className="text-lg font-bold">Preferences</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                      <FormField control={form.control} name="preferredDate" render={({ field }) => ( <FormItem><FormLabel className="text-xs text-muted-foreground ml-1">Date</FormLabel><FormControl><Input type="date" {...field} min={new Date().toISOString().split("T")[0]} className="h-12 rounded-xl bg-background" /></FormControl><FormMessage /></FormItem> )} />
+                      <FormField control={form.control} name="mealTime" render={({ field }) => ( <FormItem><FormLabel className="text-xs text-muted-foreground ml-1">Time</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger className="h-12 rounded-xl bg-background"><SelectValue placeholder="Time" /></SelectTrigger></FormControl><SelectContent><SelectItem value="lunch">Lunch</SelectItem><SelectItem value="dinner">Dinner</SelectItem></SelectContent></Select><FormMessage /></FormItem> )} />
+                  </div>
+                  <FormField control={form.control} name="instructions" render={({ field }) => ( <FormItem><FormControl><FloatingLabelTextarea field={field} label="Cooking Instructions (Optional)" /></FormControl><FormMessage /></FormItem> )} />
+              </div>
+
+              {/* Terms Checkbox */}
+              <FormField control={form.control} name="terms" render={({ field }) => ( 
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 p-4 border rounded-xl bg-muted/10">
+                      <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                      <div className="space-y-1 leading-none text-sm">
+                          <FormLabel className="font-normal text-muted-foreground">
+                              I agree to the <a href="/terms" target="_blank" className="underline text-primary hover:text-primary/80">Terms & Conditions</a> and Refund Policy.
+                          </FormLabel>
+                          <FormMessage />
+                      </div>
+                  </FormItem> 
+              )} />
               
-              <Button type="submit" size="lg" className="w-full h-14 text-lg rounded-xl shadow-lg shadow-primary/20 transition-all hover:scale-[1.02]">
-                <Lock className="mr-2 h-5 w-5" /> Place Order
+              <Button type="submit" size="lg" className="w-full h-14 text-lg rounded-xl shadow-lg shadow-primary/20 transition-all hover:scale-[1.01] active:scale-[0.99]">
+                <Lock className="mr-2 h-5 w-5" /> Place Order — {formatPrice(finalTotal)}
               </Button>
             </form>
           </Form>
         </div>
+
+        {/* --- RIGHT: ORDER SUMMARY (DESKTOP) --- */}
         <div className="lg:col-span-1 hidden lg:block">
-          <Card className="sticky top-24 bg-card shadow-md border-0">
-            <CardHeader className="border-b bg-muted/10">
+          <Card className="sticky top-24 bg-card shadow-lg border-0 overflow-hidden">
+            <CardHeader className="border-b bg-muted/10 pb-4">
               <CardTitle>Order Summary</CardTitle>
             </CardHeader>
-            <CardContent className="pt-6">
-                <OrderSummaryContent 
-                    state={state} 
-                    totalPrice={totalPrice} 
-                    useCoins={useCoins} 
-                    walletBalance={walletBalance}
-                    coinDiscount={coinDiscount}
-                    handleUseCoinsChange={handleUseCoinsChange}
-                    finalTotal={finalTotal}
-                  />
+            <CardContent className="pt-6 space-y-6">
+                
+                {/* Items List */}
+                <div className="space-y-4 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
+                    {state.items.map((item) => {
+                        const imageSrc = (item.image && item.image.url) ? item.image.url : PLACEHOLDER_IMAGE_URL;
+                        return (
+                            <div key={item.id} className="flex gap-4 items-center">
+                                <div className="relative h-14 w-14 rounded-lg overflow-hidden border bg-muted flex-shrink-0">
+                                    <Image src={imageSrc} alt={item.name} fill className="object-cover" />
+                                </div>
+                                <div className="flex-grow min-w-0">
+                                    <p className="font-medium text-sm truncate">{item.name}</p>
+                                    <p className="text-xs text-muted-foreground">Qty: {item.quantity}</p>
+                                </div>
+                                <p className="font-semibold text-sm whitespace-nowrap">{formatPrice(item.price * item.quantity)}</p>
+                            </div>
+                        );
+                    })}
+                </div>
+                
+                <Separator />
+
+                {/* Pricing Breakdown */}
+                <div className="space-y-3 text-sm">
+                    <div className="flex justify-between text-muted-foreground">
+                        <span>Subtotal</span>
+                        <span>{formatPrice(totalPrice)}</span>
+                    </div>
+                    
+                    {couponDiscount > 0 && (
+                        <div className="flex justify-between text-green-600 font-medium">
+                            <span className="flex items-center gap-1"><Ticket className="h-3 w-3"/> Coupon Applied</span>
+                            <span>- {formatPrice(couponDiscount)}</span>
+                        </div>
+                    )}
+                    
+                    {coinDiscountAmount > 0 && (
+                        <div className="flex justify-between text-amber-600 font-medium">
+                            <span className="flex items-center gap-1"><Coins className="h-3 w-3"/> Coins Redeemed</span>
+                            <span>- {formatPrice(coinDiscountAmount)}</span>
+                        </div>
+                    )}
+                    
+                    <div className="flex justify-between text-muted-foreground">
+                        <span>Delivery Fee</span>
+                        <span className="text-green-600 font-medium">Free</span>
+                    </div>
+
+                    <Separator className="my-2"/>
+                    
+                    <div className="flex justify-between text-xl font-bold text-primary">
+                        <span>Total Payable</span>
+                        <span>{formatPrice(finalTotal)}</span>
+                    </div>
+                    <p className="text-xs text-right text-muted-foreground">Inclusive of all taxes</p>
+                </div>
+
             </CardContent>
           </Card>
         </div>
+
       </div>
     </div>
   );
