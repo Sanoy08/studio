@@ -5,29 +5,27 @@ import type { NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
   const hostname = request.headers.get('host');
-  
-  // ১. Static Assets (/_next/static, favicon, etc.) সরাসরি পাস করে দাও (এগুলো রিরাইট হবে না)
-  if (request.nextUrl.pathname.startsWith('/_next/static/') ||
-      request.nextUrl.pathname.endsWith('.ico') ||
-      request.nextUrl.pathname.endsWith('/sw.js')) {
-    return NextResponse.next();
+  const path = request.nextUrl.pathname;
+
+  // ১. API CALLS এবং Static Assets কোনোভাবেই রিরাইট হবে না
+  if (path.startsWith('/_next/') || path.startsWith('/api/') || path.endsWith('.ico') || path.startsWith('/static/')) {
+      return NextResponse.next();
   }
 
   if (!hostname) {
       return NextResponse.next();
   }
   
-  // ২. যদি এটি admin.bumbaskitchen.app হয়
   const isSubdomain = hostname.startsWith('admin.'); 
 
   if (isSubdomain) {
-    const path = request.nextUrl.pathname;
     
-    // ৩. যদি রুট অলরেডি /admin/ দিয়ে শুরু না হয়, তবে রিরাইট করো (যাতে /admin/login এ যায়)
+    // ২. যদি admin.bumbaskitchen.app হিট হয়, এবং এটি API বাদে অন্য কোনো পাথ হয়:
+    // যেমন: admin.bumbaskitchen.app/dashboard -> bumbaskitchen.app/admin/dashboard
     if (!path.startsWith('/admin')) {
       const newPath = `/admin${path}`;
       
-      // এই রিরাইটটি Vercel কে বলে যে ইন্টারনালি এই রিকোয়েস্টটি /admin পাথের জন্য
+      // Rewrite করে /admin/ রুট এক্সেস করা হচ্ছে
       return NextResponse.rewrite(new URL(newPath, request.url));
     }
   }
@@ -35,10 +33,13 @@ export function middleware(request: NextRequest) {
   return NextResponse.next();
 }
 
-// কনফিগারেশন: Asset Path গুলো বাদ দেওয়া সহজ করার জন্য simplified matcher
 export const config = {
+  // সকল রিকোয়েস্টের জন্য রান করবে
   matcher: [
+    /*
+     * সকল পাথ ম্যাচ করবে, কিন্তু Next.js এর ভেতরের ফাইলগুলো বাদ দেবে।
+     */
     '/',
-    '/(api|admin|account|menus|checkout|notifications|register|login|forgot-password|reset-password)/:path*',
+    '/(.*)',
   ],
 };
