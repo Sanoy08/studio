@@ -2,12 +2,13 @@
 
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { MessageCircle, ArrowRight, Copy, Clock, AlertTriangle, CheckCircle2, Phone } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { MessageCircle, ArrowRight, Copy, Clock, AlertTriangle, CheckCircle2, Phone, Loader2 } from 'lucide-react';
+import { useEffect, useState, Suspense } from 'react'; // Suspense ইমপোর্ট করা হলো
 import { toast } from 'sonner';
 import { formatPrice } from '@/lib/utils';
 
-export default function OrderSuccessPage() {
+// ১. মূল লজিকটি একটি আলাদা কম্পোনেন্টে নিয়ে আসা হলো
+function OrderSuccessContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   
@@ -17,7 +18,6 @@ export default function OrderSuccessPage() {
 
   const ADMIN_WHATSAPP = "918240690254"; 
 
-  // Professional WhatsApp Message with spacing
   const message = `Hello Bumba's Kitchen! 👨‍🍳\n\nI have placed a new order. Please confirm it.\n\n🆔 *Order ID:* ${orderNumber}\n👤 *Name:* ${name}\n💰 *Amount:* ₹${amount}\n\nPlease start preparing my food! 🥘`;
   
   const whatsappUrl = `https://wa.me/${ADMIN_WHATSAPP}?text=${encodeURIComponent(message)}`;
@@ -36,15 +36,12 @@ export default function OrderSuccessPage() {
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4 md:p-6 relative font-sans">
       
-      {/* Subtle Background Pattern */}
       <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(#000 1px, transparent 1px)', backgroundSize: '24px 24px' }}></div>
 
       <div className="w-full max-w-[420px] space-y-8 relative z-10 animate-in slide-in-from-bottom-8 fade-in duration-700">
           
-          {/* --- MAIN STATUS CARD --- */}
           <div className="bg-white rounded-3xl shadow-xl overflow-hidden border-t-[6px] border-amber-500 ring-1 ring-black/5">
               
-              {/* Step Progress Indicator */}
               <div className="flex justify-center items-center gap-3 pt-8 pb-2 px-8">
                   <div className="flex items-center gap-1.5 text-emerald-600 font-bold text-[11px] uppercase tracking-wider opacity-60">
                       <CheckCircle2 className="h-3.5 w-3.5" /> Sent
@@ -55,7 +52,6 @@ export default function OrderSuccessPage() {
                   </div>
               </div>
 
-              {/* Main Content Area */}
               <div className="px-8 pb-10 pt-4 text-center">
                   <h1 className="text-3xl font-extrabold tracking-tight text-gray-900 mb-3 leading-tight">
                       Order On Hold! <span className="text-amber-500">⚠️</span>
@@ -67,7 +63,6 @@ export default function OrderSuccessPage() {
                       </p>
                   </div>
 
-                  {/* Order Details Badge */}
                   <div className="mt-6 flex items-center justify-center gap-3">
                       <div className="bg-gray-100 border border-gray-200 px-3 py-1.5 rounded-lg flex flex-col items-center">
                           <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Order ID</span>
@@ -80,7 +75,6 @@ export default function OrderSuccessPage() {
                   </div>
               </div>
 
-              {/* Action Area (Yellow Box) */}
               <div className="bg-amber-50/80 p-8 border-t border-amber-100/50 backdrop-blur-sm">
                   
                   <div className="flex items-start gap-3 mb-6 bg-white p-4 rounded-xl border border-amber-200/60 shadow-sm">
@@ -106,7 +100,6 @@ export default function OrderSuccessPage() {
                       </a>
                   </Button>
 
-                  {/* Visual Timer Bar */}
                   <div className="mt-7 space-y-2">
                       <div className="flex justify-between items-end">
                           <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Auto-cancel timer</span>
@@ -123,7 +116,6 @@ export default function OrderSuccessPage() {
               </div>
           </div>
 
-          {/* Footer Actions */}
           <div className="flex flex-col items-center gap-4">
               <div className="flex justify-center items-center gap-6 text-sm font-medium text-gray-500">
                   <button onClick={copyOrderId} className="flex items-center gap-1.5 hover:text-gray-900 transition-colors group">
@@ -144,5 +136,18 @@ export default function OrderSuccessPage() {
 
       </div>
     </div>
+  );
+}
+
+// ২. মেইন পেজ কম্পোনেন্ট এখন Suspense দিয়ে র‍্যাপ করা হলো
+export default function OrderSuccessPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex h-screen items-center justify-center">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+      </div>
+    }>
+      <OrderSuccessContent />
+    </Suspense>
   );
 }
