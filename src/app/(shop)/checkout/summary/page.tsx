@@ -59,10 +59,9 @@ export default function OrderSummaryPage() {
   const removeCoupon = () => {
       setCouponCode('');
       setCouponDiscount(0);
-      // toast.info("Coupon removed"); // Optional
   };
 
-  // ★ 3. Coupon Handler (Updated Logic)
+  // 3. Coupon Handler
   const handleApplyCoupon = async () => {
       if (!couponCode) return;
       setIsApplyingCoupon(true);
@@ -76,13 +75,10 @@ export default function OrderSummaryPage() {
           
           if (data.success) {
               setCouponDiscount(data.coupon.discountAmount);
-              
-              // ★ যদি কুপন সফল হয় এবং কয়েন চালু থাকে, কয়েন বন্ধ করে দাও
               if (useCoins) {
                   setUseCoins(false);
                   toast.info("Coins removed. You can use either Coupon OR Coins.");
               }
-              
               toast.success(`YAY! You saved ${formatPrice(data.coupon.discountAmount)}`);
           } else {
               setCouponDiscount(0);
@@ -95,10 +91,9 @@ export default function OrderSummaryPage() {
       }
   };
 
-  // ★ 4. Coin Toggle Handler (Updated Logic)
+  // 4. Coin Toggle Handler
   const handleCoinToggle = (checked: boolean) => {
       if (checked) {
-          // যদি কয়েন চালু করতে চায় এবং কুপন অলরেডি থাকে
           if (couponDiscount > 0) {
               removeCoupon();
               toast.info("Coupon removed. You can use either Coupon OR Coins.");
@@ -110,10 +105,8 @@ export default function OrderSummaryPage() {
   };
 
   // 5. Calculation
-  const maxCoinDiscount = totalPrice * 0.5; // Max 50%
+  const maxCoinDiscount = totalPrice * 0.5;
   const coinDiscountAmount = useCoins ? Math.min(walletBalance, Math.floor(maxCoinDiscount)) : 0;
-  
-  // এখন যেহেতু দুটো একসাথে থাকবে না, লজিক সিম্পল
   const finalTotal = Math.max(0, totalPrice - couponDiscount - coinDiscountAmount);
 
   // 6. Proceed Handler
@@ -147,7 +140,7 @@ export default function OrderSummaryPage() {
             
             <div className="grid lg:grid-cols-12 gap-8 lg:gap-12 items-start">
                 
-                {/* --- LEFT COLUMN --- */}
+                {/* --- LEFT COLUMN: OFFERS & ITEMS --- */}
                 <div className="lg:col-span-7 space-y-6">
                     
                     {/* Coin Card */}
@@ -170,7 +163,7 @@ export default function OrderSummaryPage() {
                                 </div>
                                 <Switch 
                                     checked={useCoins} 
-                                    onCheckedChange={handleCoinToggle} // ★ Updated Handler
+                                    onCheckedChange={handleCoinToggle}
                                     className="data-[state=checked]:bg-white data-[state=unchecked]:bg-black/20 border-2 border-white/50"
                                 />
                             </div>
@@ -269,7 +262,8 @@ export default function OrderSummaryPage() {
                                     <Receipt className="h-5 w-5 text-gray-400" />
                                     <span className="font-bold tracking-wide">BILL SUMMARY</span>
                                 </div>
-                                <div className="text-xs font-mono text-gray-400">#BK-{Math.floor(Date.now() / 1000)}</div>
+                                {/* ★★★ FIX: এখানে এখন আজকের তারিখ দেখাবে ★★★ */}
+                                <div className="text-xs font-mono text-gray-400">Date: {new Date().toLocaleDateString()}</div>
                             </div>
 
                             <div className="p-6 space-y-4">

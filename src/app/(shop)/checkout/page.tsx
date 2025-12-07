@@ -13,7 +13,8 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Lock, ChevronDown, ChevronUp, MapPin, Loader2, Info } from 'lucide-react';
+// ★★★ FIX: Ticket এবং Coins আইকন এখানে যোগ করা হয়েছে ★★★
+import { Lock, ChevronDown, ChevronUp, MapPin, Loader2, Info, Ticket, Coins } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -45,6 +46,7 @@ const checkoutSchema = z.object({
   shareLocation: z.boolean().optional(),
 });
 
+// --- Helper Components ---
 const FloatingLabelInput = ({ field, label, type = 'text' }: any) => (
   <div className="relative">
     <Input 
@@ -74,6 +76,7 @@ const FloatingLabelTextarea = ({ field, label }: any) => (
   </div>
 );
 
+// --- Main Component ---
 export default function CheckoutPage() {
   const { state, totalPrice, itemCount, clearCart, isInitialized, checkoutState } = useCart();
   const { user, isLoading } = useAuth();
@@ -86,7 +89,6 @@ export default function CheckoutPage() {
   const [isSummaryExpanded, setIsSummaryExpanded] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // ★★★ FIX: Success State যোগ করা হয়েছে ★★★
   const [isSuccess, setIsSuccess] = useState(false);
 
   useEffect(() => {
@@ -102,8 +104,6 @@ export default function CheckoutPage() {
       if (user) fetchWallet();
   }, [user]);
 
-  // ★★★ FIX: Auth এবং Cart Check আপডেট করা হয়েছে ★★★
-  // যদি isSuccess true হয়, তবে আর menus পেজে পাঠাবে না।
   useEffect(() => {
     if (!isLoading && !isInitialized) return;
     
@@ -113,7 +113,6 @@ export default function CheckoutPage() {
       return;
     }
 
-    // যদি অর্ডার সাকসেসফুল না হয় এবং কার্ট খালি থাকে, তবেই রিডাইরেক্ট করবে
     if (isInitialized && itemCount === 0 && !isSuccess) {
       router.push('/menus');
     }
@@ -175,7 +174,6 @@ export default function CheckoutPage() {
     setIsSubmitting(true);
     const token = localStorage.getItem('token');
     try {
-        // ... (orderPayload তৈরি করার অংশ একই থাকবে) ...
         const orderPayload = {
             ...values,
             items: state.items,
@@ -204,7 +202,7 @@ export default function CheckoutPage() {
         toast.success('Order placed successfully!');
         clearCart();
         
-        // ★★★ FIX: API রিটার্ন করছে 'orderId', তাই সেটাই ধরতে হবে ★★★
+        // Use orderId from API (as identified in diagnosis)
         const orderNum = data.orderId || '0000'; 
         
         const params = new URLSearchParams({
@@ -225,13 +223,13 @@ export default function CheckoutPage() {
 
   if (!isInitialized || isLoading) return <div className="flex justify-center p-20"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>;
   
-  // ★ FIX: পেজ রিফ্রেশ এড়াতে সরাসরি null রিটার্ন না করে লোডিং দেখানো ভালো, বা কার্ট খালি থাকলেও যদি সাকসেস হয় তবে কন্টেন্ট দেখানো দরকার নেই
   if (!user) return null;
-  if (itemCount === 0 && !isSuccess) return null; // শুধু সাকসেস না হলেই নাল দেখাবে
+  if (itemCount === 0 && !isSuccess) return null;
 
   return (
     <div className="container py-8 md:py-12 max-w-6xl">
-      {/* ... (বাকি JSX কোড একদম আগের মতোই) ... */}
+      
+      {/* Mobile Summary Accordion */}
       <div className="lg:hidden mb-6">
         <Card className="border shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between p-4 cursor-pointer bg-muted/10" onClick={() => setIsSummaryExpanded(!isSummaryExpanded)}>
