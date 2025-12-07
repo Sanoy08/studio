@@ -3,7 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { clientPromise } from '@/lib/mongodb';
 import { ObjectId } from 'mongodb';
-import { sendNotificationToUser } from '@/lib/notification';
+import { sendNotificationToUser } from '@/lib/notification'; // নোটিফিকেশন ফাংশন
 
 const DB_NAME = 'BumbasKitchenDB';
 const ORDERS_COLLECTION = 'orders';
@@ -12,7 +12,7 @@ const TRANSACTIONS_COLLECTION = 'coinTransactions';
 
 export async function PUT(request: NextRequest) {
   try {
-    const { orderId, status } = await request.json(); // orderId = _id (MongoDB ID)
+    const { orderId, status } = await request.json();
 
     if (!orderId || !status) {
         return NextResponse.json({ success: false, error: 'Missing fields' }, { status: 400 });
@@ -25,11 +25,11 @@ export async function PUT(request: NextRequest) {
     try {
         await session.withTransaction(async () => {
             
-            // অর্ডারটি খুঁজে বের করি
+            // ১. অর্ডারটি খুঁজে বের করি
             const order = await db.collection(ORDERS_COLLECTION).findOne({ _id: new ObjectId(orderId) }, { session });
             if (!order) throw new Error("Order not found");
 
-            // স্ট্যাটাস আপডেট করা
+            // ২. স্ট্যাটাস আপডেট করা
             await db.collection(ORDERS_COLLECTION).updateOne(
                 { _id: new ObjectId(orderId) },
                 { $set: { Status: status } },
@@ -38,28 +38,21 @@ export async function PUT(request: NextRequest) {
 
             const userId = order.userId; // ইউজারের আইডি (যদি রেজিস্টার্ড ইউজার হয়)
 
-            // --- লজিক ১: ডেলিভার্ড হলে কয়েন দেওয়া (Earning) ---
+            // --- লজিক ৩: ডেলিভার্ড হলে কয়েন দেওয়া (Earning) ---
             if (status === 'Delivered' && userId && !order.coinsAwarded) {
                 
-                // ইউজারের বর্তমান টোটাল খরচ
                 const user = await db.collection(USERS_COLLECTION).findOne({ _id: userId }, { session });
                 const currentTotalSpent = (user?.totalSpent || 0) + order.FinalPrice;
                 
-                // টায়ার ক্যালকুলেশন
                 let newTier = "Bronze";
-                let earnRate = 2; // Default 2%
+                let earnRate = 2;
 
-                if (currentTotalSpent >= 15000) {
-                    newTier = "Gold"; earnRate = 6;
-                } else if (currentTotalSpent >= 5000) {
-                    newTier = "Silver"; earnRate = 4;
-                }
+                if (currentTotalSpent >= 15000) { newTier = "Gold"; earnRate = 6; } 
+                else if (currentTotalSpent >= 5000) { newTier = "Silver"; earnRate = 4; }
 
-                // কয়েন ক্যালকুলেশন
                 const coinsEarned = Math.floor((order.FinalPrice * earnRate) / 100);
 
                 if (coinsEarned > 0) {
-                    // ওয়ালেটে কয়েন যোগ করা
                     await db.collection(USERS_COLLECTION).updateOne(
                         { _id: userId },
                         { 
@@ -69,7 +62,6 @@ export async function PUT(request: NextRequest) {
                         { session }
                     );
 
-                    // হিস্ট্রি যোগ করা
                     await db.collection(TRANSACTIONS_COLLECTION).insertOne({
                         userId: userId,
                         type: 'earn',
@@ -78,29 +70,28 @@ export async function PUT(request: NextRequest) {
                         createdAt: new Date()
                     }, { session });
 
-                    // ফ্ল্যাগ আপডেট (যাতে দুবার কয়েন না পায়)
                     await db.collection(ORDERS_COLLECTION).updateOne(
                         { _id: new ObjectId(orderId) },
                         { $set: { coinsAwarded: true } },
                         { session }
                     );
 
-                    // নোটিফিকেশন
-                    sendNotificationToUser(client, userId.toString(), "🎉 Coins Earned!", `You got ${coinsEarned} coins from your last order!`, '/account/wallet').catch(console.error);
+                    // আর্নিং নোটিফিকেশন
+                    sendNotificationToUser(client, userId.toString(), "🎉 Coins Earned!", `You earned ${coinsEarned} coins from Order #${order.OrderNumber}`, '/account/wallet').catch(console.error);
                 }
             }
 
-            // --- লজিক ২: ক্যানসেল হলে কয়েন রিফান্ড (Refund) ---
+            // --- লজিক ৪: ক্যানসেল হলে রিফান্ড এবং নোটিফিকেশন (Refund Notification) ---
             if (status === 'Cancelled' && userId && order.CoinsRedeemed > 0 && !order.coinsRefunded) {
                 
-                // ওয়ালেটে কয়েন ফেরত দেওয়া
+                // ওয়ালেটে কয়েন ফেরত
                 await db.collection(USERS_COLLECTION).updateOne(
                     { _id: userId },
                     { $inc: { "wallet.currentBalance": order.CoinsRedeemed } },
                     { session }
                 );
 
-                // হিস্ট্রি যোগ করা
+                // রিফান্ড হিস্ট্রি
                 await db.collection(TRANSACTIONS_COLLECTION).insertOne({
                     userId: userId,
                     type: 'refund',
@@ -109,20 +100,32 @@ export async function PUT(request: NextRequest) {
                     createdAt: new Date()
                 }, { session });
 
-                // ফ্ল্যাগ আপডেট (যাতে দুবার রিফান্ড না পায়)
+                // ফ্ল্যাগ আপডেট
                 await db.collection(ORDERS_COLLECTION).updateOne(
                     { _id: new ObjectId(orderId) },
                     { $set: { coinsRefunded: true } },
                     { session }
                 );
 
-                // নোটিফিকেশন
-                sendNotificationToUser(client, userId.toString(), "Coins Refunded", `${order.CoinsRedeemed} coins have been refunded to your wallet.`, '/account/wallet').catch(console.error);
+                // ★★★ রিফান্ড নোটিফিকেশন পাঠানো হচ্ছে ★★★
+                sendNotificationToUser(
+                    client, 
+                    userId.toString(), 
+                    "💰 Coins Refunded", 
+                    `${order.CoinsRedeemed} coins have been refunded to your wallet for Order #${order.OrderNumber}.`, 
+                    '/account/wallet'
+                ).catch(console.error);
             }
 
-            // স্ট্যাটাস চেঞ্জ নোটিফিকেশন
+            // সাধারণ স্ট্যাটাস আপডেট নোটিফিকেশন
             if (userId) {
-                sendNotificationToUser(client, userId.toString(), `Order ${status}`, `Your order #${order.OrderNumber} is now ${status}.`, '/account/orders').catch(console.error);
+                sendNotificationToUser(
+                    client, 
+                    userId.toString(), 
+                    `Order ${status}`, 
+                    `Your order #${order.OrderNumber} is now ${status}.`, 
+                    '/account/orders'
+                ).catch(console.error);
             }
         });
 
