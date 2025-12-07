@@ -4,12 +4,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { clientPromise } from '@/lib/mongodb';
 import { sendNotificationToUser } from '@/lib/notification';
 
-// ক্যাশিং বন্ধ রাখা (যাতে সবসময় ফ্রেশ ডেটা চেক করে)
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
-    // ১. সিকিউরিটি চেক (Header বা Query Param)
     const authHeader = request.headers.get('authorization');
     const { searchParams } = new URL(request.url);
     const queryKey = searchParams.get('key');
@@ -22,40 +20,51 @@ export async function GET(request: NextRequest) {
     const client = await clientPromise;
     const db = client.db('BumbasKitchenDB');
     const usersCollection = db.collection('users');
+    const transactionsCollection = db.collection('coinTransactions'); // ★ নতুন কালেকশন রেফারেন্স
 
     // --- লজিক ১: মেয়াদ শেষ (Expire) ---
     const ninetyDaysAgo = new Date();
     ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
 
-    // যাদের ৯০ দিন হয়ে গেছে এবং কয়েন আছে
     const expiredUsers = await usersCollection.find({
         lastTransactionDate: { $lt: ninetyDaysAgo },
         "wallet.currentBalance": { $gt: 0 }
     }).toArray();
 
     for (const user of expiredUsers) {
-        // ব্যালেন্স জিরো করা
+        const amountToExpire = user.wallet.currentBalance;
+
+        // ১. ট্রানজেকশন হিস্ট্রিতে এন্ট্রি যোগ করা (যাতে ওয়ালেটে দেখায়)
+        if (amountToExpire > 0) {
+            await transactionsCollection.insertOne({
+                userId: user._id,
+                type: 'expire', // নতুন টাইপ 'expire'
+                amount: amountToExpire,
+                description: 'Expired due to inactivity',
+                createdAt: new Date()
+            });
+        }
+
+        // ২. ব্যালেন্স জিরো করা
         await usersCollection.updateOne(
             { _id: user._id },
             { $set: { "wallet.currentBalance": 0 } }
         );
         
-        // নোটিফিকেশন পাঠানো
+        // ৩. নোটিফিকেশন পাঠানো
         await sendNotificationToUser(
             client,
             user._id.toString(),
             "Coins Expired ⏳",
-            "Your coins have expired due to inactivity.",
+            `Your ${amountToExpire} coins have expired due to inactivity.`,
             '/account/wallet'
         );
     }
 
     // --- লজিক ২: ওয়ার্নিং (Warning) ---
     const warningDate = new Date();
-    warningDate.setDate(warningDate.getDate() - 83); // 90 - 7 = 83 দিন পার হয়েছে (মানে ৭ দিন বাকি)
+    warningDate.setDate(warningDate.getDate() - 83); 
 
-    // যারা ৮৩ দিন আগে লেনদেন করেছে (অর্থাৎ ৯০ দিন হতে আর ৭ দিন বাকি)
-    // এবং যাদের ব্যালেন্স আছে
     const warningUsers = await usersCollection.find({
         lastTransactionDate: { $lt: warningDate, $gt: ninetyDaysAgo }, 
         "wallet.currentBalance": { $gt: 0 }

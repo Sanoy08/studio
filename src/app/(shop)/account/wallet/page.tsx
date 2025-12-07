@@ -10,15 +10,16 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-// ★ নতুন আইকন যোগ করা হয়েছে (RotateCcw)
-import { Loader2, TrendingUp, History, Gift, Coins, ArrowDownLeft, ArrowUpRight, RotateCcw } from 'lucide-react';
+// ★ নতুন আইকন TimerOff যোগ করা হয়েছে
+import { Loader2, TrendingUp, History, Gift, Coins, ArrowDownLeft, ArrowUpRight, RotateCcw, TimerOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/use-auth';
 import { formatPrice } from '@/lib/utils';
 
 type Transaction = {
     id: string;
-    type: 'earn' | 'redeem' | 'refund';
+    // ★ 'expire' টাইপ যোগ করা হয়েছে
+    type: 'earn' | 'redeem' | 'refund' | 'expire'; 
     amount: number;
     description: string;
     date: string;
@@ -32,7 +33,6 @@ export default function WalletPage() {
   const [totalSpent, setTotalSpent] = useState(0);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   
-  // Redeem Modal State
   const [isRedeemOpen, setIsRedeemOpen] = useState(false);
   const [redeemAmount, setRedeemAmount] = useState('');
   const [isRedeeming, setIsRedeeming] = useState(false);
@@ -93,7 +93,7 @@ export default function WalletPage() {
               toast.success("Coupon Generated Successfully! Check your email.");
               setIsRedeemOpen(false);
               setRedeemAmount('');
-              fetchWalletData(); // Refresh balance
+              fetchWalletData(); 
           } else {
               toast.error(data.error || "Redeem failed");
           }
@@ -104,7 +104,6 @@ export default function WalletPage() {
       }
   };
 
-  // Tier Logic
   const getNextTierInfo = () => {
       if (totalSpent < 5000) return { next: 'Silver', target: 5000, current: totalSpent };
       if (totalSpent < 15000) return { next: 'Gold', target: 15000, current: totalSpent };
@@ -118,7 +117,7 @@ export default function WalletPage() {
   return (
     <div className="max-w-3xl mx-auto space-y-8 pb-20">
         
-        {/* --- 1. Wallet Card --- */}
+        {/* Wallet Card */}
         <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-gray-900 to-gray-800 text-white shadow-2xl p-8">
             <div className="absolute top-0 right-0 -mt-10 -mr-10 w-64 h-64 bg-white/5 rounded-full blur-3xl"></div>
             <div className="absolute bottom-0 left-0 -mb-10 -ml-10 w-40 h-40 bg-primary/20 rounded-full blur-2xl"></div>
@@ -150,7 +149,7 @@ export default function WalletPage() {
             </div>
         </div>
 
-        {/* --- 2. Tier Progress --- */}
+        {/* Tier Progress */}
         {tier !== 'Gold' && (
             <Card className="border-0 shadow-md bg-gradient-to-r from-primary/5 to-transparent">
                 <CardContent className="p-6">
@@ -172,7 +171,7 @@ export default function WalletPage() {
             </Card>
         )}
 
-        {/* --- 3. Transaction History (UPDATED) --- */}
+        {/* Transaction History */}
         <div className="space-y-4">
             <h2 className="text-xl font-bold font-headline flex items-center gap-2">
                 <History className="h-5 w-5 text-gray-500" /> Recent Activity
@@ -189,7 +188,7 @@ export default function WalletPage() {
             ) : (
                 <div className="grid gap-3">
                     {transactions.map((txn) => {
-                        // ★ লজিক: Redeem বাদে বাকি সব (Earn, Refund) পজিটিভ (সবুজ)
+                        // ★ লজিক আপডেট: শুধুমাত্র earn এবং refund পজিটিভ
                         const isPositive = txn.type === 'earn' || txn.type === 'refund';
                         
                         return (
@@ -202,12 +201,15 @@ export default function WalletPage() {
                                         {txn.type === 'earn' && <ArrowDownLeft className="h-5 w-5" />}
                                         {txn.type === 'redeem' && <ArrowUpRight className="h-5 w-5" />}
                                         {txn.type === 'refund' && <RotateCcw className="h-5 w-5" />}
+                                        {txn.type === 'expire' && <TimerOff className="h-5 w-5" />} {/* এক্সপায়ার আইকন */}
                                     </div>
                                     <div>
                                         <div className="flex items-center gap-2">
                                             <p className="font-semibold text-sm text-foreground capitalize">{txn.type}</p>
-                                            {/* রিফান্ডের জন্য ব্যাজ */}
+                                            
+                                            {/* ব্যাজ */}
                                             {txn.type === 'refund' && <Badge variant="secondary" className="text-[10px] px-1 py-0 h-4">Returned</Badge>}
+                                            {txn.type === 'expire' && <Badge variant="destructive" className="text-[10px] px-1 py-0 h-4">Expired</Badge>}
                                         </div>
                                         <p className="text-xs text-muted-foreground mt-0.5">
                                             {txn.description} • {new Date(txn.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
@@ -226,7 +228,7 @@ export default function WalletPage() {
             )}
         </div>
 
-        {/* --- Redeem Modal --- */}
+        {/* Redeem Modal */}
         <Dialog open={isRedeemOpen} onOpenChange={setIsRedeemOpen}>
             <DialogContent className="max-w-sm rounded-2xl p-6">
                 <DialogHeader>
