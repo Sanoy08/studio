@@ -3,14 +3,15 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Wallet, TrendingUp, History, Gift, Coins, ArrowRight, Lock } from 'lucide-react';
+// ★ নতুন আইকন যোগ করা হয়েছে (RotateCcw)
+import { Loader2, TrendingUp, History, Gift, Coins, ArrowDownLeft, ArrowUpRight, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/use-auth';
 import { formatPrice } from '@/lib/utils';
@@ -107,7 +108,7 @@ export default function WalletPage() {
   const getNextTierInfo = () => {
       if (totalSpent < 5000) return { next: 'Silver', target: 5000, current: totalSpent };
       if (totalSpent < 15000) return { next: 'Gold', target: 15000, current: totalSpent };
-      return { next: 'Max', target: totalSpent, current: totalSpent }; // Already Top Tier
+      return { next: 'Max', target: totalSpent, current: totalSpent }; 
   };
   const tierInfo = getNextTierInfo();
   const progress = Math.min((tierInfo.current / tierInfo.target) * 100, 100);
@@ -117,7 +118,7 @@ export default function WalletPage() {
   return (
     <div className="max-w-3xl mx-auto space-y-8 pb-20">
         
-        {/* --- 1. Wallet Card (Gradient Design) --- */}
+        {/* --- 1. Wallet Card --- */}
         <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-gray-900 to-gray-800 text-white shadow-2xl p-8">
             <div className="absolute top-0 right-0 -mt-10 -mr-10 w-64 h-64 bg-white/5 rounded-full blur-3xl"></div>
             <div className="absolute bottom-0 left-0 -mb-10 -ml-10 w-40 h-40 bg-primary/20 rounded-full blur-2xl"></div>
@@ -171,7 +172,7 @@ export default function WalletPage() {
             </Card>
         )}
 
-        {/* --- 3. Transaction History --- */}
+        {/* --- 3. Transaction History (UPDATED) --- */}
         <div className="space-y-4">
             <h2 className="text-xl font-bold font-headline flex items-center gap-2">
                 <History className="h-5 w-5 text-gray-500" /> Recent Activity
@@ -187,30 +188,40 @@ export default function WalletPage() {
                 </div>
             ) : (
                 <div className="grid gap-3">
-                    {transactions.map((txn) => (
-                        <div key={txn.id} className="flex items-center justify-between p-4 bg-white rounded-xl border shadow-sm hover:shadow-md transition-shadow">
-                            <div className="flex items-center gap-4">
-                                <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
-                                    txn.type === 'earn' ? 'bg-green-100 text-green-600' : 
-                                    txn.type === 'redeem' ? 'bg-orange-100 text-orange-600' : 'bg-red-100 text-red-600'
+                    {transactions.map((txn) => {
+                        // ★ লজিক: Redeem বাদে বাকি সব (Earn, Refund) পজিটিভ (সবুজ)
+                        const isPositive = txn.type === 'earn' || txn.type === 'refund';
+                        
+                        return (
+                            <div key={txn.id} className="flex items-center justify-between p-4 bg-white rounded-xl border shadow-sm hover:shadow-md transition-shadow">
+                                <div className="flex items-center gap-4">
+                                    <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
+                                        isPositive ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'
+                                    }`}>
+                                        {/* আইকন সিলেকশন */}
+                                        {txn.type === 'earn' && <ArrowDownLeft className="h-5 w-5" />}
+                                        {txn.type === 'redeem' && <ArrowUpRight className="h-5 w-5" />}
+                                        {txn.type === 'refund' && <RotateCcw className="h-5 w-5" />}
+                                    </div>
+                                    <div>
+                                        <div className="flex items-center gap-2">
+                                            <p className="font-semibold text-sm text-foreground capitalize">{txn.type}</p>
+                                            {/* রিফান্ডের জন্য ব্যাজ */}
+                                            {txn.type === 'refund' && <Badge variant="secondary" className="text-[10px] px-1 py-0 h-4">Returned</Badge>}
+                                        </div>
+                                        <p className="text-xs text-muted-foreground mt-0.5">
+                                            {txn.description} • {new Date(txn.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                                        </p>
+                                    </div>
+                                </div>
+                                <span className={`font-bold text-sm ${
+                                    isPositive ? 'text-green-600' : 'text-red-500'
                                 }`}>
-                                    {txn.type === 'earn' ? <ArrowRight className="h-5 w-5 -rotate-45" /> : 
-                                     txn.type === 'redeem' ? <Gift className="h-5 w-5" /> : <Lock className="h-5 w-5" />}
-                                </div>
-                                <div>
-                                    <p className="font-semibold text-sm text-foreground">{txn.description}</p>
-                                    <p className="text-xs text-muted-foreground">
-                                        {new Date(txn.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                                    </p>
-                                </div>
+                                    {isPositive ? '+' : '-'}{txn.amount}
+                                </span>
                             </div>
-                            <span className={`font-bold text-sm ${
-                                txn.type === 'earn' ? 'text-green-600' : 'text-red-500'
-                            }`}>
-                                {txn.type === 'earn' ? '+' : '-'}{txn.amount}
-                            </span>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             )}
         </div>
