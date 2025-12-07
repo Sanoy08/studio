@@ -13,7 +13,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Lock, ChevronDown, ChevronUp, MapPin, Loader2, Info, Ticket, Coins } from 'lucide-react';
+import { Lock, ChevronDown, ChevronUp, MapPin, Loader2, Info } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -45,7 +45,6 @@ const checkoutSchema = z.object({
   shareLocation: z.boolean().optional(),
 });
 
-// --- Helper Components ---
 const FloatingLabelInput = ({ field, label, type = 'text' }: any) => (
   <div className="relative">
     <Input 
@@ -75,20 +74,21 @@ const FloatingLabelTextarea = ({ field, label }: any) => (
   </div>
 );
 
-// --- Main Component ---
 export default function CheckoutPage() {
   const { state, totalPrice, itemCount, clearCart, isInitialized, checkoutState } = useCart();
   const { user, isLoading } = useAuth();
   const router = useRouter();
 
-  // ★ ১. Context থেকে ডেটা রিড করা (URL থেকে নয়)
   const { couponCode, couponDiscount, useCoins } = checkoutState;
 
   const [orderType, setOrderType] = useState<'delivery' | 'pickup'>('delivery');
   const [walletBalance, setWalletBalance] = useState(0);
   const [isSummaryExpanded, setIsSummaryExpanded] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // ★★★ FIX: Success State যোগ করা হয়েছে ★★★
+  const [isSuccess, setIsSuccess] = useState(false);
 
-  // ২. ওয়ালেট ব্যালেন্স ফেচ করা (কয়েন ডিসকাউন্ট ক্যালকুলেশনের জন্য)
   useEffect(() => {
       const fetchWallet = async () => {
           const token = localStorage.getItem('token');
@@ -102,17 +102,22 @@ export default function CheckoutPage() {
       if (user) fetchWallet();
   }, [user]);
 
-  // ৩. অথেন্টিকেশন চেক
+  // ★★★ FIX: Auth এবং Cart Check আপডেট করা হয়েছে ★★★
+  // যদি isSuccess true হয়, তবে আর menus পেজে পাঠাবে না।
   useEffect(() => {
     if (!isLoading && !isInitialized) return;
+    
     if (!isLoading && !user) {
       toast.error("Please login to checkout.");
       router.push('/login');
+      return;
     }
-    if (isInitialized && itemCount === 0) {
+
+    // যদি অর্ডার সাকসেসফুল না হয় এবং কার্ট খালি থাকে, তবেই রিডাইরেক্ট করবে
+    if (isInitialized && itemCount === 0 && !isSuccess) {
       router.push('/menus');
     }
-  }, [itemCount, user, isLoading, isInitialized, router]);
+  }, [itemCount, user, isLoading, isInitialized, router, isSuccess]);
 
   const form = useForm<z.infer<typeof checkoutSchema>>({
     resolver: zodResolver(checkoutSchema),
@@ -126,7 +131,6 @@ export default function CheckoutPage() {
   const primaryAddress = watch('address');
   const [isSameAsAddress, setIsSameAsAddress] = useState(false);
 
-  // ৪. ফর্ম প্রি-ফিল করা
   useEffect(() => {
     const initializeCheckoutData = async () => {
         if (!user) return;
@@ -163,23 +167,22 @@ export default function CheckoutPage() {
     else if (watch('deliveryAddress') === primaryAddress) setValue('deliveryAddress', '');
   }, [isSameAsAddress, primaryAddress, setValue, watch]);
 
-  // ★ ৫. ফাইনাল ক্যালকুলেশন
   const maxCoinDiscount = totalPrice * 0.5;
   const coinDiscountAmount = useCoins ? Math.min(walletBalance, Math.floor(maxCoinDiscount)) : 0;
-  // টোটাল থেকে কুপন এবং কয়েন দুটোই বাদ যাবে
   const finalTotal = Math.max(0, totalPrice - couponDiscount - coinDiscountAmount);
 
-  // ৬. অর্ডার সাবমিট
   async function onSubmit(values: z.infer<typeof checkoutSchema>) {
+    setIsSubmitting(true);
     const token = localStorage.getItem('token');
     try {
+        // ... (orderPayload তৈরি করার অংশ একই থাকবে) ...
         const orderPayload = {
             ...values,
             items: state.items,
             subtotal: totalPrice,
             total: finalTotal,
-            discount: couponDiscount + coinDiscountAmount, // মোট ডিসকাউন্ট
-            couponCode: couponCode, 
+            discount: couponDiscount + coinDiscountAmount,
+            couponCode: couponCode,
             useCoins: useCoins,
             orderType: orderType,
             deliveryAddress: orderType === 'delivery' ? (values.deliveryAddress || values.address) : undefined,
@@ -197,23 +200,38 @@ export default function CheckoutPage() {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Order placement failed');
 
-        toast.success('Order placed successfully! 🎉');
-        clearCart(); // কার্ট ক্লিয়ার করলে Context এর CheckoutState ও রিসেট হবে (CartProvider এ লজিক আছে)
-        router.push('/account/orders');
+        setIsSuccess(true);
+        toast.success('Order placed successfully!');
+        clearCart();
+        
+        // ★★★ FIX: API রিটার্ন করছে 'orderId', তাই সেটাই ধরতে হবে ★★★
+        const orderNum = data.orderId || '0000'; 
+        
+        const params = new URLSearchParams({
+            orderNumber: orderNum,
+            name: values.name,
+            amount: finalTotal.toString()
+        });
+        
+        router.push(`/checkout/success?${params.toString()}`);
 
     } catch (error: any) {
         console.error("Checkout Error:", error);
         toast.error(error.message || "Failed to place order. Please try again.");
+    } finally {
+        setIsSubmitting(false);
     }
   }
 
   if (!isInitialized || isLoading) return <div className="flex justify-center p-20"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>;
-  if (!user || itemCount === 0) return null;
   
+  // ★ FIX: পেজ রিফ্রেশ এড়াতে সরাসরি null রিটার্ন না করে লোডিং দেখানো ভালো, বা কার্ট খালি থাকলেও যদি সাকসেস হয় তবে কন্টেন্ট দেখানো দরকার নেই
+  if (!user) return null;
+  if (itemCount === 0 && !isSuccess) return null; // শুধু সাকসেস না হলেই নাল দেখাবে
+
   return (
     <div className="container py-8 md:py-12 max-w-6xl">
-      
-      {/* Mobile Summary Accordion */}
+      {/* ... (বাকি JSX কোড একদম আগের মতোই) ... */}
       <div className="lg:hidden mb-6">
         <Card className="border shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between p-4 cursor-pointer bg-muted/10" onClick={() => setIsSummaryExpanded(!isSummaryExpanded)}>
@@ -253,14 +271,12 @@ export default function CheckoutPage() {
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               
-              {/* Personal Details */}
               <div className="space-y-4">
                   <h3 className="text-lg font-bold">Contact Info</h3>
                   <FormField control={form.control} name="name" render={({ field }) => ( <FormItem><FormControl><FloatingLabelInput field={field} label="Full Name" /></FormControl><FormMessage /></FormItem> )} />
                   <FormField control={form.control} name="altPhone" render={({ field }) => ( <FormItem><FormControl><FloatingLabelInput field={field} label="Phone Number" type="tel" /></FormControl><FormMessage /></FormItem> )} />
               </div>
 
-              {/* Delivery / Pickup Toggle */}
               <div className="space-y-4">
                   <h3 className="text-lg font-bold">Delivery Method</h3>
                   <div className="flex gap-4 p-1 bg-muted/20 rounded-2xl border">
@@ -269,7 +285,6 @@ export default function CheckoutPage() {
                   </div>
               </div>
 
-              {/* Address Section */}
               {orderType === 'delivery' ? (
                 <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
                     <FormField control={form.control} name="address" render={({ field }) => ( <FormItem><FormControl><FloatingLabelInput field={field} label="Primary Address" /></FormControl><FormMessage /></FormItem> )} />
@@ -292,7 +307,6 @@ export default function CheckoutPage() {
                 </div>
               )}
 
-              {/* Preferences */}
               <div className="space-y-4 pt-2">
                   <h3 className="text-lg font-bold">Preferences</h3>
                   <div className="grid grid-cols-2 gap-4">
@@ -302,7 +316,6 @@ export default function CheckoutPage() {
                   <FormField control={form.control} name="instructions" render={({ field }) => ( <FormItem><FormControl><FloatingLabelTextarea field={field} label="Cooking Instructions (Optional)" /></FormControl><FormMessage /></FormItem> )} />
               </div>
 
-              {/* Terms Checkbox */}
               <FormField control={form.control} name="terms" render={({ field }) => ( 
                   <FormItem className="flex flex-row items-start space-x-3 space-y-0 p-4 border rounded-xl bg-muted/10">
                       <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
@@ -315,8 +328,9 @@ export default function CheckoutPage() {
                   </FormItem> 
               )} />
               
-              <Button type="submit" size="lg" className="w-full h-14 text-lg rounded-xl shadow-lg shadow-primary/20 transition-all hover:scale-[1.01] active:scale-[0.99]">
-                <Lock className="mr-2 h-5 w-5" /> Place Order — {formatPrice(finalTotal)}
+              <Button type="submit" disabled={isSubmitting} size="lg" className="w-full h-14 text-lg rounded-xl shadow-lg shadow-primary/20 transition-all hover:scale-[1.01] active:scale-[0.99]">
+                {isSubmitting ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Lock className="mr-2 h-5 w-5" />}
+                {isSubmitting ? 'Placing Order...' : `Place Order — ${formatPrice(finalTotal)}`}
               </Button>
             </form>
           </Form>
@@ -326,11 +340,10 @@ export default function CheckoutPage() {
         <div className="lg:col-span-1 hidden lg:block">
           <Card className="sticky top-24 bg-card shadow-lg border-0 overflow-hidden">
             <CardHeader className="border-b bg-muted/10 pb-4">
-              <CardTitle>Order Summary</CardTitle>
+              <CardTitle>Payment Details</CardTitle>
             </CardHeader>
             <CardContent className="pt-6 space-y-6">
                 
-                {/* Items List */}
                 <div className="space-y-4 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
                     {state.items.map((item) => {
                         const imageSrc = (item.image && item.image.url) ? item.image.url : PLACEHOLDER_IMAGE_URL;
@@ -351,7 +364,6 @@ export default function CheckoutPage() {
                 
                 <Separator />
 
-                {/* Pricing Breakdown */}
                 <div className="space-y-3 text-sm">
                     <div className="flex justify-between text-muted-foreground">
                         <span>Subtotal</span>
