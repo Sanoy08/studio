@@ -7,9 +7,14 @@ export function middleware(request: NextRequest) {
   const hostname = request.headers.get('host');
   const path = request.nextUrl.pathname;
 
-  // ১. API CALLS এবং Static Assets কোনোভাবেই রিরাইট হবে না
-  if (path.startsWith('/_next/') || path.startsWith('/api/') || path.endsWith('.ico') || path.startsWith('/static/')) {
-      return NextResponse.next();
+  // ★★★ FIX: Static Files (manifest, _next, favicon) সরাসরি পাস করে দেওয়া হচ্ছে ★★★
+  if (path.startsWith('/_next/') || 
+      path.endsWith('.ico') || 
+      path.includes('manifest.json') || // manifest.json কে আলাদাভাবে বাদ দেওয়া হলো
+      path.startsWith('/sw.js') ||
+      path.startsWith('/api/') // API calls should also not be rewritten
+      ) {
+    return NextResponse.next();
   }
 
   if (!hostname) {
@@ -20,12 +25,11 @@ export function middleware(request: NextRequest) {
 
   if (isSubdomain) {
     
-    // ২. যদি admin.bumbaskitchen.app হিট হয়, এবং এটি API বাদে অন্য কোনো পাথ হয়:
-    // যেমন: admin.bumbaskitchen.app/dashboard -> bumbaskitchen.app/admin/dashboard
+    // ২. যদি admin.bumbaskitchen.app হিট হয় এবং এটি /admin দিয়ে শুরু না হয় (যেমন: admin.domain.app/)
     if (!path.startsWith('/admin')) {
       const newPath = `/admin${path}`;
       
-      // Rewrite করে /admin/ রুট এক্সেস করা হচ্ছে
+      // Rewrite করে ইন্টারনাল /admin/ রুট এক্সেস করা হচ্ছে
       return NextResponse.rewrite(new URL(newPath, request.url));
     }
   }
@@ -34,12 +38,9 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  // সকল রিকোয়েস্টের জন্য রান করবে
+  // সকল নন-স্ট্যাটিক রিকোয়েস্ট ম্যাচ করবে
   matcher: [
-    /*
-     * সকল পাথ ম্যাচ করবে, কিন্তু Next.js এর ভেতরের ফাইলগুলো বাদ দেবে।
-     */
     '/',
-    '/(.*)',
+    '/((?!_next/static|favicon.ico|manifest.json|sw.js|.*\\..*).*)',
   ],
 };
