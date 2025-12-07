@@ -7,13 +7,14 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Loader2, RefreshCcw, ShoppingBag, Search, FileText, Download } from 'lucide-react'; // আইকন ইমপোর্ট
+import { Loader2, RefreshCcw, ShoppingBag, Search, FileText, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/use-auth';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { formatPrice } from '@/lib/utils';
-import { generateInvoice } from '@/lib/invoiceGenerator'; // জেনারেটর ইমপোর্ট
+// আপনার যদি invoiceGenerator না থাকে তবে নিচের লাইনটি কমেন্ট করে দিন
+import { generateInvoice } from '@/lib/invoiceGenerator'; 
 
 type Order = {
   _id: string;
@@ -47,6 +48,7 @@ export default function AdminOrdersPage() {
 
     setIsLoading(true);
     try {
+      // অর্ডার ফেচ করার জন্য GET রিকোয়েস্ট
       const res = await fetch('/api/admin/orders', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -88,11 +90,17 @@ export default function AdminOrdersPage() {
     setFilteredOrders(result);
   }, [searchQuery, statusFilter, orders]);
 
+  // ★ স্ট্যাটাস আপডেট হ্যান্ডলার (কয়েন লজিক কাজ করার জন্য এটি গুরুত্বপূর্ণ)
   const handleStatusChange = async (orderId: string, newStatus: string) => {
     const token = localStorage.getItem('token');
+    
+    // UI আগে আপডেট করে দিচ্ছি (Optimistic UI)
+    setOrders(prev => prev.map(o => o._id === orderId ? { ...o, Status: newStatus } : o));
+
     try {
-        const res = await fetch('/api/admin/orders', {
-            method: 'PATCH',
+        // ★ সঠিক API পাথ এবং মেথড (PUT) ব্যবহার করা হচ্ছে
+        const res = await fetch('/api/admin/orders/status', {
+            method: 'PUT',
             headers: { 
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}` 
@@ -101,14 +109,15 @@ export default function AdminOrdersPage() {
         });
 
         if (res.ok) {
-            toast.success(`Status updated to ${newStatus}`);
-            setOrders(prev => prev.map(o => o._id === orderId ? { ...o, Status: newStatus } : o));
+            toast.success(`Order marked as ${newStatus}`);
         } else {
-            toast.error("Failed to update status");
+            toast.error("Update failed!");
+            fetchOrders(); // ফেইল করলে রিফ্রেশ
         }
     } catch (error) {
         console.error(error);
-        toast.error("Error updating status");
+        toast.error("Network error");
+        fetchOrders();
     }
   }
 
@@ -122,11 +131,14 @@ export default function AdminOrdersPage() {
       }
   };
 
-  // ★ ইনভয়েস ডাউনলোড হ্যান্ডলার
   const handleDownloadInvoice = (order: Order) => {
       try {
-          generateInvoice(order);
-          toast.success("Invoice downloaded");
+          if (typeof generateInvoice === 'function') {
+            generateInvoice(order);
+            toast.success("Invoice downloaded");
+          } else {
+            toast.error("Invoice generator not found");
+          }
       } catch (e) {
           console.error(e);
           toast.error("Failed to generate invoice");
@@ -214,7 +226,6 @@ export default function AdminOrdersPage() {
                                 </SelectContent>
                             </Select>
                         </div>
-                        {/* ★ মোবাইল ইনভয়েস বাটন ★ */}
                         <Button size="icon" variant="outline" className="h-9 w-9 text-blue-600 border-blue-200 bg-blue-50" onClick={() => handleDownloadInvoice(order)}>
                             <FileText className="h-4 w-4" />
                         </Button>
@@ -274,7 +285,6 @@ export default function AdminOrdersPage() {
                                 </SelectContent>
                             </Select>
                         </TableCell>
-                        {/* ★ ডেস্কটপ ইনভয়েস বাটন ★ */}
                         <TableCell className="text-right pr-6">
                             <Button 
                                 variant="ghost" 
