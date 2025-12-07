@@ -87,25 +87,7 @@ export function Header() {
 
   return (
     <>
-        {/* Top Announcement Bar - With Slide Animation */}
-        <div className={cn(
-            "bg-primary text-primary-foreground overflow-hidden transition-all duration-500 ease-in-out relative z-[51]",
-            showTopBanner ? "max-h-12 py-1.5" : "max-h-0 py-0"
-        )}>
-            <div className="container flex justify-center items-center gap-2 text-xs font-medium">
-                <Sparkles className="h-3 w-3 text-yellow-300 fill-yellow-300 animate-pulse" />
-                <span className="truncate">
-                    Free Delivery on orders above ₹499! Use code <span className="font-bold bg-white/20 px-1.5 py-0.5 rounded ml-1 dashed border border-white/30">FREEDEL</span>
-                </span>
-            </div>
-            <button 
-                onClick={() => setShowTopBanner(false)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 hover:bg-white/20 rounded-full transition-colors"
-                aria-label="Close banner"
-            >
-                <X className="h-3 w-3" />
-            </button>
-        </div>
+       
 
         <header className={cn(
             "sticky top-0 z-50 w-full transition-all duration-500 ease-in-out border-b",

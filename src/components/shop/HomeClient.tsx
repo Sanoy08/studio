@@ -18,7 +18,6 @@ import type { Product } from '@/lib/types';
 import { Clock, Utensils, Truck, ShieldCheck, Leaf, ChevronRight } from 'lucide-react';
 import { SpecialDishCard } from './SpecialDishCard';
 
-// --- Types ---
 export type HeroSlide = { id: string; imageUrl: string; clickUrl: string; };
 export type Offer = { id: string; title: string; description: string; price: number; imageUrl: string; };
 type HomeClientProps = { 
@@ -28,7 +27,6 @@ type HomeClientProps = {
   allProducts?: Product[]; 
 };
 
-// --- Data Constants ---
 const CATEGORIES = [
     { name: "Fried", image: "/Categories/Fried.webp", link: "/menus?category=Fried", color: "from-green-400 to-emerald-600" },
     { name: "Rolls", image: "/Categories/fried.webp", link: "/menus?category=rolls", color: "from-yellow-400 to-orange-500" },
@@ -57,7 +55,6 @@ export function HomeClient({ heroSlides, offers, bestsellers, allProducts = [] }
   const [current, setCurrent] = useState(0)
   const [count, setCount] = useState(0)
   
-  // Find Daily Special
   const dailySpecial = allProducts.find(p => p.isDailySpecial);
 
   useEffect(() => {
@@ -71,24 +68,40 @@ export function HomeClient({ heroSlides, offers, bestsellers, allProducts = [] }
     <div className="bg-background pb-20 md:pb-0">
       
       {/* 1. Hero Section */}
-      <section className="relative -mt-16">
+      <section className="relative -mt-20 md:-mt-24 w-full">
         {heroSlides.length > 0 ? (
           <>
             <Carousel setApi={setApi} opts={{ loop: true }} plugins={[Autoplay({ delay: 5000 })]}>
               <CarouselContent>
                 {heroSlides.map((slide) => (
                   <CarouselItem key={slide.id}>
-                    <Link href={slide.clickUrl} className="block relative h-[55vh] md:h-[85vh] overflow-hidden">
-                      <Image src={slide.imageUrl} alt="Hero Slide" fill className="object-cover" priority unoptimized={true} />
-                      <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/60"></div>
+                    {/* ★★★ FIX: Fixed Height বাদ দেওয়া হয়েছে, এখন 'w-full' এবং 'h-auto' থাকবে ★★★ */}
+                    <Link href={slide.clickUrl} className="block w-full relative">
+                      <Image 
+                        src={slide.imageUrl} 
+                        alt="Hero Slide" 
+                        // width/height=0 এবং sizes="100vw" দিলে ইমেজটি কন্টেইনারের সাইজ নেবে
+                        width={0}
+                        height={0}
+                        sizes="100vw"
+                        // style={{ width: '100%', height: 'auto' }} -> এটি নিশ্চিত করে ইমেজ কখনো ক্রপ হবে না
+                        style={{ width: '100%', height: 'auto' }}
+                        className="object-contain" 
+                        priority 
+                        unoptimized={true} 
+                      />
+                      {/* Gradient Overlay */}
+                      <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/60 pointer-events-none"></div>
                     </Link>
                   </CarouselItem>
                 ))}
               </CarouselContent>
             </Carousel>
-            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex gap-2">
+            
+            {/* Dots */}
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex gap-2">
               {Array.from({ length: count }).map((_, index) => (
-                <button key={index} onClick={() => api?.scrollTo(index)} className={`h-1.5 rounded-full transition-all duration-300 ${current === index ? 'w-8 bg-white' : 'w-2 bg-white/50'}`} />
+                <button key={index} onClick={() => api?.scrollTo(index)} className={`h-1.5 rounded-full transition-all duration-300 shadow-sm ${current === index ? 'w-8 bg-white' : 'w-2 bg-white/60'}`} />
               ))}
             </div>
           </>
@@ -149,20 +162,16 @@ export function HomeClient({ heroSlides, offers, bestsellers, allProducts = [] }
           </div>
       </section>
 
-      {/* 4. Daily Special Section (Simplified: Image + Button) */}
+      {/* 4. Daily Special Section */}
       {dailySpecial && (
         <section className="py-16 bg-amber-50/50">
             <div className="container">
-                {/* Header */}
                 <div className="text-center mb-8">
                     <h2 className="text-3xl md:text-4xl font-bold font-headline text-primary">Today's Special</h2>
                     <p className="text-muted-foreground mt-2">Freshly prepared just for you.</p>
                 </div>
 
-                {/* Main Card */}
                 <div className="max-w-md mx-auto bg-white p-4 rounded-3xl shadow-xl border border-amber-100 hover:shadow-2xl transition-shadow duration-300">
-                    
-                    {/* 1. Image (or Generated Card) */}
                     <div className="relative aspect-square w-full rounded-2xl overflow-hidden shadow-sm bg-muted">
                          {dailySpecial.images && dailySpecial.images.length > 0 && dailySpecial.images[0].url ? (
                             <Image 
@@ -181,7 +190,6 @@ export function HomeClient({ heroSlides, offers, bestsellers, allProducts = [] }
                          )}
                     </div>
 
-                    {/* 2. Button (Below, No Overlap) */}
                     <div className="mt-6 px-2 pb-2">
                         <Button asChild size="lg" className="w-full rounded-xl text-lg font-bold h-14 shadow-md shadow-primary/20 hover:scale-[1.02] transition-transform">
                             <Link href={`/menus/${dailySpecial.slug}`}>
