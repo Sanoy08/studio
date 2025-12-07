@@ -1,93 +1,148 @@
-// src/app/(shop)/checkout/success/page.tsx
-
 'use client';
 
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CheckCircle2, MessageCircle, AlertTriangle, ArrowRight, ShoppingBag } from 'lucide-react';
-import Link from 'next/link';
+import { MessageCircle, ArrowRight, Copy, Clock, AlertTriangle, CheckCircle2, Phone } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import Confetti from 'react-confetti'; // (Optional: যদি কনফেটি এফেক্ট চান, না চাইলে এই লাইন বাদ দিন)
+import { toast } from 'sonner';
+import { formatPrice } from '@/lib/utils';
 
 export default function OrderSuccessPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   
-  // URL থেকে ডেটা নেওয়া
-  const orderNumber = searchParams.get('orderNumber') || 'New Order';
-  const name = searchParams.get('name') || 'Customer';
-  const amount = searchParams.get('amount') || '';
+  const orderNumber = searchParams.get('orderNumber') || '...';
+  const name = searchParams.get('name') || 'Guest';
+  const amount = searchParams.get('amount') || '0';
 
-  // আপনার হোয়াটসঅ্যাপ নম্বর (91 যুক্ত করবেন)
-  const ADMIN_WHATSAPP_NUMBER = "918240690254"; // ★ এখানে আপনার আসল নম্বর দিন
+  const ADMIN_WHATSAPP = "918240690254"; 
 
-  // হোয়াটসঅ্যাপ মেসেজ জেনারেট করা
-  const message = `Hi Bumba's Kitchen, I just placed order #${orderNumber} of ₹${amount}. My name is ${name}. Please confirm my order.`;
-  const whatsappUrl = `https://wa.me/${ADMIN_WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
+  // Professional WhatsApp Message with spacing
+  const message = `Hello Bumba's Kitchen! 👨‍🍳\n\nI have placed a new order. Please confirm it.\n\n🆔 *Order ID:* ${orderNumber}\n👤 *Name:* ${name}\n💰 *Amount:* ₹${amount}\n\nPlease start preparing my food! 🥘`;
+  
+  const whatsappUrl = `https://wa.me/${ADMIN_WHATSAPP}?text=${encodeURIComponent(message)}`;
 
-  // উইন্ডো সাইজ (কনফেটির জন্য)
-  const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
   useEffect(() => {
-      setWindowSize({ width: window.innerWidth, height: window.innerHeight });
+      const audio = new Audio("https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3");
+      audio.volume = 0.5;
+      audio.play().catch(() => {});
   }, []);
 
+  const copyOrderId = () => {
+      navigator.clipboard.writeText(orderNumber);
+      toast.success("Order ID copied to clipboard");
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4 md:p-6 relative font-sans">
       
-      {/* Celebration Effect (Optional) */}
-      <div className="absolute inset-0 pointer-events-none">
-         <Confetti width={windowSize.width} height={windowSize.height} recycle={false} numberOfPieces={200} />
+      {/* Subtle Background Pattern */}
+      <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(#000 1px, transparent 1px)', backgroundSize: '24px 24px' }}></div>
+
+      <div className="w-full max-w-[420px] space-y-8 relative z-10 animate-in slide-in-from-bottom-8 fade-in duration-700">
+          
+          {/* --- MAIN STATUS CARD --- */}
+          <div className="bg-white rounded-3xl shadow-xl overflow-hidden border-t-[6px] border-amber-500 ring-1 ring-black/5">
+              
+              {/* Step Progress Indicator */}
+              <div className="flex justify-center items-center gap-3 pt-8 pb-2 px-8">
+                  <div className="flex items-center gap-1.5 text-emerald-600 font-bold text-[11px] uppercase tracking-wider opacity-60">
+                      <CheckCircle2 className="h-3.5 w-3.5" /> Sent
+                  </div>
+                  <div className="w-10 h-[2px] bg-gray-200 rounded-full"></div>
+                  <div className="flex items-center gap-1.5 text-amber-600 font-bold text-[11px] uppercase tracking-wider animate-pulse">
+                      <Clock className="h-3.5 w-3.5" /> Verify
+                  </div>
+              </div>
+
+              {/* Main Content Area */}
+              <div className="px-8 pb-10 pt-4 text-center">
+                  <h1 className="text-3xl font-extrabold tracking-tight text-gray-900 mb-3 leading-tight">
+                      Order On Hold! <span className="text-amber-500">⚠️</span>
+                  </h1>
+                  
+                  <div className="text-[15px] leading-relaxed text-gray-500 space-y-1">
+                      <p>
+                          Thanks <span className="font-semibold text-gray-900">{name.split(' ')[0]}</span>. Your order is placed but needs a quick confirmation.
+                      </p>
+                  </div>
+
+                  {/* Order Details Badge */}
+                  <div className="mt-6 flex items-center justify-center gap-3">
+                      <div className="bg-gray-100 border border-gray-200 px-3 py-1.5 rounded-lg flex flex-col items-center">
+                          <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Order ID</span>
+                          <span className="font-mono font-bold text-gray-800 text-sm">#{orderNumber}</span>
+                      </div>
+                      <div className="bg-gray-100 border border-gray-200 px-3 py-1.5 rounded-lg flex flex-col items-center">
+                          <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Total</span>
+                          <span className="font-bold text-gray-800 text-sm">{formatPrice(parseFloat(amount))}</span>
+                      </div>
+                  </div>
+              </div>
+
+              {/* Action Area (Yellow Box) */}
+              <div className="bg-amber-50/80 p-8 border-t border-amber-100/50 backdrop-blur-sm">
+                  
+                  <div className="flex items-start gap-3 mb-6 bg-white p-4 rounded-xl border border-amber-200/60 shadow-sm">
+                      <div className="bg-amber-100 p-2 rounded-full shrink-0">
+                          <AlertTriangle className="h-5 w-5 text-amber-600" />
+                      </div>
+                      <div>
+                          <h3 className="font-bold text-amber-950 text-sm">Action Required</h3>
+                          <p className="text-xs text-amber-800/80 mt-1 leading-5">
+                              We only start cooking after WhatsApp verification to prevent fake orders.
+                          </p>
+                      </div>
+                  </div>
+
+                  <Button 
+                      asChild 
+                      className="w-full h-14 text-[16px] font-bold rounded-2xl bg-[#25D366] hover:bg-[#1fb655] text-white shadow-lg shadow-green-200/50 hover:shadow-green-300/50 transition-all hover:-translate-y-0.5 active:scale-[0.98] group"
+                  >
+                      <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2">
+                          <MessageCircle className="h-5 w-5 fill-current" />
+                          <span>Confirm on WhatsApp</span>
+                          <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform opacity-80" />
+                      </a>
+                  </Button>
+
+                  {/* Visual Timer Bar */}
+                  <div className="mt-7 space-y-2">
+                      <div className="flex justify-between items-end">
+                          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Auto-cancel timer</span>
+                          <span className="text-[10px] font-bold text-red-500 font-mono">10:00</span>
+                      </div>
+                      <div className="h-1.5 w-full bg-gray-200 rounded-full overflow-hidden">
+                          <div className="h-full bg-red-500 rounded-full w-full animate-[shrink_600s_linear_forwards] origin-left"></div>
+                      </div>
+                      <style jsx>{`
+                          @keyframes shrink { from { width: 100%; } to { width: 0%; } }
+                      `}</style>
+                  </div>
+
+              </div>
+          </div>
+
+          {/* Footer Actions */}
+          <div className="flex flex-col items-center gap-4">
+              <div className="flex justify-center items-center gap-6 text-sm font-medium text-gray-500">
+                  <button onClick={copyOrderId} className="flex items-center gap-1.5 hover:text-gray-900 transition-colors group">
+                      <Copy className="h-3.5 w-3.5 group-hover:text-primary transition-colors" /> 
+                      Copy ID
+                  </button>
+                  <div className="w-1 h-1 bg-gray-300 rounded-full"></div>
+                  <button onClick={() => router.push('/account/orders')} className="hover:text-gray-900 transition-colors">
+                      View Details
+                  </button>
+              </div>
+              
+              <div className="flex items-center gap-2 text-xs text-gray-400 bg-white px-3 py-1.5 rounded-full shadow-sm border border-gray-100">
+                  <Phone className="h-3 w-3" />
+                  <span>Support: <a href={`tel:${ADMIN_WHATSAPP}`} className="hover:text-gray-600 transition-colors tracking-wide font-mono">{ADMIN_WHATSAPP}</a></span>
+              </div>
+          </div>
+
       </div>
-
-      <Card className="max-w-md w-full shadow-2xl border-0 relative z-10 overflow-hidden">
-        {/* Top Green Banner */}
-        <div className="bg-green-600 h-32 flex items-center justify-center relative">
-            <div className="absolute inset-0 bg-[url('/patterns/circuit-board.svg')] opacity-10"></div>
-            <div className="bg-white p-4 rounded-full shadow-lg animate-in zoom-in duration-500">
-                <CheckCircle2 className="h-12 w-12 text-green-600" />
-            </div>
-        </div>
-
-        <CardContent className="pt-12 pb-8 px-6 text-center space-y-6">
-            
-            <div className="space-y-2">
-                <h1 className="text-2xl font-bold font-headline text-gray-900">Almost There! 🎉</h1>
-                <p className="text-muted-foreground">
-                    We have received your request for <span className="font-mono font-bold text-gray-800">#{orderNumber}</span>.
-                </p>
-            </div>
-
-            {/* Warning Box */}
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-left flex gap-3 animate-pulse">
-                <AlertTriangle className="h-6 w-6 text-amber-600 shrink-0" />
-                <div>
-                    <h3 className="font-bold text-amber-800 text-sm">One Final Step!</h3>
-                    <p className="text-xs text-amber-700 mt-1 leading-relaxed">
-                        To avoid fake orders, we require a <strong>WhatsApp Confirmation</strong>. Without this, your order will be cancelled automatically within 10 mins.
-                    </p>
-                </div>
-            </div>
-
-            {/* WhatsApp Button */}
-            <Button 
-                asChild 
-                size="lg" 
-                className="w-full h-14 text-lg font-bold rounded-xl bg-[#25D366] hover:bg-[#128C7E] shadow-lg shadow-green-200 transition-transform hover:scale-[1.02]"
-            >
-                <a href={whatsappUrl} target="_blank" rel="noopener noreferrer">
-                    <MessageCircle className="mr-2 h-6 w-6" /> Verify on WhatsApp
-                </a>
-            </Button>
-
-            <div className="pt-4 border-t">
-                <Button variant="ghost" className="text-muted-foreground hover:text-primary" onClick={() => router.push('/account/orders')}>
-                    View Order Status <ArrowRight className="ml-1 h-4 w-4" />
-                </Button>
-            </div>
-
-        </CardContent>
-      </Card>
     </div>
   );
 }

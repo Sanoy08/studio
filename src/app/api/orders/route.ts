@@ -5,7 +5,6 @@ import { clientPromise } from '@/lib/mongodb';
 import { ObjectId } from 'mongodb';
 import jwt from 'jsonwebtoken';
 import { sendNotificationToAdmins, sendNotificationToUser } from '@/lib/notification';
-import { pusherServer } from '@/lib/pusher';
 
 const DB_NAME = 'BumbasKitchenDB';
 const ORDERS_COLLECTION = 'orders';
@@ -13,7 +12,6 @@ const USERS_COLLECTION = 'users';
 const TRANSACTIONS_COLLECTION = 'coinTransactions';
 const JWT_SECRET = process.env.JWT_SECRET || 'default_secret';
 
-// ১ কয়েন = ১ টাকা ডিসকাউন্ট
 const COIN_VALUE = 1; 
 
 export async function POST(request: NextRequest) {
@@ -44,28 +42,26 @@ export async function POST(request: NextRequest) {
             let coinsRedeemed = 0;
             let subtotal = parseFloat(orderData.subtotal);
 
-            // ২. কয়েন রিডিমশন লজিক (যদি ইউজার চায়)
+            // ২. কয়েন রিডিমশন (কাটা হবে, কিন্তু আর্ন হবে না)
             if (userIdToSave && orderData.useCoins) {
                 const user = await db.collection(USERS_COLLECTION).findOne({ _id: userIdToSave }, { session });
                 const userBalance = user?.wallet?.currentBalance || 0;
 
-                // রুল: অর্ডারের ৫০% এর বেশি কয়েন দিয়ে দেওয়া যাবে না
                 const maxRedeemableAmount = subtotal * 0.5; 
                 const redeemableCoins = Math.floor(maxRedeemableAmount / COIN_VALUE);
 
-                // কত কয়েন ব্যবহার হবে (ব্যালেন্স অথবা ম্যাক্স লিমিট, যেটা ছোট)
                 coinsRedeemed = Math.min(userBalance, redeemableCoins);
                 finalDiscount = coinsRedeemed * COIN_VALUE;
 
                 if (coinsRedeemed > 0) {
-                    // ব্যালেন্স কাটা হচ্ছে
+                    // ওয়ালেট থেকে কয়েন কাটা হচ্ছে
                     await db.collection(USERS_COLLECTION).updateOne(
                         { _id: userIdToSave },
                         { $inc: { "wallet.currentBalance": -coinsRedeemed } },
                         { session }
                     );
 
-                    // রিডিম হিস্ট্রি
+                    // ট্রানজেকশন হিস্ট্রি (Redeem)
                     await db.collection(TRANSACTIONS_COLLECTION).insertOne({
                         userId: userIdToSave,
                         type: 'redeem',
@@ -77,10 +73,12 @@ export async function POST(request: NextRequest) {
             }
 
             // ৩. ফাইনাল প্রাইস ক্যালকুলেশন
-            // (অন্য কুপন থাকলে সেটাও এখানে হ্যান্ডেল করা যায়, আপাতত কয়েন ফোকাসড)
-            const finalPrice = subtotal - finalDiscount;
+            // (এখানে কুপন ডিসকাউন্ট থাকলে সেটাও বাদ দিতে হবে, আমি ধরে নিচ্ছি orderData.discount এর মধ্যে সব আছে)
+            // তবে আপনার লজিক অনুযায়ী subtotal - coinDiscount
+            const finalPrice = subtotal - finalDiscount; 
+            // বা যদি আলাদা কুপন থাকে: const finalPrice = orderData.total; 
 
-            // ৪. অর্ডার সেভ করা
+            // ৪. অর্ডার সেভ করা (Status: Pending Verification)
             const newOrder = {
                 OrderNumber: orderNumber,
                 userId: userIdToSave,
@@ -94,91 +92,27 @@ export async function POST(request: NextRequest) {
                 PreferredDate: new Date(orderData.preferredDate),
                 Instructions: orderData.instructions,
                 Subtotal: subtotal,
-                Discount: finalDiscount,
+                Discount: orderData.discount || finalDiscount, // টোটাল ডিসকাউন্ট সেভ করা
                 CoinsRedeemed: coinsRedeemed,
-                FinalPrice: finalPrice,
+                FinalPrice: orderData.total, // ফ্রন্টএন্ড থেকে আসা ক্যালকুলেটেড টোটাল
                 Items: orderData.items, 
-                Status: "Received"
+                Status: "Pending Verification", // ★ এখানে চেঞ্জ করা হয়েছে
+                coinsAwarded: false, // ফ্ল্যাগ: এখনো আর্ন হয়নি
+                coinsRefunded: false // ফ্ল্যাগ: এখনো রিফান্ড হয়নি
             };
 
             await db.collection(ORDERS_COLLECTION).insertOne(newOrder, { session });
 
-            // ৫. কয়েন আর্নিং এবং টায়ার আপডেট (Earning & Tier Logic)
-            if (userIdToSave) {
-                // ইউজারের বর্তমান টোটাল খরচ বের করা
-                const user = await db.collection(USERS_COLLECTION).findOne({ _id: userIdToSave }, { session });
-                const currentTotalSpent = (user?.totalSpent || 0) + finalPrice;
-                
-                // টায়ার ক্যালকুলেশন
-                let newTier = "Bronze";
-                let earnRate = 2; // 2%
+            // ★ নোট: আর্নিং লজিক এখান থেকে সরিয়ে ফেলা হয়েছে ★
 
-                if (currentTotalSpent >= 15000) {
-                    newTier = "Gold";
-                    earnRate = 6; // 6%
-                } else if (currentTotalSpent >= 5000) {
-                    newTier = "Silver";
-                    earnRate = 4; // 4%
-                }
-
-                // নতুন কয়েন ক্যালকুলেশন
-                const coinsEarned = Math.floor((finalPrice * earnRate) / 100);
-
-                // ইউজার আপডেট (ব্যালেন্স, টায়ার, টোটাল খরচ)
-                await db.collection(USERS_COLLECTION).updateOne(
-                    { _id: userIdToSave },
-                    { 
-                        $inc: { 
-                            "wallet.currentBalance": coinsEarned,
-                            "totalSpent": finalPrice
-                        },
-                        $set: { 
-                            "wallet.tier": newTier,
-                            "lastTransactionDate": new Date() // এক্সপায়ারির জন্য দরকার
-                        }
-                    },
-                    { session }
-                );
-
-                // আর্নিং হিস্ট্রি
-                if (coinsEarned > 0) {
-                    await db.collection(TRANSACTIONS_COLLECTION).insertOne({
-                        userId: userIdToSave,
-                        type: 'earn',
-                        amount: coinsEarned,
-                        description: `Earned from Order #${orderNumber} (${newTier} Member)`,
-                        createdAt: new Date()
-                    }, { session });
-
-                    // নোটিফিকেশন (কয়েন আর্ন)
-                    // নোট: এটি ট্রানজেকশনের বাইরে কল করা নিরাপদ (fire and forget)
-                    sendNotificationToUser(
-                        client, 
-                        userIdToSave.toString(), 
-                        "🎉 Coins Earned!", 
-                        `You earned ${coinsEarned} coins! You are now a ${newTier} member.`, 
-                        '/account/wallet'
-                    ).catch(console.error);
-                }
-            }
-
-            // ৬. অর্ডার কনফার্মেশন এবং অ্যাডমিন অ্যালার্ট
+            // ৫. নোটিফিকেশন
             sendNotificationToAdmins(
                 client,
-                "New Order Received! 🛍️",
-                `Order #${orderNumber} by ${orderData.name} - ₹${finalPrice}`,
+                "New Order (Pending) ⚠️",
+                `Order #${orderNumber} needs verification.`,
                 '/admin/orders'
             ).catch(console.error);
 
-            if (userIdToSave) {
-                sendNotificationToUser(
-                    client,
-                    userIdToSave.toString(),
-                    "Order Placed! 🥘",
-                    `Order #${orderNumber} received. We are preparing it!`,
-                    '/account/orders'
-                ).catch(console.error);
-            }
         });
 
         return NextResponse.json({ 
