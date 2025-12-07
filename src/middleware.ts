@@ -7,6 +7,11 @@ import type { NextRequest } from 'next/server';
 export function middleware(request: NextRequest) {
   const hostname = request.headers.get('host');
   
+  // ★★★ FIX: hostname null কি না চেক করা হচ্ছে ★★★
+  if (!hostname) {
+      return NextResponse.next();
+  }
+  
   // চেক করা হচ্ছে: এটি কি 'admin.' সাবডোমেইন, নাকি localhost:9002 (ডেভেলপমেন্ট চেক)
   // Vercel এ deploy হলে hostname এ সবসময় admin.bumbaskitchen.app থাকবে
   const isSubdomain = hostname.startsWith('admin.'); 
