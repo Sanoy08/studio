@@ -1,27 +1,22 @@
 // src/lib/notification.ts
 
-import webpush from 'web-push';
+import admin from '@/lib/firebase-admin'; // আপনার তৈরি করা firebase-admin.ts ফাইল
 import { MongoClient, ObjectId } from 'mongodb';
-
-webpush.setVapidDetails(
-  'mailto:info.bumbaskitchen@gmail.com',
-  process.env.VAPID_PUBLIC_KEY!,
-  process.env.VAPID_PRIVATE_KEY!
-);
 
 const DB_NAME = 'BumbasKitchenDB';
 const SUBSCRIPTIONS_COLLECTION = 'subscriptions';
 const USERS_COLLECTION = 'users';
-const NOTIFICATIONS_COLLECTION = 'notifications'; // ★ নতুন কালেকশন
+const NOTIFICATIONS_COLLECTION = 'notifications';
 
-// ১. নির্দিষ্ট ইউজারকে নোটিফিকেশন পাঠানো (এবং হিস্ট্রিতে সেভ করা)
+// ১. নির্দিষ্ট ইউজারকে নোটিফিকেশন পাঠানো
 export async function sendNotificationToUser(client: MongoClient, userId: string, title: string, body: string, url: string = '/') {
   try {
     const db = client.db(DB_NAME);
+    const userIdObj = new ObjectId(userId);
     
-    // ★ ১. ডাটাবেসে নোটিফিকেশন সেভ করা (যাতে অ্যাপের নোটিফিকেশন পেজে দেখায়)
+    // ক) ডাটাবেসে নোটিফিকেশন হিস্ট্রি সেভ করা
     await db.collection(NOTIFICATIONS_COLLECTION).insertOne({
-        userId: new ObjectId(userId),
+        userId: userIdObj,
         title,
         message: body,
         link: url,
@@ -29,36 +24,51 @@ export async function sendNotificationToUser(client: MongoClient, userId: string
         createdAt: new Date()
     });
 
-    // ★ ২. পুশ নোটিফিকেশন পাঠানো (ব্রাউজার/ফোনে)
+    // খ) FCM টোকেন খুঁজে বের করা এবং নোটিফিকেশন পাঠানো
     const subscriptions = await db.collection(SUBSCRIPTIONS_COLLECTION).find({ 
-        userId: new ObjectId(userId) 
+        userId: userIdObj,
+        type: 'fcm' // শুধুমাত্র অ্যাপ ইউজারদের জন্য
     }).toArray();
 
     if (subscriptions.length === 0) return;
 
-    const payload = JSON.stringify({
-      title,
-      body,
-      icon: '/icons/icon-192.png',
-      url
-    });
+    const promises: Promise<any>[] = [];
 
-    const promises = subscriptions.map(sub => 
-        webpush.sendNotification(sub as any, payload).catch(err => {
-            if (err.statusCode === 410) {
-                // সাবস্ক্রিপশন নষ্ট হয়ে গেলে ডিলিট করে দেওয়া
-                db.collection(SUBSCRIPTIONS_COLLECTION).deleteOne({ _id: sub._id });
-            }
-        })
-    );
+    for (const sub of subscriptions) {
+        if (sub.token) {
+            const message = {
+                notification: {
+                    title: title,
+                    body: body,
+                },
+                data: {
+                    link: url, // অ্যাপে রিডাইরেক্ট করার জন্য
+                    userId: userId
+                },
+                token: sub.token,
+            };
+            
+            promises.push(
+                admin.messaging().send(message)
+                    .catch(async (error: any) => {
+                        console.error("FCM Send Error:", error.code);
+                        // যদি টোকেন অকেজো হয়ে যায়, তবে ডাটাবেস থেকে মুছে ফেলা
+                        if (error.code === 'messaging/invalid-registration-token' || 
+                            error.code === 'messaging/registration-token-not-registered') {
+                             await db.collection(SUBSCRIPTIONS_COLLECTION).deleteOne({ _id: sub._id });
+                        }
+                    })
+            );
+        }
+    }
 
-    await Promise.all(promises);
+    await Promise.allSettled(promises);
   } catch (error) {
     console.error("Error sending user notification:", error);
   }
 }
 
-// ২. সব অ্যাডমিনকে নোটিফিকেশন পাঠানো (যেমন: নতুন অর্ডার আসলে)
+// ২. সব অ্যাডমিনকে নোটিফিকেশন পাঠানো
 export async function sendNotificationToAdmins(client: MongoClient, title: string, body: string, url: string = '/admin/orders') {
   try {
     const db = client.db(DB_NAME);
@@ -69,7 +79,7 @@ export async function sendNotificationToAdmins(client: MongoClient, title: strin
 
     if (adminIds.length === 0) return;
 
-    // ★ ১. সব অ্যাডমিনের নোটিফিকেশন হিস্ট্রিতে সেভ করা
+    // ক) অ্যাডমিনদের হিস্ট্রিতে সেভ করা
     const notificationsToSave = adminIds.map(id => ({
         userId: id,
         title,
@@ -83,64 +93,36 @@ export async function sendNotificationToAdmins(client: MongoClient, title: strin
         await db.collection(NOTIFICATIONS_COLLECTION).insertMany(notificationsToSave);
     }
 
-    // ★ ২. পুশ নোটিফিকেশন পাঠানো
+    // খ) FCM এর মাধ্যমে পাঠানো
     const subscriptions = await db.collection(SUBSCRIPTIONS_COLLECTION).find({ 
-        userId: { $in: adminIds } 
+        userId: { $in: adminIds },
+        type: 'fcm'
     }).toArray();
 
-    const payload = JSON.stringify({
-      title,
-      body,
-      icon: '/icons/admin-icon-192.png',
-      url
-    });
+    const promises: Promise<any>[] = [];
 
-    const promises = subscriptions.map(sub => 
-        webpush.sendNotification(sub as any, payload).catch(err => {
-            if (err.statusCode === 410) {
-                db.collection(SUBSCRIPTIONS_COLLECTION).deleteOne({ _id: sub._id });
-            }
-        })
-    );
+    for (const sub of subscriptions) {
+        if (sub.token) {
+            const message = {
+                notification: { title, body },
+                data: { link: url },
+                token: sub.token,
+            };
+            
+            promises.push(
+                admin.messaging().send(message)
+                    .catch(async (error: any) => {
+                        if (error.code === 'messaging/invalid-registration-token' || 
+                            error.code === 'messaging/registration-token-not-registered') {
+                            await db.collection(SUBSCRIPTIONS_COLLECTION).deleteOne({ _id: sub._id });
+                        }
+                    })
+            );
+        }
+    }
 
-    await Promise.all(promises);
+    await Promise.allSettled(promises);
   } catch (error) {
     console.error("Error sending admin notification:", error);
   }
-}
-
-// ৩. সবাইকে পাঠানো (ব্রডকাস্ট) - যেমন নতুন অফার বা মেনু
-export async function sendNotificationToAllUsers(client: MongoClient, title: string, body: string, url: string = '/') {
-    try {
-        const db = client.db(DB_NAME);
-        
-        // ★ ১. সব ইউজারের হিস্ট্রিতে সেভ করা (যাদের অ্যাকাউন্ট আছে)
-        const users = await db.collection(USERS_COLLECTION).find({}, { projection: { _id: 1 } }).toArray();
-        
-        if (users.length > 0) {
-             const notificationsToSave = users.map(u => ({
-                userId: u._id,
-                title,
-                message: body,
-                link: url,
-                isRead: false,
-                createdAt: new Date()
-            }));
-            await db.collection(NOTIFICATIONS_COLLECTION).insertMany(notificationsToSave);
-        }
-
-        // ★ ২. পুশ পাঠানো (শুধুমাত্র সাবস্ক্রাইবারদের)
-        const subscriptions = await db.collection(SUBSCRIPTIONS_COLLECTION).find({}).toArray();
-
-        const payload = JSON.stringify({ title, body, icon: '/icons/icon-192.png', url });
-
-        const promises = subscriptions.map(sub => 
-            webpush.sendNotification(sub as any, payload).catch(err => {
-                if (err.statusCode === 410) db.collection(SUBSCRIPTIONS_COLLECTION).deleteOne({ _id: sub._id });
-            })
-        );
-        await Promise.all(promises);
-    } catch (error) {
-        console.error("Error broadcasting notification:", error);
-    }
 }

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "42402664604",
+    "project_id": "bumbas-kitchen-87d59",
+    "storage_bucket": "bumbas-kitchen-87d59.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:42402664604:android:c2ad618afbbc8dd0f89d59",
+        "android_client_info": {
+          "package_name": "com.bumbas.kitchen"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCVLqpMkOXWtKeA3azVFs16RfdRxZerwJQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

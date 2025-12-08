@@ -7,7 +7,6 @@ import { CartProvider } from '@/context/CartProvider';
 import { Toaster } from '@/components/ui/sonner';
 import { cn } from '@/lib/utils';
 import { RealtimeMenuUpdater } from '@/components/providers/RealtimeMenuUpdater';
-import { ServiceWorkerRegister } from '@/components/providers/ServiceWorkerRegister';
 
 const poppins = Poppins({
   subsets: ['latin'],
@@ -76,7 +75,6 @@ export default function RootLayout({
       )}>
           <CartProvider>
             <RealtimeMenuUpdater />
-            <ServiceWorkerRegister />
             {children}
             <Toaster />
           </CartProvider>

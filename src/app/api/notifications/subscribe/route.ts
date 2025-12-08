@@ -10,31 +10,38 @@ const JWT_SECRET = process.env.JWT_SECRET || 'default_secret';
 
 export async function POST(request: NextRequest) {
   try {
-    const { subscription, token } = await request.json();
-    
-    let userId = null;
-    if (token) {
-      try {
-        const decoded: any = jwt.verify(token, JWT_SECRET);
-        userId = decoded._id;
-      } catch (e) {
-        console.warn("Invalid token during subscription");
-      }
+    const { token, type, jwtToken } = await request.json();
+
+    if (!token || type !== 'fcm') {
+        return NextResponse.json({ success: false }, { status: 400 });
     }
+
+    // User Auth Check
+    let userId = null;
+    if (jwtToken) {
+      try {
+        const decoded: any = jwt.verify(jwtToken, JWT_SECRET);
+        userId = decoded._id;
+      } catch (e) {}
+    }
+
+    if (!userId) return NextResponse.json({ success: false }, { status: 401 });
 
     const client = await clientPromise;
     const db = client.db(DB_NAME);
+    const userIdObj = new ObjectId(userId);
 
-    const subscriptionData = {
-      ...subscription,
-      userId: userId ? new ObjectId(userId) : null,
-      createdAt: new Date()
-    };
+    // Remove old web-push
+    await db.collection(COLLECTION_NAME).deleteMany({
+      userId: userIdObj,
+      $or: [{ type: 'webpush' }, { endpoint: { $exists: true } }]
+    });
 
+    // Save/Update FCM Token
     await db.collection(COLLECTION_NAME).updateOne(
-      { endpoint: subscription.endpoint },
-      { $set: subscriptionData },
-      { upsert: true }
+        { token: token, userId: userIdObj },
+        { $set: { token, type: 'fcm', userId: userIdObj, createdAt: new Date() } },
+        { upsert: true }
     );
 
     return NextResponse.json({ success: true });
