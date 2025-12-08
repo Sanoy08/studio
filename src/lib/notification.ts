@@ -1,21 +1,34 @@
 // src/lib/notification.ts
 
+<<<<<<< HEAD
 import admin from '@/lib/firebase-admin'; 
+=======
+import webpush from 'web-push';
+>>>>>>> parent of 83e2411 (app)
 import { MongoClient, ObjectId } from 'mongodb';
+
+webpush.setVapidDetails(
+  'mailto:info.bumbaskitchen@gmail.com',
+  process.env.VAPID_PUBLIC_KEY!,
+  process.env.VAPID_PRIVATE_KEY!
+);
 
 const DB_NAME = 'BumbasKitchenDB';
 const SUBSCRIPTIONS_COLLECTION = 'subscriptions';
 const USERS_COLLECTION = 'users';
-const NOTIFICATIONS_COLLECTION = 'notifications';
+const NOTIFICATIONS_COLLECTION = 'notifications'; // ★ নতুন কালেকশন
 
-// ১. নির্দিষ্ট ইউজারকে নোটিফিকেশন পাঠানো
+// ১. নির্দিষ্ট ইউজারকে নোটিফিকেশন পাঠানো (এবং হিস্ট্রিতে সেভ করা)
 export async function sendNotificationToUser(client: MongoClient, userId: string, title: string, body: string, url: string = '/') {
   try {
     const db = client.db(DB_NAME);
-    const userIdObj = new ObjectId(userId);
     
+<<<<<<< HEAD
+=======
+    // ★ ১. ডাটাবেসে নোটিফিকেশন সেভ করা (যাতে অ্যাপের নোটিফিকেশন পেজে দেখায়)
+>>>>>>> parent of 83e2411 (app)
     await db.collection(NOTIFICATIONS_COLLECTION).insertOne({
-        userId: userIdObj,
+        userId: new ObjectId(userId),
         title,
         message: body,
         link: url,
@@ -23,12 +36,19 @@ export async function sendNotificationToUser(client: MongoClient, userId: string
         createdAt: new Date()
     });
 
+<<<<<<< HEAD
     const subscriptions = await db.collection(SUBSCRIPTIONS_COLLECTION).find({ 
         userId: userIdObj, type: 'fcm' 
+=======
+    // ★ ২. পুশ নোটিফিকেশন পাঠানো (ব্রাউজার/ফোনে)
+    const subscriptions = await db.collection(SUBSCRIPTIONS_COLLECTION).find({ 
+        userId: new ObjectId(userId) 
+>>>>>>> parent of 83e2411 (app)
     }).toArray();
 
     if (subscriptions.length === 0) return;
 
+<<<<<<< HEAD
     const promises: Promise<any>[] = [];
     for (const sub of subscriptions) {
         if (sub.token) {
@@ -48,9 +68,31 @@ export async function sendNotificationToUser(client: MongoClient, userId: string
     }
     await Promise.allSettled(promises);
   } catch (error) { console.error("Error sending user notification:", error); }
+=======
+    const payload = JSON.stringify({
+      title,
+      body,
+      icon: '/icons/icon-192.png',
+      url
+    });
+
+    const promises = subscriptions.map(sub => 
+        webpush.sendNotification(sub as any, payload).catch(err => {
+            if (err.statusCode === 410) {
+                // সাবস্ক্রিপশন নষ্ট হয়ে গেলে ডিলিট করে দেওয়া
+                db.collection(SUBSCRIPTIONS_COLLECTION).deleteOne({ _id: sub._id });
+            }
+        })
+    );
+
+    await Promise.all(promises);
+  } catch (error) {
+    console.error("Error sending user notification:", error);
+  }
+>>>>>>> parent of 83e2411 (app)
 }
 
-// ২. সব অ্যাডমিনকে নোটিফিকেশন পাঠানো
+// ২. সব অ্যাডমিনকে নোটিফিকেশন পাঠানো (যেমন: নতুন অর্ডার আসলে)
 export async function sendNotificationToAdmins(client: MongoClient, title: string, body: string, url: string = '/admin/orders') {
   try {
     const db = client.db(DB_NAME);
@@ -59,6 +101,10 @@ export async function sendNotificationToAdmins(client: MongoClient, title: strin
 
     if (adminIds.length === 0) return;
 
+<<<<<<< HEAD
+=======
+    // ★ ১. সব অ্যাডমিনের নোটিফিকেশন হিস্ট্রিতে সেভ করা
+>>>>>>> parent of 83e2411 (app)
     const notificationsToSave = adminIds.map(id => ({
         userId: id,
         title,
@@ -69,6 +115,7 @@ export async function sendNotificationToAdmins(client: MongoClient, title: strin
     }));
     await db.collection(NOTIFICATIONS_COLLECTION).insertMany(notificationsToSave);
 
+<<<<<<< HEAD
     const subscriptions = await db.collection(SUBSCRIPTIONS_COLLECTION).find({ 
         userId: { $in: adminIds }, type: 'fcm'
     }).toArray();
@@ -89,12 +136,47 @@ export async function sendNotificationToAdmins(client: MongoClient, title: strin
 }
 
 // ৩. সবাইকে পাঠানো (ব্রডকাস্ট) - ★★★ এটি মিসিং ছিল ★★★
+=======
+    // ★ ২. পুশ নোটিফিকেশন পাঠানো
+    const subscriptions = await db.collection(SUBSCRIPTIONS_COLLECTION).find({ 
+        userId: { $in: adminIds } 
+    }).toArray();
+
+    const payload = JSON.stringify({
+      title,
+      body,
+      icon: '/icons/admin-icon-192.png',
+      url
+    });
+
+    const promises = subscriptions.map(sub => 
+        webpush.sendNotification(sub as any, payload).catch(err => {
+            if (err.statusCode === 410) {
+                db.collection(SUBSCRIPTIONS_COLLECTION).deleteOne({ _id: sub._id });
+            }
+        })
+    );
+
+    await Promise.all(promises);
+  } catch (error) {
+    console.error("Error sending admin notification:", error);
+  }
+}
+
+// ৩. সবাইকে পাঠানো (ব্রডকাস্ট) - যেমন নতুন অফার বা মেনু
+>>>>>>> parent of 83e2411 (app)
 export async function sendNotificationToAllUsers(client: MongoClient, title: string, body: string, url: string = '/') {
     try {
         const db = client.db(DB_NAME);
         
+<<<<<<< HEAD
         // ১. সব ইউজারের হিস্ট্রিতে সেভ করা
         const users = await db.collection(USERS_COLLECTION).find({}, { projection: { _id: 1 } }).toArray();
+=======
+        // ★ ১. সব ইউজারের হিস্ট্রিতে সেভ করা (যাদের অ্যাকাউন্ট আছে)
+        const users = await db.collection(USERS_COLLECTION).find({}, { projection: { _id: 1 } }).toArray();
+        
+>>>>>>> parent of 83e2411 (app)
         if (users.length > 0) {
              const notificationsToSave = users.map(u => ({
                 userId: u._id,
@@ -107,6 +189,7 @@ export async function sendNotificationToAllUsers(client: MongoClient, title: str
             await db.collection(NOTIFICATIONS_COLLECTION).insertMany(notificationsToSave);
         }
 
+<<<<<<< HEAD
         // ২. FCM টোকেন ব্যবহার করে পাঠানো
         const subscriptions = await db.collection(SUBSCRIPTIONS_COLLECTION).find({ type: 'fcm' }).toArray();
 
@@ -129,4 +212,20 @@ export async function sendNotificationToAllUsers(client: MongoClient, title: str
         }
         await Promise.allSettled(promises);
     } catch (error) { console.error("Error broadcasting notification:", error); }
+=======
+        // ★ ২. পুশ পাঠানো (শুধুমাত্র সাবস্ক্রাইবারদের)
+        const subscriptions = await db.collection(SUBSCRIPTIONS_COLLECTION).find({}).toArray();
+
+        const payload = JSON.stringify({ title, body, icon: '/icons/icon-192.png', url });
+
+        const promises = subscriptions.map(sub => 
+            webpush.sendNotification(sub as any, payload).catch(err => {
+                if (err.statusCode === 410) db.collection(SUBSCRIPTIONS_COLLECTION).deleteOne({ _id: sub._id });
+            })
+        );
+        await Promise.all(promises);
+    } catch (error) {
+        console.error("Error broadcasting notification:", error);
+    }
+>>>>>>> parent of 83e2411 (app)
 }

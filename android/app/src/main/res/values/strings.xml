@@ -1,7 +1,0 @@
-<?xml version='1.0' encoding='utf-8'?>
-<resources>
-    <string name="app_name">Bumbas Kitchen</string>
-    <string name="title_activity_main">Bumbas Kitchen</string>
-    <string name="package_name">com.bumbas.kitchen</string>
-    <string name="custom_url_scheme">com.bumbas.kitchen</string>
-</resources>

@@ -35,7 +35,6 @@ import { CartSheet } from '@/components/shop/CartSheet';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
 import { Badge } from '@/components/ui/badge';
-import { usePushNotification } from '@/hooks/use-push-notification';
 
 const navLinks = [
   { href: '/', label: 'Home', icon: Sparkles },
@@ -85,8 +84,6 @@ export function Header() {
     if (hour < 18) return 'Good Afternoon';
     return 'Good Evening';
   };
-
-  usePushNotification();
 
   return (
     <>
