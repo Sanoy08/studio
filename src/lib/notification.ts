@@ -1,6 +1,6 @@
 // src/lib/notification.ts
 
-import admin from '@/lib/firebase-admin'; // আপনার তৈরি করা firebase-admin.ts ফাইল
+import admin from '@/lib/firebase-admin'; 
 import { MongoClient, ObjectId } from 'mongodb';
 
 const DB_NAME = 'BumbasKitchenDB';
@@ -14,7 +14,6 @@ export async function sendNotificationToUser(client: MongoClient, userId: string
     const db = client.db(DB_NAME);
     const userIdObj = new ObjectId(userId);
     
-    // ক) ডাটাবেসে নোটিফিকেশন হিস্ট্রি সেভ করা
     await db.collection(NOTIFICATIONS_COLLECTION).insertOne({
         userId: userIdObj,
         title,
@@ -24,62 +23,42 @@ export async function sendNotificationToUser(client: MongoClient, userId: string
         createdAt: new Date()
     });
 
-    // খ) FCM টোকেন খুঁজে বের করা এবং নোটিফিকেশন পাঠানো
     const subscriptions = await db.collection(SUBSCRIPTIONS_COLLECTION).find({ 
-        userId: userIdObj,
-        type: 'fcm' // শুধুমাত্র অ্যাপ ইউজারদের জন্য
+        userId: userIdObj, type: 'fcm' 
     }).toArray();
 
     if (subscriptions.length === 0) return;
 
     const promises: Promise<any>[] = [];
-
     for (const sub of subscriptions) {
         if (sub.token) {
             const message = {
-                notification: {
-                    title: title,
-                    body: body,
-                },
-                data: {
-                    link: url, // অ্যাপে রিডাইরেক্ট করার জন্য
-                    userId: userId
-                },
+                notification: { title, body },
+                data: { link: url, userId },
                 token: sub.token,
             };
-            
             promises.push(
-                admin.messaging().send(message)
-                    .catch(async (error: any) => {
-                        console.error("FCM Send Error:", error.code);
-                        // যদি টোকেন অকেজো হয়ে যায়, তবে ডাটাবেস থেকে মুছে ফেলা
-                        if (error.code === 'messaging/invalid-registration-token' || 
-                            error.code === 'messaging/registration-token-not-registered') {
-                             await db.collection(SUBSCRIPTIONS_COLLECTION).deleteOne({ _id: sub._id });
-                        }
-                    })
+                admin.messaging().send(message).catch(async (e: any) => {
+                    if (e.code === 'messaging/invalid-registration-token' || e.code === 'messaging/registration-token-not-registered') {
+                         await db.collection(SUBSCRIPTIONS_COLLECTION).deleteOne({ _id: sub._id });
+                    }
+                })
             );
         }
     }
-
     await Promise.allSettled(promises);
-  } catch (error) {
-    console.error("Error sending user notification:", error);
-  }
+  } catch (error) { console.error("Error sending user notification:", error); }
 }
 
 // ২. সব অ্যাডমিনকে নোটিফিকেশন পাঠানো
 export async function sendNotificationToAdmins(client: MongoClient, title: string, body: string, url: string = '/admin/orders') {
   try {
     const db = client.db(DB_NAME);
-
-    // সব অ্যাডমিন খুঁজে বের করা
     const admins = await db.collection(USERS_COLLECTION).find({ role: 'admin' }).toArray();
-    const adminIds = admins.map(admin => admin._id);
+    const adminIds = admins.map(a => a._id);
 
     if (adminIds.length === 0) return;
 
-    // ক) অ্যাডমিনদের হিস্ট্রিতে সেভ করা
     const notificationsToSave = adminIds.map(id => ({
         userId: id,
         title,
@@ -88,19 +67,13 @@ export async function sendNotificationToAdmins(client: MongoClient, title: strin
         isRead: false,
         createdAt: new Date()
     }));
-    
-    if (notificationsToSave.length > 0) {
-        await db.collection(NOTIFICATIONS_COLLECTION).insertMany(notificationsToSave);
-    }
+    await db.collection(NOTIFICATIONS_COLLECTION).insertMany(notificationsToSave);
 
-    // খ) FCM এর মাধ্যমে পাঠানো
     const subscriptions = await db.collection(SUBSCRIPTIONS_COLLECTION).find({ 
-        userId: { $in: adminIds },
-        type: 'fcm'
+        userId: { $in: adminIds }, type: 'fcm'
     }).toArray();
 
     const promises: Promise<any>[] = [];
-
     for (const sub of subscriptions) {
         if (sub.token) {
             const message = {
@@ -108,21 +81,52 @@ export async function sendNotificationToAdmins(client: MongoClient, title: strin
                 data: { link: url },
                 token: sub.token,
             };
-            
-            promises.push(
-                admin.messaging().send(message)
-                    .catch(async (error: any) => {
-                        if (error.code === 'messaging/invalid-registration-token' || 
-                            error.code === 'messaging/registration-token-not-registered') {
+            promises.push(admin.messaging().send(message).catch(() => {}));
+        }
+    }
+    await Promise.allSettled(promises);
+  } catch (error) { console.error("Error sending admin notification:", error); }
+}
+
+// ৩. সবাইকে পাঠানো (ব্রডকাস্ট) - ★★★ এটি মিসিং ছিল ★★★
+export async function sendNotificationToAllUsers(client: MongoClient, title: string, body: string, url: string = '/') {
+    try {
+        const db = client.db(DB_NAME);
+        
+        // ১. সব ইউজারের হিস্ট্রিতে সেভ করা
+        const users = await db.collection(USERS_COLLECTION).find({}, { projection: { _id: 1 } }).toArray();
+        if (users.length > 0) {
+             const notificationsToSave = users.map(u => ({
+                userId: u._id,
+                title,
+                message: body,
+                link: url,
+                isRead: false,
+                createdAt: new Date()
+            }));
+            await db.collection(NOTIFICATIONS_COLLECTION).insertMany(notificationsToSave);
+        }
+
+        // ২. FCM টোকেন ব্যবহার করে পাঠানো
+        const subscriptions = await db.collection(SUBSCRIPTIONS_COLLECTION).find({ type: 'fcm' }).toArray();
+
+        const promises: Promise<any>[] = [];
+        for (const sub of subscriptions) {
+            if (sub.token) {
+                const message = {
+                    notification: { title, body },
+                    data: { link: url },
+                    token: sub.token,
+                };
+                promises.push(
+                    admin.messaging().send(message).catch(async (e: any) => {
+                        if (e.code === 'messaging/invalid-registration-token' || e.code === 'messaging/registration-token-not-registered') {
                             await db.collection(SUBSCRIPTIONS_COLLECTION).deleteOne({ _id: sub._id });
                         }
                     })
-            );
+                );
+            }
         }
-    }
-
-    await Promise.allSettled(promises);
-  } catch (error) {
-    console.error("Error sending admin notification:", error);
-  }
+        await Promise.allSettled(promises);
+    } catch (error) { console.error("Error broadcasting notification:", error); }
 }

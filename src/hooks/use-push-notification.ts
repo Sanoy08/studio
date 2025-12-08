@@ -1,13 +1,15 @@
 // src/hooks/use-push-notification.ts
+
 import { useEffect } from 'react';
 import { toast } from 'sonner';
-import { isPlatform } from '@capacitor/core';
+// ★ FIX: isPlatform এর বদলে সরাসরি Capacitor ইমপোর্ট করুন
+import { Capacitor } from '@capacitor/core'; 
 import { PushNotifications } from '@capacitor/push-notifications';
 
 export function usePushNotification() {
   useEffect(() => {
-    // Shudhu Android/iOS e kaj korbe
-    if (!isPlatform('capacitor')) return;
+    // ★ FIX: এখানে Capacitor.getPlatform() ব্যবহার করুন
+    if (Capacitor.getPlatform() === 'web') return;
 
     const registerPush = async () => {
         try {
@@ -15,7 +17,7 @@ export function usePushNotification() {
             await PushNotifications.register();
 
             PushNotifications.addListener('registration', async (token) => {
-                const jwtToken = localStorage.getItem('token'); // Tomar auth token jeta login er por save hoy
+                const jwtToken = localStorage.getItem('token');
                 if(jwtToken) {
                     await fetch('/api/notifications/subscribe', {
                         method: 'POST',
